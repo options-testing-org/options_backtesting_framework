@@ -202,19 +202,19 @@ def test_trade_dte():
 def test_trade_close_date():
     # create option
     call = get_4390_call_option()
-    assert call.trade_close_date is None
+    assert call.trade_close_date == []
 
     # open trade
     call.open_trade(1)
-    assert call.trade_close_date is None
+    assert call.trade_close_date == []
 
     # update trade
     update_4390_call_option(call)
-    assert call.trade_close_date is None
+    assert call.trade_close_date == []
 
     # close trade
     call.close_trade()
-    assert call.trade_close_date == test_update_quote_date
+    assert call.trade_close_date[0] == test_update_quote_date
 
 
 def test_dte_is_none_when_option_does_not_have_quote_data():
@@ -409,6 +409,16 @@ def test_close_position_does_not_incur_fees_when_flag_is_false():
     expected_fees = 0.0
 
     assert put.total_fees == expected_fees
+
+def test_close_long_position_adds_correct_close_date_and_close_amount():
+    quantity = 10
+    put = get_4220_put_option() # 15
+    put.open_trade(quantity, incur_fees=False)
+    update_4220_put_option(put) # 9.65
+    put.close_trade(incur_fees=False)
+
+    assert put.trade_close_date[0] == test_update_quote_date
+
 
 def test_trade_cost_for_long_position():
     quantity = 1

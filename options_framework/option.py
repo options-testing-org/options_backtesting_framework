@@ -2,12 +2,19 @@ import datetime
 
 from .option_types import OptionPositionType, OptionType
 from .utils.helpers import decimalize_0, decimalize_2, decimalize_4
+from collections import namedtuple
 
 optional_fields = ['open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega', 'rho', 'fee']
 
+TradeOpen = namedtuple("trade_open", "date spot_price quantity price open_value")
+TradeClose = namedtuple("trade_close", "date spot_price quantity price close_value")
+Greeks = namedtuple("Greeks", "delta gamma theta vega rho")
+OptionContract = namedtuple("OptionContract", "option_id symbol expiration strike option_type")
+OptionQuote = namedtuple("OptionQuote", "quote_date spot_price bid ask price")
+
 class Option:
     """
-    The Option class holds all the values the pertain to a single option. The option can have just basic option information
+    The Option class holds all the values that pertain to a single option. The option can have just basic option information
     without any price or other current values. These values are id, symbol, strike, expiration and option type.
     Quote information can be set when the option is created and also using the update method.
     The trade_open and trade_close methods are used to capture open/close price and dates.
@@ -61,33 +68,23 @@ class Option:
         if quote_date is not None and quote_date.date() > expiration.date():
             raise ValueError("Cannot create an option with a quote date past its expiration date")
 
-        self._option_type = option_type
-        self._option_id = option_id
-        self._ticker_symbol = symbol
-        self._strike = strike
-        self._expiration = expiration
-        self._quote_date = quote_date
-        self._spot_price = spot_price
-        self._bid = bid
-        self._ask = ask
-        self._price = price
+        self._option_contract = OptionContract(option_id=option_id, symbol=symbol, expiration=expiration,
+                                               strike=strike, option_type=option_type)
+        self._option_quote = OptionQuote(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
         # The optional attributes are set using keyword arguments
         self._open_interest = None if kwargs is None else kwargs['open_interest'] if 'open_interest' in kwargs else None
         self._iv = None if kwargs is None else kwargs['iv'] if 'iv' in kwargs else None
-        self._delta = None if kwargs is None else kwargs['delta'] if 'delta' in kwargs else None
-        self._gamma = None if kwargs is None else kwargs['gamma'] if 'gamma' in kwargs else None
-        self._theta = None if kwargs is None else kwargs['theta'] if 'theta' in kwargs else None
-        self._vega = None if kwargs is None else kwargs['vega'] if 'vega' in kwargs else None
-        self._rho = None if kwargs is None else kwargs['rho'] if 'rho' in kwargs else None
         self._fee = 0 if kwargs is None else kwargs['fee'] if 'fee' in kwargs else 0
+        delta = None if kwargs is None else kwargs['delta'] if 'delta' in kwargs else None
+        gamma = None if kwargs is None else kwargs['gamma'] if 'gamma' in kwargs else None
+        theta = None if kwargs is None else kwargs['theta'] if 'theta' in kwargs else None
+        vega = None if kwargs is None else kwargs['vega'] if 'vega' in kwargs else None
+        rho = None if kwargs is None else kwargs['rho'] if 'rho' in kwargs else None
+        self._greeks = Greeks(delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho)
 
-        self._trade_open_date = None
-        self._trade_spot_price = None
-        self._trade_price = None
-        self._trade_close_date = None
-        self._trade_close_price = None
-        self._trade_dte = None
+        self._trade_open = TradeOpen(date=None, spot_price=None, quantity=None, price=None, open_value=None)
+        self._trade_close = [TradeClose(date=None, spot_price=None, quantity=None, price=None, close_value=None)]
         self._position_type = None
         self._quantity = None
         self._total_fees = 0
@@ -95,8 +92,8 @@ class Option:
         self._set_additional_fields(kwargs)
 
     def __repr__(self) -> str:
-        return f'<{self._option_type.name} {self._ticker_symbol} {self.strike} ' \
-            + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}>'
+        return f'<{self._option_contract.option_type.name} {self._option_contract.symbol} {self._option_contract.strike} ' \
+            + f'{datetime.datetime.strftime(self._option_contract.expiration, "%Y-%m-%d")}>'
 
     def _set_additional_fields(self, kwargs):
         """
@@ -126,21 +123,22 @@ class Option:
         """
         if self._quote_date is None:
             raise ValueError("Cannot open a position that does not have price data")
-        if self._trade_open_date is not None:
+        if self._trade_open.date is not None:
             raise ValueError("Cannot open position. A position is already open.")
         if (quantity is None) or not (isinstance(quantity, int)) or (quantity == 0):
             raise ValueError("Quantity must be a non-zero integer.")
-        self._trade_open_date = self._quote_date
-        self._trade_spot_price = self._spot_price
-        self._trade_price = self._price
-        self._trade_dte = self.dte()
+        self._trade_open.date = self._quote_date
+        self._trade_open.spot_price = self._spot_price
+        self._trade_open.quantity = quantity
+        self._trade_open.price = self._price
+        self._trade_open.open_value = float(decimalize_2(self._price) * decimalize_0(self._quantity))
         self._position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
         self._quantity = quantity
 
         self._set_additional_fields(kwargs)
 
         if incur_fees:
-            self._incur_fees()
+            self._incur_fees(quantity)
 
     def update(self, quote_date, spot_price, bid, ask, price, *args, **kwargs):
         """
@@ -170,31 +168,34 @@ class Option:
             raise ValueError("ask is required")
         if price is None:
             raise ValueError("price is required")
-        if quote_date.date() > self._expiration.date():
+        if quote_date.date() > self._option_contract.expiration.date():
             raise ValueError("Cannot update to a date past the option expiration")
 
-        self._bid = bid
-        self._ask = ask
-        self._price = price
-        self._quote_date = quote_date
-        self._spot_price = spot_price
+        self._option_quote.quote_date = quote_date
+        self._option_quote.spot_price = spot_price
+        self._option_quote.bid = bid
+        self._option_contract.ask = ask
+        self._option_contract.price = price
         self._open_interest = None if kwargs is None else kwargs['open_interest'] if 'open_interest' in kwargs else None
         self._iv = None if kwargs is None else kwargs['iv'] if 'iv' in kwargs else None
-        self._delta = None if kwargs is None else kwargs['delta'] if 'delta' in kwargs else None
-        self._gamma = None if kwargs is None else kwargs['gamma'] if 'gamma' in kwargs else None
-        self._theta = None if kwargs is None else kwargs['theta'] if 'theta' in kwargs else None
-        self._vega = None if kwargs is None else kwargs['vega'] if 'vega' in kwargs else None
-        self._rho = None if kwargs is None else kwargs['rho'] if 'rho' in kwargs else None
+        delta = None if kwargs is None else kwargs['delta'] if 'delta' in kwargs else None
+        gamma = None if kwargs is None else kwargs['gamma'] if 'gamma' in kwargs else None
+        theta = None if kwargs is None else kwargs['theta'] if 'theta' in kwargs else None
+        vega = None if kwargs is None else kwargs['vega'] if 'vega' in kwargs else None
+        rho = None if kwargs is None else kwargs['rho'] if 'rho' in kwargs else None
+        self._greeks = Greeks(delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho)
 
         self._set_additional_fields(kwargs)
 
-    def _incur_fees(self):
+    def _incur_fees(self, quantity):
         """
         Calculates fees for a transaction and adds to the total fees
         :return: fees that were added to the option
         :rtype: float
         """
-        fees = self._fee * abs(self._quantity)
+        fee = decimalize_2(self._fee)
+        qty = decimalize_0(quantity)
+        fees = float(fee * abs(qty))
         self._total_fees += fees
         return fees
 
@@ -210,10 +211,9 @@ class Option:
         Closing price can only be calculated on an option that has an open trade
         :rtype: float
         """
-        if self._trade_open_date is None:
-            raise ValueError("Cannot determine closing price on option that has not been traded")
+        if self._trade_open.("Cannot determine closing price on option that has not been traded")
         price = decimalize_2(self._price)
-        spot_price = decimalize_2(self._spot_price)
+        spot_price = decimalize_2(self._option_quote.spot_price)
         close_price = None
         # check if option is expired (assume PM settled)
         if self.is_expired():
@@ -222,44 +222,51 @@ class Option:
 
             # ITM options value is the difference between the spot price and the strike price
             elif self.itm:  # ITM options only have intrinsic value at expiration
-                if self._option_type == OptionType.CALL:
-                    close_price = spot_price - self._strike
-                elif self._option_type == OptionType.PUT:
-                    close_price = self._strike - spot_price
+                if self._option_contract.option_type == OptionType.CALL:
+                    close_price = spot_price - self._option_contract.strike
+                elif self._option_contract.option_type == OptionType.PUT:
+                    close_price = self._option_contract.strike - spot_price
 
         # get price, but if bid is zero, assume option cannot be sold to close for any amount
         # (LONG options must be sold to close).
         # if bid is zero, option can only be bought to close for the ask price
         # (SHORT options must be bought to close)
         else:  # option is not expired
-            if self._bid == 0:
+            if self._option_quote.bid == 0:
                 if self._position_type == OptionPositionType.LONG:
                     close_price = 0
                 elif self._position_type == OptionPositionType.SHORT:
-                    close_price = self._ask
+                    close_price = self._option_quote.ask
             else:
                 close_price = price
         return float(close_price)
 
-    def close_trade(self, incur_fees=True):
+    def close_trade(self, quantity=None, incur_fees=True):
         """
         Calculates the closing price and sets the close date and price for the option
+        :param quantity: If a quantity is provided, only that quantity will be closed.
         :param incur_fees: if True, calculates the fees for the closing transaction
             and adds that to the total fees
         :return: the value of the option at the closing price
         :rtype: float
         """
-        if self._trade_open_date is None:
+        if self._trade_open.date is None:
             raise ValueError("Cannot close an option that has not been traded to open")
-        if self._trade_close_date is not None:
-            raise ValueError("Cannot close an option and is already closed")
+        if self._quantity == 0:
+            raise ValueError("Cannot close an option that is already closed")
+        if abs(quantity) > abs(self._quantity):
+            raise ValueError("Quantity to close is greater than open quantity.")
+        # to-do: check for quantity validity. update quantity
+        closing_price = decimalize_2(self.get_closing_price())
+        qty = decimalize_0(self._quantity) if quantity is None else decimalize_0(quantity)
         self._price = self.get_closing_price()
-        self._trade_close_date = self._quote_date
-        self._trade_close_price = self.get_closing_price()
+        self._trade_close_date.append(self._quote_date)
+        self._trade_close_price.append(self.get_closing_price())
+        self._quantity = int(decimalize_0(self._quantity) - qty)
         if incur_fees:
-            self._incur_fees()
-        closing_value = self._trade_close_price * 100 * self._quantity
-        return closing_value
+            self._incur_fees(qty)
+        closing_value = closing_price * 100 * qty
+        return float(closing_value)
 
     def dte(self):
         """
@@ -317,12 +324,6 @@ class Option:
         price_diff = price - trade_price
         value = price_diff * 100 * quantity
         return float(value)
-
-    # def current_premium(self):
-    #     price = decimalize_2(self._price)
-    #     quantity = decimalize_0(self._quantity)
-    #     premium = price * quantity
-    #     return float(premium)
 
     def profit_loss_percent(self):
         """
