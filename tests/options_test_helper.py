@@ -6,6 +6,7 @@ ticker = "SPXW"
 test_expiration = datetime.datetime.strptime("07-16-2021", "%m-%d-%Y")
 test_quote_date = datetime.datetime.strptime("2021-07-01 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
 test_update_quote_date = datetime.datetime.strptime("2021-07-02 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
+test_update_quote_date2 = datetime.datetime.strptime("2021-07-02 14:31:00.000000", "%Y-%m-%d %H:%M:%S.%f")
 long_quantity = 10
 short_quantity = -10
 standard_fee = 0.50
@@ -48,6 +49,11 @@ def update_4220_put_option(option):
     option.update(test_update_quote_date, spot_price, bid, ask, price, delta=delta, gamma=gamma, theta=theta, vega=vega,
                   open_interest=open_interest)  # 9.65
 
+def update_4220_put_option_2(option):
+    spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest = (
+        4349.73, 8.30, 8.50, 8.4, -0.1362, 0.0018, -0.9335, 1.8654, 878)
+    option.update(test_update_quote_date, spot_price, bid, ask, price, delta=delta, gamma=gamma, theta=theta, vega=vega,
+                  open_interest=open_interest)  # 9.65
 
 def get_4100_put_option():
     _id = 3
@@ -114,6 +120,12 @@ def update_4380_call_option(option):
     option.update(test_update_quote_date, spot_price, bid, ask, price, delta=delta, gamma=gamma, theta=theta, vega=vega,
                   open_interest=open_interest)  # 8.1
 
+def update_4380_call_option_2(option):
+    # 2021-07-02 14:31:00.0000000	14.30	14.60	0.0800	0.3260	0.0053	-0.8739	3.0781	54.1393	372	4349.73	14.450000
+    spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest = (
+        4349.73, 14.30, 14.60, 14.45, 0.3260, 0.0053, -0.8739, 3.0781, 372)
+    option.update(test_update_quote_date2, spot_price, bid, ask, price, delta=delta, gamma=gamma, theta=theta, vega=vega,
+                  open_interest=open_interest)  # 14.45
 
 def get_4390_call_option():
     _id = 6
@@ -181,7 +193,7 @@ def get_4300_put_option():
     option = Option(_id, ticker, strike, option_expiration, option_type=OptionType.PUT, quote_date=quote_datetime,
                     spot_price=spot_price, bid=bid, ask=ask, price=price,
                     open_interest=open_interest, delta=delta, gamma=gamma, theta=theta, vega=vega,
-                    iv=implied_volatility)  # trade price 3.50
+                    implied_volatility=implied_volatility)  # trade price 3.50
     return option, quote_datetime
 
 

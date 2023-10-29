@@ -1,16 +1,18 @@
 import datetime
-
+import math
 from .option_types import OptionPositionType, OptionType
 from .utils.helpers import decimalize_0, decimalize_2, decimalize_4
 from collections import namedtuple
 
 optional_fields = ['open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega', 'rho', 'fee']
 
-TradeOpen = namedtuple("trade_open", "date spot_price quantity price open_value")
-TradeClose = namedtuple("trade_close", "date spot_price quantity price close_value")
-Greeks = namedtuple("Greeks", "delta gamma theta vega rho")
 OptionContract = namedtuple("OptionContract", "option_id symbol expiration strike option_type")
 OptionQuote = namedtuple("OptionQuote", "quote_date spot_price bid ask price")
+Greeks = namedtuple("Greeks", "delta gamma theta vega rho")
+ExtendedProperties = namedtuple("AdditionalOptionFields", "implied_volatility open_interest")
+TradeOpen = namedtuple("TradeOpen", "date quantity price premium fees")
+TradeClose = namedtuple("TradeClose", "date quantity price premium profit_loss fees")
+
 
 class Option:
     """
@@ -50,7 +52,8 @@ class Option:
         :param kwargs: keyword arguments
         :type: dictionary
 
-        optional parameters: delta, theta, vega, gamma, iv, open_interest, rho, fee
+        optional parameters: delta, theta, vega, gamma, implied_volatility, open_interest, rho, fee
+        If the fee is not specified it will be set to zero
         additional user-defined parameters passed as keyword arguments will be defined as attributes
 
         """
@@ -70,32 +73,46 @@ class Option:
 
         self._option_contract = OptionContract(option_id=option_id, symbol=symbol, expiration=expiration,
                                                strike=strike, option_type=option_type)
-        self._option_quote = OptionQuote(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+
+        if quote_date is None or spot_price is None or bid is None or ask is None or price is None:
+            self._option_quote = None
+        else:
+            self._option_quote = OptionQuote(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
         # The optional attributes are set using keyword arguments
-        self._open_interest = None if kwargs is None else kwargs['open_interest'] if 'open_interest' in kwargs else None
-        self._iv = None if kwargs is None else kwargs['iv'] if 'iv' in kwargs else None
-        self._fee = 0 if kwargs is None else kwargs['fee'] if 'fee' in kwargs else 0
+        open_interest = None if kwargs is None else kwargs['open_interest'] if 'open_interest' in kwargs else None
+        iv = None if kwargs is None else kwargs['implied_volatility'] if 'implied_volatility' in kwargs else None
+        if open_interest is None and iv is None:
+            self._extended_properties = None
+        else:
+            self._extended_properties = ExtendedProperties(implied_volatility=iv, open_interest=open_interest)
+
         delta = None if kwargs is None else kwargs['delta'] if 'delta' in kwargs else None
         gamma = None if kwargs is None else kwargs['gamma'] if 'gamma' in kwargs else None
         theta = None if kwargs is None else kwargs['theta'] if 'theta' in kwargs else None
         vega = None if kwargs is None else kwargs['vega'] if 'vega' in kwargs else None
         rho = None if kwargs is None else kwargs['rho'] if 'rho' in kwargs else None
-        self._greeks = Greeks(delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho)
+        if delta is None and gamma is None and theta is None and vega is None and rho is None:
+            self._greeks = None
+        else:
+            self._greeks = Greeks(delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho)
 
-        self._trade_open = TradeOpen(date=None, spot_price=None, quantity=None, price=None, open_value=None)
-        self._trade_close = [TradeClose(date=None, spot_price=None, quantity=None, price=None, close_value=None)]
-        self._position_type = None
-        self._quantity = None
+        self._fee = 0 if kwargs is None else kwargs['fee'] if 'fee' in kwargs else 0
         self._total_fees = 0
 
-        self._set_additional_fields(kwargs)
+        self._trade_open = None
+        self._trade_close = None
+        self._trade_close_records = []
+        self._position_type = None
+        self._quantity = 0
+
+        self._set_additional_attributes(kwargs)
 
     def __repr__(self) -> str:
         return f'<{self._option_contract.option_type.name} {self._option_contract.symbol} {self._option_contract.strike} ' \
             + f'{datetime.datetime.strftime(self._option_contract.expiration, "%Y-%m-%d")}>'
 
-    def _set_additional_fields(self, kwargs):
+    def _set_additional_attributes(self, kwargs):
         """
         An internal method to set keyword arguments as attributes on the option object
         :param kwargs:
@@ -104,6 +121,73 @@ class Option:
         additional_fields = {key: kwargs[key] for key in kwargs.keys() if key not in optional_fields}
         for key, value in additional_fields.items():
             setattr(self, key, value)
+
+    def _incur_fees(self, quantity):
+        """
+        Calculates fees for a transaction and adds to the total fees
+        :return: fees that were added to the option
+        :rtype: float
+        """
+        fee = decimalize_2(self._fee)
+        qty = decimalize_0(quantity)
+        fees = fee * abs(qty)
+        total_fees = decimalize_2(self._total_fees) + fees
+        self._total_fees = float(total_fees)
+        return float(fees)
+
+    def update(self, quote_date, spot_price, bid, ask, price, *args, **kwargs):
+        """
+        Updates price and underlying asset information for a given data date and/or time
+
+        :param quote_date: data date for price information
+        :type quote_date: datetime.datetime
+        :param spot_price: price of underlying on quote_date
+        :type spot_price: float
+        :param bid: bid price
+        :type bid: float
+        :param ask: ask price
+        :type ask: float
+        :param price: calculated price based on mid-point between bid and ask
+        :type price: float
+
+        optional parameters: delta, theta, vega, gamma, implied_volatility, open_interest, rho, fee
+        additional user-defined parameters passed as keyword arguments will be defined as attributes
+        """
+        if quote_date is None:
+            raise ValueError("quote_date is required")
+        if spot_price is None:
+            raise ValueError("spot_price is required")
+        if bid is None:
+            raise ValueError("bid is required")
+        if ask is None:
+            raise ValueError("ask is required")
+        if price is None:
+            raise ValueError("price is required")
+        if quote_date.date() > self._option_contract.expiration.date():
+            raise ValueError("Cannot update to a date past the option expiration")
+
+        self._option_quote = OptionQuote(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+
+        open_interest = None if kwargs is None else kwargs['open_interest'] if 'open_interest' in kwargs else None
+        implied_volatility = None if kwargs is None else kwargs['implied_volatility'] if ('implied_volatility'
+                                                                                          in kwargs) else None
+        if open_interest is None and implied_volatility is None:
+            self._extended_properties = None
+        else:
+            self._extended_properties = ExtendedProperties(implied_volatility=implied_volatility,
+                                                           open_interest=open_interest)
+
+        delta = None if kwargs is None else kwargs['delta'] if 'delta' in kwargs else None
+        gamma = None if kwargs is None else kwargs['gamma'] if 'gamma' in kwargs else None
+        theta = None if kwargs is None else kwargs['theta'] if 'theta' in kwargs else None
+        vega = None if kwargs is None else kwargs['vega'] if 'vega' in kwargs else None
+        rho = None if kwargs is None else kwargs['rho'] if 'rho' in kwargs else None
+        if delta is None and gamma is None and theta is None and vega is None and rho is None:
+            self._greeks = None
+        else:
+            self._greeks = Greeks(delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho)
+
+        self._set_additional_attributes(kwargs)
 
     def open_trade(self, quantity, incur_fees=True, *args, **kwargs):
         """
@@ -121,83 +205,66 @@ class Option:
 
         additional user-defined parameters passed as keyword arguments will be defined as attributes
         """
-        if self._quote_date is None:
+        if self._option_quote is None:
             raise ValueError("Cannot open a position that does not have price data")
-        if self._trade_open.date is not None:
+        if self._trade_open is not None:
             raise ValueError("Cannot open position. A position is already open.")
         if (quantity is None) or not (isinstance(quantity, int)) or (quantity == 0):
             raise ValueError("Quantity must be a non-zero integer.")
-        self._trade_open.date = self._quote_date
-        self._trade_open.spot_price = self._spot_price
-        self._trade_open.quantity = quantity
-        self._trade_open.price = self._price
-        self._trade_open.open_value = float(decimalize_2(self._price) * decimalize_0(self._quantity))
+        fees = 0
+        if incur_fees:
+            fees = self._incur_fees(quantity)
+        premium = float(decimalize_2(self._option_quote.price) * 100 * decimalize_0(quantity))
+
+        trade_open = TradeOpen(date=self._option_quote.quote_date, quantity=quantity, price=self._option_quote.price,
+                               premium=premium, fees=fees)
+        self._trade_open = trade_open
         self._position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
         self._quantity = quantity
 
-        self._set_additional_fields(kwargs)
+        self._set_additional_attributes(kwargs)
 
-        if incur_fees:
-            self._incur_fees(quantity)
+        return premium
 
-    def update(self, quote_date, spot_price, bid, ask, price, *args, **kwargs):
+    def close_trade(self, quantity=None, incur_fees=True):
         """
-        Updates price and underlying asset information for a given data date and/or time
-
-        :param quote_date: data date for price information
-        :type quote_date: datetime.datetime
-        :param spot_price: price of underlying on quote_date
-        :type spot_price: float
-        :param bid: bid price
-        :type bid: float
-        :param ask: ask price
-        :type ask: float
-        :param price: calculated price based on mid-point between bid and ask
-        :type price: float
-
-        optional parameters: delta, theta, vega, gamma, iv, open_interest, rho, fee
-        additional user-defined parameters passed as keyword arguments will be defined as attributes
-        """
-        if quote_date is None:
-            raise ValueError("quote_date is required")
-        if spot_price is None:
-            raise ValueError("spot_price is required")
-        if bid is None:
-            raise ValueError("bid is required")
-        if ask is None:
-            raise ValueError("ask is required")
-        if price is None:
-            raise ValueError("price is required")
-        if quote_date.date() > self._option_contract.expiration.date():
-            raise ValueError("Cannot update to a date past the option expiration")
-
-        self._option_quote.quote_date = quote_date
-        self._option_quote.spot_price = spot_price
-        self._option_quote.bid = bid
-        self._option_contract.ask = ask
-        self._option_contract.price = price
-        self._open_interest = None if kwargs is None else kwargs['open_interest'] if 'open_interest' in kwargs else None
-        self._iv = None if kwargs is None else kwargs['iv'] if 'iv' in kwargs else None
-        delta = None if kwargs is None else kwargs['delta'] if 'delta' in kwargs else None
-        gamma = None if kwargs is None else kwargs['gamma'] if 'gamma' in kwargs else None
-        theta = None if kwargs is None else kwargs['theta'] if 'theta' in kwargs else None
-        vega = None if kwargs is None else kwargs['vega'] if 'vega' in kwargs else None
-        rho = None if kwargs is None else kwargs['rho'] if 'rho' in kwargs else None
-        self._greeks = Greeks(delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho)
-
-        self._set_additional_fields(kwargs)
-
-    def _incur_fees(self, quantity):
-        """
-        Calculates fees for a transaction and adds to the total fees
-        :return: fees that were added to the option
+        Calculates the closing price and sets the close date and price for the option
+        :param quantity: If a quantity is provided, only that quantity will be closed.
+        :param incur_fees: if True, calculates the fees for the closing transaction
+            and adds that to the total fees
+        :return: the value of the option at the closing price
         :rtype: float
         """
-        fee = decimalize_2(self._fee)
-        qty = decimalize_0(quantity)
-        fees = float(fee * abs(qty))
-        self._total_fees += fees
-        return fees
+        if self._trade_open.date is None:
+            raise ValueError("Cannot close an option that is not open.")
+        # if len(self._trade_close_records) > 0:
+        #     raise ValueError("Cannot close an option that is already closed.")
+        if quantity == 0:
+            raise ValueError("Must supply a non-zero quantity.")
+
+        quantity = self._quantity if quantity is None else quantity
+        if self._position_type == OptionPositionType.LONG:
+            quantity = decimalize_0(quantity)*-1
+
+        if abs(quantity) > abs(self._quantity):
+            raise ValueError("Quantity to close is greater than the current open quantity.")
+
+        # date quantity, price, close_value
+        close_price = decimalize_2(self.get_closing_price())
+        open_price = decimalize_2(self._trade_open.price)
+        premium = (close_price * 100 * quantity) * -1
+        profit_loss = (open_price * 100 * quantity) + premium
+        fees = 0
+        if incur_fees:
+            fees = self._incur_fees(abs(quantity))
+
+        # date quantity price premium profit_loss fees
+        trade_close_record = TradeClose(date=self._option_quote.quote_date, quantity=int(quantity),
+                                        price=float(close_price), premium=float(premium), profit_loss=float(profit_loss),
+                                        fees=fees)
+        self._trade_close_records.append(trade_close_record)
+        self._quantity = int(quantity) + self._quantity
+        return float(premium)
 
     def get_closing_price(self):
         """
@@ -211,11 +278,18 @@ class Option:
         Closing price can only be calculated on an option that has an open trade
         :rtype: float
         """
-        if self._trade_open.("Cannot determine closing price on option that has not been traded")
-        price = decimalize_2(self._price)
+        if self._trade_open is None:
+            raise ValueError("Cannot determine closing price on option that does not have an opening trade")
+        price = decimalize_2(self._option_quote.price)
         spot_price = decimalize_2(self._option_quote.spot_price)
         close_price = None
         # check if option is expired (assume PM settled)
+        # If an option is expired, the price in the data may not match what the actual
+        # settlement price of the option. An expired option's value is always
+        # its intrinsic value. An out-of-the-money has no intrinsic value,
+        # therefore its expiry price is zero.
+        # If an option expires in the money, its value is equal to its intrinsic value.
+        # Just calculate the intrinsic value and return that price.
         if self.is_expired():
             if self.otm:  # OTM options have no value at expiration
                 close_price = 0
@@ -227,46 +301,65 @@ class Option:
                 elif self._option_contract.option_type == OptionType.PUT:
                     close_price = self._option_contract.strike - spot_price
 
-        # get price, but if bid is zero, assume option cannot be sold to close for any amount
-        # (LONG options must be sold to close).
-        # if bid is zero, option can only be bought to close for the ask price
-        # (SHORT options must be bought to close)
+        # Normally, the option price is assumed to be halfway between the bid and ask
+        # When the bid is zero, it implies that there are no buyers, and only sellers at the ask price
+        # Therefore, the option can only be bought at the ask and cannot be sold at any price
+        # LONG options must be sold to close. Therefore, if the bid is zero,
+        # the option is worthless since it cannot be sold.
+        # SHORT options must be bought to close. If the bid is zero,
+        # the option can only be bought to close for the ask price
+        #
+        # If the bid is not zero, then the price is the mid-point between the bid and ask
         else:  # option is not expired
             if self._option_quote.bid == 0:
+                # bid is zero, option is long. Cannot be sold to close, therefore it is worthless
                 if self._position_type == OptionPositionType.LONG:
                     close_price = 0
+                # bid is zero, option is short. The other side of this transaction holds a long option,
+                # which is worthless. People will always take free money for something that is worthless,
+                # so the option can be bought to close for the ask price.
                 elif self._position_type == OptionPositionType.SHORT:
                     close_price = self._option_quote.ask
             else:
                 close_price = price
         return float(close_price)
 
-    def close_trade(self, quantity=None, incur_fees=True):
+    def get_trade_open_info(self):
         """
-        Calculates the closing price and sets the close date and price for the option
-        :param quantity: If a quantity is provided, only that quantity will be closed.
-        :param incur_fees: if True, calculates the fees for the closing transaction
-            and adds that to the total fees
-        :return: the value of the option at the closing price
-        :rtype: float
+        The trade_open_info returns all the values captured when a trade is opened.
+        This contains the following properties:
+        date: The trade open date
+        spot_price: The spot price of the underlying asset when the trade was opened
+        quantity: The number of contracts that were opened. A positive number is a long position, and a negative number
+                    is a short position
+        price: The price the option was bought or sold at
+        open_value: The total credit or debit premium when opening the trade
+
+        :return: A named tuple with the following properties: date, spot_price, quantity, price, open_value
+        :rtype: A TradeOpen named tuple
         """
-        if self._trade_open.date is None:
-            raise ValueError("Cannot close an option that has not been traded to open")
-        if self._quantity == 0:
-            raise ValueError("Cannot close an option that is already closed")
-        if abs(quantity) > abs(self._quantity):
-            raise ValueError("Quantity to close is greater than open quantity.")
-        # to-do: check for quantity validity. update quantity
-        closing_price = decimalize_2(self.get_closing_price())
-        qty = decimalize_0(self._quantity) if quantity is None else decimalize_0(quantity)
-        self._price = self.get_closing_price()
-        self._trade_close_date.append(self._quote_date)
-        self._trade_close_price.append(self.get_closing_price())
-        self._quantity = int(decimalize_0(self._quantity) - qty)
-        if incur_fees:
-            self._incur_fees(qty)
-        closing_value = closing_price * 100 * qty
-        return float(closing_value)
+        return self._trade_open
+
+    def get_trade_close_info(self):
+        """
+        The
+        :return:
+        """
+        if not self._trade_close_records:
+            return None
+        # date quantity price premium profit_loss fees
+        records = self._trade_close_records
+        date = records[-1].date
+        quantity = sum(decimalize_0(x.quantity) for x in records)
+        price = decimalize_2(sum((decimalize_2(x.price)*decimalize_0(x.quantity))/quantity for x in records))
+        premium = sum(decimalize_2(x.premium) for x in records)
+        profit_loss = sum(decimalize_2(x.profit_loss) for x in records)
+        fees = sum(x.fees for x in records)
+
+        trade_close = TradeClose(date=date, quantity=int(quantity), price=float(price), premium=float(premium),
+                                 profit_loss=float(profit_loss), fees=fees)
+
+        return trade_close
 
     def dte(self):
         """
@@ -274,270 +367,209 @@ class Option:
         :return: The number of days to the expiration for the current quote
         :rtype: int
         """
-        if self._quote_date is None:
+        if self._option_quote is None:
             return None
-        dt_date = self._quote_date.date()
-        time_delta = self._expiration.date() - dt_date
+        dt_date = self._option_quote.quote_date.date()
+        time_delta = self._option_contract.expiration.date() - dt_date
         return time_delta.days
 
     def is_expired(self):
         """
-        Assumes the option is PM settled
+        Assumes the option is PM settled. If there is no quote data, the expiration status has
+        no meaning, so None is returned.
         :return: True if option quote is at or exceeds the expiration date
         :rtype: bool
         """
-        quote_date, expiration_date = self._quote_date.date(), self._expiration.date()
-        quote_time, exp_time = self._quote_date.time(), datetime.time(16, 15)
+        if self._option_quote is None:
+            return None
+        quote_date, expiration_date = self._option_quote.quote_date.date(), self._option_contract.expiration.date()
+        quote_time, exp_time = self._option_quote.quote_date.time(), datetime.time(16, 15)
         if (quote_date == expiration_date and quote_time >= exp_time) or (quote_date > expiration_date):
             return True
         else:
             return False
 
-    def total_premium(self):
+    def is_trade_open(self):
         """
-        The value of the trade at opening. If the value is positive, that is a debit, and it will be taken
-            from the account to open the trade. If the value is negative, that is a credit, and it will be credited
-            to the account when the trade is opened.
-        :return: The cost to open a trade, positive for a debit, negative for a credit
-        :rtype: float
+        Returns boolean indicating whether a trade has any open contracts.
+        :return: True if there are open contracts, False if a trade was never opened, or was opened
+                    and then fully closed.
+        :rtype: bool
         """
-        if self._trade_open_date is None:
-            raise Exception("No trade has been opened.")
-        trade_price = decimalize_2(self._trade_price)
-        quantity = decimalize_0(self._quantity)
-        value = trade_price * 100 * quantity
-        return float(value)
+        return self._quantity != 0
 
-    def current_gain_loss(self):
+    def get_profit_loss(self):
         """
-        The current value is the difference in value between the trade open and the current quote.
+        The get_profit_loss method returns the difference in value between the trade open and the current quote.
         The value is determined by multiplying the price difference by the quantity and number
         of underlying units the option represents (100).
+        This method uses the current price of the option. This may be different than the closing
+        price which considers other factors such as expiration and intrinsic value.
         :return: the current value of the trade
         :rtype: float
         """
-        if self._trade_open_date is None:
+        if self._trade_open is None:
             raise Exception("No trade has been opened.")
-        trade_price = decimalize_2(self._trade_price)
-        price = decimalize_2(self._price)
+        trade_price = decimalize_2(self._trade_open.price)
+        price = decimalize_2(self._option_quote.price)
         quantity = decimalize_0(self._quantity)
         price_diff = price - trade_price
         value = price_diff * 100 * quantity
         return float(value)
 
-    def profit_loss_percent(self):
+    def get_profit_loss_percent(self):
         """
         The percentage gain or loss based on the current price compared to the trade price of an option.
         :return: the percentage gain or loss
         :rtype: float
         """
-        if self._trade_open_date is None:
+        if self._trade_open.date is None:
             raise Exception("No trade has been opened.")
-        trade_price = decimalize_4(self._trade_price)
-        price = decimalize_4(self._price)
+        trade_price = decimalize_4(self._trade_open.price)
+        price = decimalize_4(self._option_quote.price)
         quantity = decimalize_0(self._quantity)
         percent = ((price - trade_price) / trade_price) * int(quantity / abs(quantity))
         return float(decimalize_4(percent))
 
-    def close_value(self):
+    def get_current_open_premium(self):
         """
-        The value of a closed option at closing.
-        :return: The value of the closed option
-        :rtype: object
+        Calculates and returns the current market value of the option position. If the option does not
+        have any open contracts, the value is zero.
+        :return: The current premium value of the option.
+        :rtype: float
         """
-        if self._trade_open_date is None:
+        if self._option_quote is None:
+            return None
+
+        price = decimalize_2(self._option_quote.price)
+        quantity = decimalize_0(self._quantity)
+        premium = price * 100 * quantity
+
+        return float(premium)
+
+    def get_days_in_trade(self):
+        if self._trade_open.date is None:
             raise Exception("No trade has been opened.")
-        if self._trade_close_date is None:
-            raise Exception("The open trade has not been closed.")
-        close_value = self._trade_close_price * 100 * self._quantity
-        return close_value
+
+        # if the trade has any open contracts, use current quote date.
+        # if the trade is closed, then use the latest close date.
+        if self._quantity > 0:
+            dt_date = self._option_quote.quote_date.date()
+        else:
+            dt_date = self._trade_close_records[-1].date.date()
+
+        time_delta = self._trade_open.date.date() - dt_date
+        return time_delta.days
+
+    def itm(self):
+        """
+        In the Money
+        Returns a boolean value indicating whether the option is currently in the money.
+        :return: ITM returns true if the option is "in the money" and false if the option is "out of the money".
+            An option is ITM when the strike price has been exceeded by the price of the underlying.
+            The intrinsic value is the value it will have at expiration if the price of the underlying
+            does not change.
+        :rtype: bool
+        """
+        if self._option_quote is None:
+            return None
+
+        if self._option_contract.option_type == OptionType.CALL:
+            return True if self._option_quote.spot_price >= self._option_contract.strike else False
+        elif self._option_contract.option_type == OptionType.PUT:
+            return True if self._option_quote.spot_price <= self._option_contract.strike else False
+
+    def otm(self):
+        """
+        Out of the Money
+        Returns a boolean value indicating whether the option is currently out of the money.
+        :return: OTM returns true if the option is "out of the money" and false if the option is "in the money".
+            An option is OTM when an option has a strike price that the option has not
+            reached. The option has no instrinsic value. If the underlying price
+            does not change, the option will expire worthless.
+        :rtype: bool
+        """
+        if self._option_quote is None:
+            return None
+
+        if self._option_contract.option_type == OptionType.CALL:
+            return True if self._option_quote.spot_price < self._option_contract.strike else False
+        elif self._option_contract.option_type == OptionType.PUT:
+            return True if self._option_quote.spot_price > self._option_contract.strike else False
 
     @property
-    def option_type(self):
+    def option_contract(self):
         """
-        The option can be a call or a put.
-        :return: OptionType.CALL or OptionType.PUT
+        The option contains all the properties of a contract that do not change:
+
+        id: A unique identifier for the option
+        symbol: The ticker symbol of the underlying asset
+        expiration: The option expiration date
+        strike: The option strike price
+        option_type: OptionType.PUT or OptionType.CALL
+        :return: A named tuple with the following properties: id, symbol, expiration, strike, option_type
+        :rtype: OptionContract named tuple
         """
-        return self._option_type
+        return self._option_contract
 
     @property
-    def option_id(self):
+    def option_quote(self):
         """
-        The unique identifier for an option
-        :return: The option id that was set when the option was created
-        :rtype: Any
+        The option quote contains all the information that will change throughout it's lifetime, such as the price
+        The option quote has the following properties:
+
+        quote_date: The data date
+        spot_price: The price of the underlying as of the data date
+        bid: The bid price of the option as of the data date
+        ask: The ask price of the option as of the data date
+        price: The mid-point of the bid and ask price of the option as of the data date
+
+        These may be set to None if the option contract data is not populated
+
+        :return: A named tuple with the following properties: quote_date, spot_price, bid, ask, price
+        :rtype: OptionQuote named tuple
         """
-        return self._option_id
+        return self._option_quote
 
     @property
-    def ticker_symbol(self):
+    def extended_properties(self):
         """
-        The ticker symbol that was set when the option was created
-        :return: ticker symbol
-        :rtype: string
+        The extended properties are optional properties that can be set and updated on an option.
+        The extended properties contain the following: implied volatility, open interest,
+            the standard fee for trading 1 contract
+        :return: A named tuple with the following properties: implied_volatility, open_interest
+        :rtype: ExtendedProperties named tuple containing: implied_volatility, open_interest
         """
-        return self._ticker_symbol
+        return self._extended_properties
 
     @property
-    def strike(self):
+    def greeks(self):
         """
-        The strike that was set when the option was created
-        :return: strike
-        :rtype: float
+        The option greeks contains the current values as of the data date of the option_contract property
+        The greeks property contains the following attributes: delta, gamma, theta, vega, rho
+        These may be set to None if they are not populated
+
+        :return: A named tuple with the following properties: delta, gamma, theta, vega, rho
+        :rtype: A Greeks named tuple containing: delta, gamma, theta, vega, rho
         """
-        return self._strike
+        return self._greeks
 
     @property
-    def expiration(self):
+    def trade_close_records(self):
         """
-        The expiration that was set when the option was created
-        :return: expiration
-        :rtype: datetime.datetime
+        When a trade is closed, either fully or partially, a trade close record is created and added to the
+        close records. This methon will return all the trade close transaction records.
+        :return: The array containing all the closing trade records
+        :rtype: TradeClose, a numed tuple containing: date, quantity, price, premium, profit_loss, fees
         """
-        return self._expiration
-
-    @property
-    def bid(self):
-        """
-        :return: bid
-        :rtype: float
-        """
-        return self._bid
-
-    @property
-    def ask(self):
-        """
-        :return: ask
-        :rtype: float
-        """
-        return self._ask
-
-    @property
-    def price(self):
-        """
-        Price is a calculated field based on the mid-point between the bid and ask
-        :return: price
-        :rtype: float
-        """
-        return self._price
-
-    @property
-    def quote_date(self):
-        """
-        :return: current quote date for price and greeks
-        :rtype: datetime.datetime
-        """
-        return self._quote_date
-
-    @property
-    def spot_price(self):
-        """
-        :return: current price of underlying asset
-        :rtype: float
-        """
-        return self._spot_price
-
-    @property
-    def open_interest(self):
-        """
-        :return: open interest
-        :rtype: integer
-        """
-        return self._open_interest
-
-    @property
-    def iv(self):
-        """
-        :return: implied volatility
-        :rtype: float
-        """
-        return self._iv
-
-    @property
-    def delta(self):
-        """
-        :return: delta
-        :rtype: float
-        """
-        return self._delta
-
-    @property
-    def gamma(self):
-        """
-        :return: gamma
-        :rtype: float
-        """
-        return self._gamma
-
-    @property
-    def theta(self):
-        """
-        :return: theta
-        :rtype: float
-        """
-        return self._theta
-
-    @property
-    def vega(self):
-        """
-        :return: vega
-        :rtype: float
-        """
-        return self._vega
-
-    @property
-    def rho(self):
-        """
-        :return: rho
-        :rtype: float
-        """
-        return self._rho
-
-    @property
-    def trade_price(self):
-        """
-        :return: This is the price at the time when the option was opened
-        :rtype: float
-        """
-        return self._trade_price
-
-    @property
-    def trade_spot_price(self):
-        """
-        :return: The price of the underlying asset when the option was opened
-        :rtype: float
-        """
-        return self._trade_spot_price
-
-    @property
-    def trade_open_date(self):
-        """
-        :return: The date/time when the option was opened
-        :rtype: datetime.datetime
-        """
-        return self._trade_open_date
-
-    @property
-    def trade_close_date(self):
-        """
-        :return: The date/time when the option was closed
-        :rtype: datetime.datetime
-        """
-        return self._trade_close_date
-
-    @property
-    def fee(self):
-        """
-        The base transaction fee for a quantity of one option for one transaction
-        :return: fee
-        :rtype: float
-        """
-        return self._fee
+        return self._trade_close_records
 
     @property
     def total_fees(self):
         """
-        All the fees that have been incurred for this option
+        All the fees that have been incurred for this option.
+        A fee per contract amount can be set when the option is created. When the option is traded,
+        the fee will be applied for the number of contracts traded and added to the total fees.
         :return: current fees
         :rtype: float
         """
@@ -548,7 +580,7 @@ class Option:
         """
         The position type is determined when the option is opened. It is either long or short.
             An option is long if the quantity is positive. It is bought to open and sold to close.
-            An option is long if the quantity is negative. It is sold to open and bought to close
+            An option is short if the quantity is negative. It is sold to open and bought to close
         :return: OptionPositionType of LONG or SHORT
         :rtype: OptionPositionType
         """
@@ -564,49 +596,11 @@ class Option:
         return self._quantity
 
     @property
-    def trade_dte(self):
-        """
-        Trade DTE is days to expiration calculated from the trade open date
-        :return: The number of days to expiration when the trade was opened
-        :rtype: integer
-        """
-        return self._trade_dte
+    def fee_per_contract(self):
+        return self._fee
 
-    @property
-    def itm(self):
-        """
-        In the Money
-        :return: ITM returns true if the option is "in the money" and false if the option is "out of the money".
-            An option is ITM when the strike price has been exceeded by the price of the underlying.
-            The intrinsic value is the value it will have at expiration if the price of the underlying
-            does not change.
-        :rtype: bool
-        """
-        itm = None
-
-        if self._spot_price is not None and self._option_type == OptionType.PUT:
-            itm = True if self._strike >= self._spot_price else False
-        elif self._spot_price is not None and self._option_type == OptionType.CALL:
-            itm = True if self._strike <= self._spot_price else False
-
-        return itm
-
-    @property
-    def otm(self):
-        """
-        Out of the Money
-        :return: OTM returns true if the option is "out of the money" and false if the option is "in the money".
-            An option is OTM when an option has a strike price that the option has not
-            reached. The option has no instrinsic value. If the underlying price
-            does not change, the option will expire worthless.
-        :rtype: bool
-        """
-        otm = None
-        if self._spot_price is not None and self._option_type == OptionType.PUT:
-            otm = True if self.strike < self.spot_price else False
-        elif self._spot_price is not None and self._option_type == OptionType.CALL:
-            otm = True if self.strike > self.spot_price else False
-
-        return otm
-
-
+    @fee_per_contract.setter
+    def fee_per_contract(self, value):
+        if math.isnan(value) or value < 0:
+            raise ValueError("Fee per contract must be zero or a positive number")
+        self._fee = value
