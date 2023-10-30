@@ -4,6 +4,7 @@ from options_framework.option_types import OptionPositionType
 import options_framework.option as option
 from options_test_helper import *
 
+
 # Test initialization
 def test_option_init_with_only_option_contract_parameters():
     _id = 1
@@ -29,7 +30,8 @@ def test_option_init_with_quote_data():
     _id = 1
     strike = 4305
     bid, ask, price, spot_price = (32.7, 33.2, 32.95, 4308)
-    test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL, test_quote_date, spot_price, bid, ask, price)
+    test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL, test_quote_date, spot_price, bid, ask,
+                         price)
 
     option_quote = test_option.option_quote
 
@@ -47,9 +49,10 @@ def test_option_init_with_extended_properties():
     strike = 4305
     fee = 0.5
 
-    test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL, test_quote_date, spot_price, bid, ask, price,
-                       open_interest=open_interest, implied_volatility=iv, delta=delta, gamma=gamma,
-                       theta=theta, vega=vega, rho=rho, fee=fee)
+    test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL, test_quote_date, spot_price, bid, ask,
+                         price,
+                         open_interest=open_interest, implied_volatility=iv, delta=delta, gamma=gamma,
+                         theta=theta, vega=vega, rho=rho, fee=fee)
 
     option_contract = test_option.option_contract
     option_quote = test_option.option_quote
@@ -76,6 +79,7 @@ def test_option_init_with_extended_properties():
 
     assert test_option._fee == fee
 
+
 def test_option_init_with_user_defined_attributes():
     _id = 1
     strike = 4305
@@ -85,11 +89,13 @@ def test_option_init_with_user_defined_attributes():
                                                                                       -0.4916, 4308, 0.0951, 0.0048,
                                                                                       -1.0935, 3.5141, 24, -90.0008)
 
-    test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL, test_quote_date, spot_price, bid, ask, price,
-                    open_interest=open_interest, iv=iv, delta=delta, gamma=gamma,
-                    theta=theta, vega=vega, rho=rho, user_defined=test_value)
+    test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL, test_quote_date, spot_price, bid, ask,
+                         price,
+                         open_interest=open_interest, iv=iv, delta=delta, gamma=gamma,
+                         theta=theta, vega=vega, rho=rho, user_defined=test_value)
 
     assert test_option.user_defined == test_value
+
 
 def test_option_init_raises_exception_if_missing_required_fields():
     # missing id
@@ -127,6 +133,7 @@ def test_option_init_raises_exception_if_quote_date_is_greater_than_expiration()
         Option(id, ticker, strike, test_expiration, OptionType.CALL, quote_date=bad_open_date,
                spot_price=spot_price, bid=bid, ask=ask, price=price)
 
+
 # repr tests
 def test_call_option_string_representation():
     call = get_4380_call_option()
@@ -135,12 +142,14 @@ def test_call_option_string_representation():
 
     assert call_repr == expected_call_repr
 
+
 def test_put_option_string_representation():
     put = get_4210_put_option()
     expected_put_repr = '<PUT SPXW 4210 2021-07-16>'
     put_repr = str(put)
 
     assert put_repr == expected_put_repr
+
 
 # update tests
 def test_update_sets_correct_values():
@@ -164,6 +173,7 @@ def test_update_sets_correct_values():
     assert call.option_quote.spot_price == 4330.27
     assert call.option_quote.quote_date == test_update_quote_date
     assert call.user_defined == test_value
+
 
 def test_update_raises_exception_if_missing_required_fields():
     call = get_4390_call_option()
@@ -193,6 +203,7 @@ def test_update_raises_exception_if_missing_required_fields():
     with pytest.raises(ValueError, match="price is required"):
         call.update(quote_date=test_update_quote_date, spot_price=4330, bid=6, ask=6.2, price=price)
 
+
 def test_update_raises_exception_if_quote_date_is_greater_than_expiration():
     bad_quote_date = datetime.datetime.strptime("2021-07-17 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
     put = get_4210_put_option()
@@ -200,7 +211,7 @@ def test_update_raises_exception_if_quote_date_is_greater_than_expiration():
         (4330.27, 8.8, 9.1, 8.95, -0.1471, 0.002, -0.9392, 1.9709, 349)
     with pytest.raises(Exception, match="Cannot update to a date past the option expiration"):
         put.update(bad_quote_date, spot_price, bid, ask, price, delta=delta,
-                  gamma=gamma, theta=theta, vega=vega, open_interest=open_interest)
+                   gamma=gamma, theta=theta, vega=vega, open_interest=open_interest)
 
 
 # open trade
@@ -220,9 +231,11 @@ def test_open_trade_sets_correct_values():
     # kwargs were set as attributes
     assert call.spot_price == 4308.00
 
+
 def test_option_that_is_not_open_has_none_position_type():
     call = get_4380_call_option()
     assert call.position_type is None
+
 
 @pytest.mark.parametrize("quantity, position_type", [(10, OptionPositionType.LONG), (-10, OptionPositionType.SHORT)])
 def test_open_trade_has_correct_position_type(quantity, position_type):
@@ -231,19 +244,23 @@ def test_open_trade_has_correct_position_type(quantity, position_type):
 
     assert call.position_type == position_type
 
+
 @pytest.mark.parametrize("quantity, expected_premium", [(10, 5_550), (1, 555), (-10, -5_550)])
 def test_open_trade_returns_correct_open_value(quantity, expected_premium):
     call = get_4380_call_option()
     premium = call.open_trade(quantity)
     assert premium == expected_premium
 
+
 @pytest.mark.parametrize("quantity, incur_fees_flag, expected_fees", [(10, True, 5.0), (2, True, 1.0), (-3, True, 1.5),
-                                                                      (10, False, 0.0), (2, False, 0.0), (-3, False, 0.0)])
+                                                                      (10, False, 0.0), (2, False, 0.0),
+                                                                      (-3, False, 0.0)])
 def test_open_trade_sets_total_fees_when_incur_fees_flag_is_true(quantity, incur_fees_flag, expected_fees):
     call = get_4380_call_option()
     call.open_trade(quantity=quantity, incur_fees=incur_fees_flag)
 
     assert call.total_fees == expected_fees
+
 
 def test_open_trade_when_there_is_no_quote_data_raises_exception():
     _id = 6
@@ -252,6 +269,7 @@ def test_open_trade_when_there_is_no_quote_data_raises_exception():
     quantity = 10
     with pytest.raises(ValueError, match="Cannot open a position that does not have price data"):
         test_option.open_trade(quantity)
+
 
 def test_open_trade_with_invalid_quantity_raises_exception():
     call = get_4390_call_option()
@@ -270,6 +288,7 @@ def test_open_trade_with_invalid_quantity_raises_exception():
     quantity = 0
     with pytest.raises(ValueError, match="Quantity must be a non-zero integer."):
         call.open_trade(quantity)
+
 
 def test_open_trade_when_trade_is_already_open_raises_exception():
     call = get_4390_call_option()
@@ -290,6 +309,7 @@ def test_close_trade_closes_entire_position_with_default_values():
 
     assert call.quantity == 0
 
+
 def test_close_partial_trade():
     call = get_4390_call_option()
     quantity = 10
@@ -299,6 +319,7 @@ def test_close_partial_trade():
     call.close_trade(quantity=close_quantity)  # Missing or none quantity closes entire position
 
     assert call.quantity == 8
+
 
 @pytest.mark.parametrize("open_qty, close1_qty, close2_qty, expected_qty", [(10, 2, 8, 0), (10, 2, 3, 5),
                                                                             (-10, 2, 8, 0), (-10, 2, 3, -5)])
@@ -317,6 +338,7 @@ def test_close_trade_with_multiple_partial_close(open_qty, close1_qty, close2_qt
 
     assert call.quantity == expected_qty
 
+
 @pytest.mark.parametrize("open_quantity, close_quantity", [(10, 12), (-10, -12)])
 def test_close_trade_with_greater_than_quantity_open_raises_exception(open_quantity, close_quantity):
     call = get_4380_call_option()
@@ -325,6 +347,7 @@ def test_close_trade_with_greater_than_quantity_open_raises_exception(open_quant
 
     with pytest.raises(ValueError, match="Quantity to close is greater than the current open quantity."):
         call.close_trade(close_quantity)
+
 
 @pytest.mark.parametrize("quantity", [10, -10])
 def test_close_partial_trade_with_greater_than_remaining_quantity_raises_exception(quantity):
@@ -337,9 +360,12 @@ def test_close_partial_trade_with_greater_than_remaining_quantity_raises_excepti
     with pytest.raises(ValueError, match="Quantity to close is greater than the current open quantity."):
         call.close_trade(quantity)
 
+
 @pytest.mark.parametrize("incur_fees_flag, open_quantity, close_quantity, fee_amount", [(True, 10, 10, 5.0),
-                                                                    (True, -10, 10, 5.0), (True, 10, 2, 1.0),
-                                                                    (False, 10, 10, 0.0), (False, -10, 10, 0.0),
+                                                                                        (True, -10, 10, 5.0),
+                                                                                        (True, 10, 2, 1.0),
+                                                                                        (False, 10, 10, 0.0),
+                                                                                        (False, -10, 10, 0.0),
                                                                                         (False, -10, 2, 0.0)])
 def test_close_trade_updates_total_fees_incur_fees_flag(incur_fees_flag, open_quantity, close_quantity, fee_amount):
     call = get_4380_call_option()
@@ -350,56 +376,88 @@ def test_close_trade_updates_total_fees_incur_fees_flag(incur_fees_flag, open_qu
 
     assert call.total_fees == fee_amount
 
-@pytest.mark.parametrize("open_qty, close_qty, close_date, close_price, close_prem, close_pnl, close_fees, remaining_qty",
-                         [(10, 10, test_update_quote_date, 8.1, 8_100.0, 2_550.0, 5, 0),
-                          (-10, 10, test_update_quote_date, 8.1, -8_100, -2_550, 5, 0),
-                          (10, 1, test_update_quote_date, 8.1, 810.0, 255.0, 0.5, 9),
-                          (-10, 5, test_update_quote_date, 8.1, -4_050.0, -1_275.0, 2.5, -5)])
+
+@pytest.mark.parametrize(
+    "open_qty, close_qty, close_date, close_price, close_pnl, pnl_pct, close_fees, remaining_qty",
+    [
+        (10, 10, test_update_quote_date, 8.1, 2_550.0, 0.4595, 5, 0),
+        (-10, 10, test_update_quote_date, 8.1, -2_550, -0.4595, 5, 0),
+        (10, 1, test_update_quote_date, 8.1, 255.0, 0.0459, 0.5, 9),
+        (-10, 5, test_update_quote_date, 8.1, -1_275.0, -0.2297, 2.5, -5)
+    ])
 def test_close_trade_values_with_one_close_trade(open_qty, close_qty, close_date, close_price,
-                                                 close_prem, close_pnl, close_fees, remaining_qty):
+                                                 close_pnl, pnl_pct, close_fees, remaining_qty):
     call = get_4380_call_option()
     call.open_trade(open_qty)
     update_4380_call_option(call)
 
-    prem = call.close_trade(quantity=close_qty)
-    assert prem == close_prem
+    pnl = call.close_trade(quantity=close_qty)
 
     trade_close_info = call.get_trade_close_info()
     assert trade_close_info.date == close_date
-    assert trade_close_info.quantity == close_qty if open_qty < 0 else close_qty*-1
+    assert trade_close_info.quantity == close_qty if open_qty < 0 else close_qty * -1
     assert trade_close_info.price == close_price
-    assert trade_close_info.premium == close_prem
     assert trade_close_info.profit_loss == close_pnl
+    assert trade_close_info.profit_loss_percent == pnl_pct
     assert trade_close_info.fees == close_fees
 
     assert call.quantity == remaining_qty
+    assert pnl == close_pnl
 
-@pytest.mark.parametrize("open_qty, close_qty, close_date, close_price, close_prem, close_pnl, close_fees, remaining_qty",
-                         [(10, 2, test_update_quote_date2, 11.91, 5_955.0, 3_180.0, 2.5, 5),
-                          (-10, 3, test_update_quote_date2, 11.73, -8_210.0, -4_325, 3.5, -3),
-                          (10, 1, test_update_quote_date2, 12.33, 3_700.0, 2_035.0, 1.5, 7),
-                          (-10, 4, test_update_quote_date2, 11.63, -10_465.0, -5_470.0, 4.5, -1)])
-def test_close_trade_values_with_multiple_close_trades(open_qty, close_qty, close_date, close_price, close_prem,
-                                                       close_pnl, close_fees, remaining_qty):
-    call = get_4380_call_option()
-    call.open_trade(open_qty)
-    update_4380_call_option(call)
+@pytest.mark.parametrize(
+    "open_qty, close_qty, close_date, close_price, close_pnl, pnl_pct, close_fees, remaining_qty",
+    [(10, 2, test_update_quote_date2, 11.91, 3_180.0, 0.5730, 2.5, 5),
+     (-10, 3, test_update_quote_date2, 11.73, -4_325, -0.7793, 3.5, -3),
+     (10, 1, test_update_quote_date2, 12.33, 2_035.0, 0.3667, 1.5, 7),
+     (-10, 4, test_update_quote_date2, 11.63, -5_470.0, -0.9856, 4.5, -1)])
+def test_call_option_close_trade_values_with_multiple_close_trades(open_qty, close_qty, close_date, close_price,
+                                                                   close_pnl, pnl_pct, close_fees, remaining_qty):
+    test_option = get_4380_call_option()
+    test_option.open_trade(open_qty)
+    update_4380_call_option(test_option)
 
-    call.close_trade(quantity=close_qty)
-    update_4380_call_option_2(call)
-    call.close_trade(quantity=close_qty+1)
+    test_option.close_trade(quantity=close_qty)
+    update_4380_call_option_2(test_option)
+    test_option.close_trade(quantity=close_qty + 1)
 
-    trade_close_info = call.get_trade_close_info()
+    trade_close_info = test_option.get_trade_close_info()
 
     assert trade_close_info.date == close_date
 
     assert trade_close_info.price == close_price
-    assert trade_close_info.premium == close_prem
     assert trade_close_info.profit_loss == close_pnl
     assert trade_close_info.fees == close_fees
 
-    assert trade_close_info.quantity == (open_qty - remaining_qty)*-1
-    assert call.quantity == remaining_qty
+    assert trade_close_info.quantity == (open_qty - remaining_qty) * -1
+    assert test_option.quantity == remaining_qty
+
+
+@pytest.mark.parametrize(
+    "open_qty, close_qty, close_date, close_price, close_pnl, pnl_pct, close_fees, remaining_qty",
+    [(10, 2, test_update_quote_date2, 8.9, -3_050, -0.2033, 2.5, 5),
+     (-10, 3, test_update_quote_date2, 8.94, 4_245, 0.283, 3.5, -3),
+     (10, 1, test_update_quote_date2, 8.82, -1_855.0, -0.1237, 1.5, 7),
+     (-10, 4, test_update_quote_date2, 8.96, 5_440.0, 0.3627, 4.5, -1)])
+def test_put_option_close_trade_values_with_multiple_close_trades(open_qty, close_qty, close_date, close_price,
+                                                                  close_pnl, pnl_pct, close_fees, remaining_qty):
+    test_option = get_4220_put_option()
+    test_option.open_trade(open_qty)
+    update_4220_put_option(test_option)
+
+    test_option.close_trade(quantity=close_qty)
+    update_4220_put_option_2(test_option)
+    test_option.close_trade(quantity=close_qty + 1)
+
+    trade_close_info = test_option.get_trade_close_info()
+
+    assert trade_close_info.date == close_date
+
+    assert trade_close_info.price == close_price
+    assert trade_close_info.profit_loss == close_pnl
+    assert trade_close_info.fees == close_fees
+
+    assert trade_close_info.quantity == (open_qty - remaining_qty) * -1
+    assert test_option.quantity == remaining_qty
 
 
 def test_trade_close_records_returns_all_close_trades():
@@ -418,6 +476,7 @@ def test_trade_close_records_returns_all_close_trades():
     records = call.trade_close_records
     assert len(records) == 2
 
+
 def test_total_fees_returns_all_fees_incurred():
     # standard fee is 0.50 per contract
     call = get_4380_call_option()
@@ -435,6 +494,7 @@ def test_total_fees_returns_all_fees_incurred():
 
     assert call.total_fees == 7.5
 
+
 def test_get_closing_price():
     call = get_4320_call_option()
     call.open_trade(1)
@@ -445,12 +505,15 @@ def test_get_closing_price():
 
     assert close_price == expected_close_price
 
+
 def test_get_close_price_on_option_that_has_not_been_traded_raises_exception():
     call = get_4320_call_option()
     update_4320_call_option(call)
 
-    with pytest.raises(ValueError, match="Cannot determine closing price on option that does not have an opening trade"):
+    with pytest.raises(ValueError,
+                       match="Cannot determine closing price on option that does not have an opening trade"):
         call.get_closing_price()
+
 
 @pytest.mark.parametrize("open_quantity, bid, ask, price, expected_closing_price",
                          [(10, 0.0, 0.10, 0.05, 0.0), (-10, 0.0, 0.10, 0.05, 0.10)])
@@ -462,6 +525,7 @@ def test_get_closing_price_on_call_option_when_bid_is_zero(open_quantity, bid, a
     call.update(test_update_quote_date, spot_price, bid, ask, price)
 
     assert call.get_closing_price() == expected_closing_price
+
 
 @pytest.mark.parametrize("open_quantity, bid, ask, price, expected_closing_price",
                          [(10, 0.0, 0.10, 0.05, 0.0), (-10, 0.0, 0.10, 0.05, 0.10)])
@@ -491,6 +555,7 @@ def test_get_close_price_is_zero_when_option_expires_otm():
     # 4076 > 4075, so this option expires OTM
     assert put.get_closing_price() == 0.0
 
+
 def test_dte_is_none_when_option_does_not_have_quote_data():
     _id = 1
     strike = 4210
@@ -498,12 +563,14 @@ def test_dte_is_none_when_option_does_not_have_quote_data():
 
     assert test_option.dte() is None
 
+
 def test_dte_when_option_has_quote_data():
     put = get_4210_put_option()
 
     expected_dte = 15
     actual_dte = put.dte()
     assert actual_dte == expected_dte
+
 
 def test_dte_is_updated_when_quote_date_is_updated():
     call = get_4390_call_option()
@@ -515,10 +582,11 @@ def test_dte_is_updated_when_quote_date_is_updated():
     expected_dte = 14
     assert call.dte() == expected_dte
 
+
 @pytest.mark.parametrize("expiration_datetime",
-            [datetime.datetime.strptime("2021-07-16 09:31:00.000000", "%Y-%m-%d %H:%M:%S.%f"),
-             datetime.datetime.strptime("2021-07-16 11:00:00.000000", "%Y-%m-%d %H:%M:%S.%f"),
-             datetime.datetime.strptime("2021-07-16 16:15:00.000000", "%Y-%m-%d %H:%M:%S.%f")])
+                         [datetime.datetime.strptime("2021-07-16 09:31:00.000000", "%Y-%m-%d %H:%M:%S.%f"),
+                          datetime.datetime.strptime("2021-07-16 11:00:00.000000", "%Y-%m-%d %H:%M:%S.%f"),
+                          datetime.datetime.strptime("2021-07-16 16:15:00.000000", "%Y-%m-%d %H:%M:%S.%f")])
 def test_dte_is_zero_on_expiration_day(expiration_datetime):
     call = get_4390_call_option()
     spot_price, bid, ask, price = \
@@ -526,6 +594,7 @@ def test_dte_is_zero_on_expiration_day(expiration_datetime):
     call.update(expiration_datetime, spot_price, bid, ask, price)
     expected_dte = 0
     assert call.dte() == expected_dte
+
 
 def test_otm_and_itm_equal_none_when_option_does_not_have_quote_data():
     _id = 1
@@ -536,9 +605,10 @@ def test_otm_and_itm_equal_none_when_option_does_not_have_quote_data():
     assert test_option.itm() is None
     assert test_option.otm() is None
 
+
 @pytest.mark.parametrize("spot_price, strike, expected_value", [(4140.0, 4140.0, False),
-                                                                   (4140.0, 4120.0, False),
-                                                                   (4140.0, 4150.0, True)])
+                                                                (4140.0, 4120.0, False),
+                                                                (4140.0, 4150.0, True)])
 def test_call_option_otm(spot_price, strike, expected_value):
     _id = 1
     test_option = Option(_id, ticker, strike, test_expiration, option_type=OptionType.CALL)
@@ -547,9 +617,10 @@ def test_call_option_otm(spot_price, strike, expected_value):
     actual_value = test_option.otm()
     assert actual_value == expected_value
 
+
 @pytest.mark.parametrize("spot_price, strike, expected_value", [(4140.0, 4140.0, False),
-                                                                   (4140.0, 4120.0, True),
-                                                                   (4140.0, 4150.0, False)])
+                                                                (4140.0, 4120.0, True),
+                                                                (4140.0, 4150.0, False)])
 def test_put_option_otm(spot_price, strike, expected_value):
     _id = 1
     test_option = Option(_id, ticker, strike, test_expiration, option_type=OptionType.PUT)
@@ -558,9 +629,10 @@ def test_put_option_otm(spot_price, strike, expected_value):
     actual_value = test_option.otm()
     assert actual_value == expected_value
 
+
 @pytest.mark.parametrize("spot_price, strike, expected_value", [(4140.0, 4140.0, True),
-                                                                   (4140.0, 4120.0, True),
-                                                                   (4140.0, 4150.0, False)])
+                                                                (4140.0, 4120.0, True),
+                                                                (4140.0, 4150.0, False)])
 def test_call_option_itm(spot_price, strike, expected_value):
     _id = 1
     test_option = Option(_id, ticker, strike, test_expiration, option_type=OptionType.CALL)
@@ -569,9 +641,10 @@ def test_call_option_itm(spot_price, strike, expected_value):
     actual_value = test_option.itm()
     assert actual_value == expected_value
 
+
 @pytest.mark.parametrize("spot_price, strike, expected_value", [(4140.0, 4140.0, True),
-                                                                   (4140.0, 4120.0, False),
-                                                                   (4140.0, 4150.0, True)])
+                                                                (4140.0, 4120.0, False),
+                                                                (4140.0, 4150.0, True)])
 def test_put_option_itm(spot_price, strike, expected_value):
     _id = 1
     test_option = Option(_id, ticker, strike, test_expiration, option_type=OptionType.PUT)
@@ -580,11 +653,13 @@ def test_put_option_itm(spot_price, strike, expected_value):
     actual_value = test_option.itm()
     assert actual_value == expected_value
 
+
 def test_is_expired_returns_none_when_no_quote_data():
     _id = 1
     test_option = Option(_id, ticker, 1000.0, test_expiration, option_type=OptionType.PUT)
 
     assert test_option.is_expired() is None
+
 
 @pytest.mark.parametrize("expiration_date_test, quote_date, expected_result", [
     (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
@@ -610,6 +685,7 @@ def test_is_expired_returns_correct_result(expiration_date_test, quote_date, exp
 
     assert actual_result == expected_result
 
+
 def test_is_trade_open_returns_false_if_no_trade_was_opened():
     call = get_4390_call_option()
     expected_result = False
@@ -623,6 +699,7 @@ def test_is_trade_open_returns_true_if_trade_was_opened():
 
     assert call.is_trade_open() == expected_result
 
+
 def test_is_trade_open_returns_true_if_trade_was_opened_and_partially_closed():
     call = get_4390_call_option()
     call.open_trade(10)
@@ -630,6 +707,7 @@ def test_is_trade_open_returns_true_if_trade_was_opened_and_partially_closed():
     expected_result = True
 
     assert call.is_trade_open() == expected_result
+
 
 def test_is_trade_open_returns_false_if_trade_was_opened_and_then_closed():
     call = get_4390_call_option()
@@ -639,17 +717,20 @@ def test_is_trade_open_returns_false_if_trade_was_opened_and_then_closed():
 
     assert call.is_trade_open() == expected_result
 
+
 def test_get_profit_loss_raises_exception_if_trade_was_not_opened():
     call = get_4380_call_option()
 
     with pytest.raises(Exception, match="No trade has been opened."):
-        call.get_profit_loss()
+        call.get_open_profit_loss()
+
 
 def test_get_profit_loss_is_zero_if_quote_data_is_not_updated():
     call = get_4380_call_option()
     call.open_trade(10)
 
-    assert call.get_profit_loss() == 0.0
+    assert call.get_open_profit_loss() == 0.0
+
 
 def test_get_profit_loss_is_zero_when_no_contracts_are_open():
     call = get_4380_call_option()
@@ -657,7 +738,8 @@ def test_get_profit_loss_is_zero_when_no_contracts_are_open():
     update_4380_call_option(call)
     call.close_trade(10)
 
-    assert call.get_profit_loss() == 0.0
+    assert call.get_open_profit_loss() == 0.0
+
 
 @pytest.mark.parametrize("test_option, quantity, spot_price, bid, ask, price, expected_profit_loss", [
     (get_4380_call_option(), 10, 4330.27, 8, 8.2, 8.10, 2_550.0),
@@ -677,5 +759,85 @@ def test_get_profit_loss_value(test_option, quantity, spot_price, bid, ask, pric
     test_option.open_trade(quantity)
     test_option.update(test_update_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
-    assert test_option.get_profit_loss() == expected_profit_loss
+    assert test_option.get_open_profit_loss() == expected_profit_loss
 
+
+def test_get_profit_loss_percent_raises_exception_if_trade_was_not_opened():
+    call = get_4380_call_option()
+
+    with pytest.raises(Exception, match="No trade has been opened."):
+        call.get_open_profit_loss_percent()
+
+
+def test_get_profit_loss_percent_return_zero_when_no_contracts_are_open():
+    call = get_4380_call_option()
+    call.open_trade(10)
+    update_4380_call_option(call)
+    call.close_trade(10)
+
+    assert call.get_open_profit_loss_percent() == 0.0
+
+
+@pytest.mark.parametrize("test_option, quantity, spot_price, bid, ask, price, expected_profit_loss", [
+    (get_4380_call_option(), 10, 4330.27, 8, 8.2, 8.10, 0.4595),
+    (get_4380_call_option(), 10, 4349.73, 14.30, 14.60, 14.45, 1.6036),
+    (get_4380_call_option(), 10, 4320.22, 5.4, 5.7, 5.55, 0.0),
+    (get_4380_call_option(), -10, 4330.27, 8, 8.2, 8.10, -0.4595),
+    (get_4380_call_option(), -10, 4349.73, 14.30, 14.60, 14.45, -1.6036),
+    (get_4380_call_option(), -10, 4320.22, 5.4, 5.7, 5.55, 0.0),
+    (get_4220_put_option(), 10, 4330.27, 9.5, 9.8, 9.65, -0.3567),
+    (get_4220_put_option(), 10, 4349.73, 8.30, 8.50, 8.4, -0.4400),
+    (get_4220_put_option(), 10, 4308, 14.8, 15.2, 15.00, 0.0),
+    (get_4220_put_option(), -10, 4330.27, 9.5, 9.8, 9.65, 0.3567),
+    (get_4220_put_option(), -10, 4349.73, 8.30, 8.50, 8.4, 0.4400),
+    (get_4220_put_option(), -10, 4308, 14.8, 15.2, 15.00, 0.0)
+])
+def test_get_profit_loss_percent_value(test_option, quantity, spot_price, bid, ask, price, expected_profit_loss):
+    test_option.open_trade(quantity)
+    test_option.update(test_update_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+
+    actual_pnl_pct = test_option.get_open_profit_loss_percent()
+    assert actual_pnl_pct == expected_profit_loss
+
+def test_get_current_open_premium():
+    test_option = get_4380_call_option()
+    test_option.open_trade(10)
+
+    assert test_option.get_current_open_premium() == 5_550.0
+
+    update_4380_call_option(test_option)
+    test_option.close_trade(3)
+
+    assert test_option.get_current_open_premium() == 5_670.0
+
+    update_4380_call_option_2(test_option)
+    test_option.close_trade(3)
+
+    assert test_option.get_current_open_premium() == 5_780.0
+
+def test_get_days_in_trade():
+    test_option = get_4380_call_option()
+    test_option.open_trade(10)
+
+    assert test_option.get_days_in_trade() == 0
+    quote_date, spot_price, bid, ask, price = (
+        datetime.datetime.strptime("2021-07-07 11:14:00.000000", "%Y-%m-%d %H:%M:%S.%f"),
+        4344.30, 12.30, 12.60, 12.45)
+    test_option.update(quote_date, spot_price, bid, ask, price)
+
+    assert test_option.get_days_in_trade() == 6
+
+    quote_date, spot_price, bid, ask, price = (
+        datetime.datetime.strptime("2021-07-13 10:53:00.000000", "%Y-%m-%d %H:%M:%S.%f"),
+        4385.25, 20.90, 21.20, 21.05)
+    test_option.update(quote_date, spot_price, bid, ask, price)
+    test_option.close_trade()
+
+    assert test_option.get_days_in_trade() == 12
+
+    quote_date, spot_price, bid, ask, price = (
+        datetime.datetime.strptime("2021-07-15 10:05:00.000000", "%Y-%m-%d %H:%M:%S.%f"),
+        4367.98, 7.40, 7.50, 7.50)
+    test_option.update(quote_date, spot_price, bid, ask, price)
+
+    assert test_option.get_days_in_trade() == 12

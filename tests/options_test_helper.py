@@ -52,7 +52,7 @@ def update_4220_put_option(option):
 def update_4220_put_option_2(option):
     spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest = (
         4349.73, 8.30, 8.50, 8.4, -0.1362, 0.0018, -0.9335, 1.8654, 878)
-    option.update(test_update_quote_date, spot_price, bid, ask, price, delta=delta, gamma=gamma, theta=theta, vega=vega,
+    option.update(test_update_quote_date2, spot_price, bid, ask, price, delta=delta, gamma=gamma, theta=theta, vega=vega,
                   open_interest=open_interest)  # 9.65
 
 def get_4100_put_option():

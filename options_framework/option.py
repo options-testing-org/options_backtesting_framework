@@ -11,7 +11,7 @@ OptionQuote = namedtuple("OptionQuote", "quote_date spot_price bid ask price")
 Greeks = namedtuple("Greeks", "delta gamma theta vega rho")
 ExtendedProperties = namedtuple("AdditionalOptionFields", "implied_volatility open_interest")
 TradeOpen = namedtuple("TradeOpen", "date quantity price premium fees")
-TradeClose = namedtuple("TradeClose", "date quantity price premium profit_loss fees")
+TradeClose = namedtuple("TradeClose", "date quantity price profit_loss profit_loss_percent fees")
 
 
 class Option:
@@ -228,11 +228,12 @@ class Option:
 
     def close_trade(self, quantity=None, incur_fees=True):
         """
-        Calculates the closing price and sets the close date and price for the option
+        Calculates the closing price and sets the close date, price and profit/loss info for the
+        quantity closed.
         :param quantity: If a quantity is provided, only that quantity will be closed.
         :param incur_fees: if True, calculates the fees for the closing transaction
             and adds that to the total fees
-        :return: the value of the option at the closing price
+        :return: the profit/loss of the closed quantity
         :rtype: float
         """
         if self._trade_open.date is None:
@@ -242,9 +243,9 @@ class Option:
         if quantity == 0:
             raise ValueError("Must supply a non-zero quantity.")
 
-        quantity = self._quantity if quantity is None else quantity
+        quantity = decimalize_0(self._quantity) if quantity is None else decimalize_0(quantity)
         if self._position_type == OptionPositionType.LONG:
-            quantity = decimalize_0(quantity)*-1
+            quantity = quantity*-1
 
         if abs(quantity) > abs(self._quantity):
             raise ValueError("Quantity to close is greater than the current open quantity.")
@@ -252,19 +253,22 @@ class Option:
         # date quantity, price, close_value
         close_price = decimalize_2(self.get_closing_price())
         open_price = decimalize_2(self._trade_open.price)
-        premium = (close_price * 100 * quantity) * -1
-        profit_loss = (open_price * 100 * quantity) + premium
+        profit_loss = (open_price * 100 * quantity) - (close_price * 100 * quantity)
+        profit_loss_percent = decimalize_4((open_price - close_price)/open_price) * (quantity/abs(quantity))
+
         fees = 0
         if incur_fees:
             fees = self._incur_fees(abs(quantity))
 
         # date quantity price premium profit_loss fees
         trade_close_record = TradeClose(date=self._option_quote.quote_date, quantity=int(quantity),
-                                        price=float(close_price), premium=float(premium), profit_loss=float(profit_loss),
+                                        price=float(close_price),
+                                        profit_loss=float(profit_loss),
+                                        profit_loss_percent=float(decimalize_4(profit_loss_percent)),
                                         fees=fees)
         self._trade_close_records.append(trade_close_record)
         self._quantity = int(quantity) + self._quantity
-        return float(premium)
+        return float(profit_loss)
 
     def get_closing_price(self):
         """
@@ -351,13 +355,16 @@ class Option:
         records = self._trade_close_records
         date = records[-1].date
         quantity = sum(decimalize_0(x.quantity) for x in records)
+        open_premium = decimalize_2(self._trade_open.premium)
         price = decimalize_2(sum((decimalize_2(x.price)*decimalize_0(x.quantity))/quantity for x in records))
-        premium = sum(decimalize_2(x.premium) for x in records)
+
         profit_loss = sum(decimalize_2(x.profit_loss) for x in records)
+        profit_loss_percent = decimalize_4(profit_loss / open_premium) * (quantity*-1 / abs(quantity))
         fees = sum(x.fees for x in records)
 
-        trade_close = TradeClose(date=date, quantity=int(quantity), price=float(price), premium=float(premium),
-                                 profit_loss=float(profit_loss), fees=fees)
+        trade_close = TradeClose(date=date, quantity=int(quantity), price=float(price),
+                                 profit_loss=float(profit_loss), profit_loss_percent=float(profit_loss_percent),
+                                 fees=fees)
 
         return trade_close
 
@@ -398,9 +405,10 @@ class Option:
         """
         return self._quantity != 0
 
-    def get_profit_loss(self):
+    def get_open_profit_loss(self):
         """
-        The get_profit_loss method returns the difference in value between the trade open and the current quote.
+        Returns the current unrealized profit/loss. This is the difference in value between
+        the trade open and the current quote.
         The value is determined by multiplying the price difference by the quantity and number
         of underlying units the option represents (100).
         This method uses the current price of the option. This may be different than the closing
@@ -417,29 +425,59 @@ class Option:
         value = price_diff * 100 * quantity
         return float(value)
 
-    def get_profit_loss_percent(self):
+    def get_total_profit_loss(self):
         """
+        Returns the total realized and unrealized profit/loss.
+        :return: Returns the total profit/loss for both open and closed contracts.
+        :rtype: float
+        """
+        if self._trade_open is None:
+            raise Exception("No trade has been opened.")
+
+        unrealized_pnl = self.get_open_profit_loss()
+        # if no contracts were closed, this is just the open pnl
+        if not self._trade_close_records:
+            return unrealized_pnl
+        realized_pnl = self._trade_close.profit_loss
+
+        total_profit_loss = unrealized_pnl + realized_pnl
+        return total_profit_loss
+
+    def get_open_profit_loss_percent(self):
+        """
+        Returns the unrealized profit/loss percent.
         The percentage gain or loss based on the current price compared to the trade price of an option.
         :return: the percentage gain or loss
         :rtype: float
         """
-        if self._trade_open.date is None:
+        if self._trade_open is None:
             raise Exception("No trade has been opened.")
+        if self._quantity == 0:
+            return 0.0
         trade_price = decimalize_4(self._trade_open.price)
         price = decimalize_4(self._option_quote.price)
         quantity = decimalize_0(self._quantity)
-        percent = ((price - trade_price) / trade_price) * int(quantity / abs(quantity))
+        percent = ((price - trade_price) / trade_price) * (quantity / abs(quantity))
         return float(decimalize_4(percent))
+
+    def get_total_profit_loss_percent(self):
+        if self._trade_open is None:
+            raise Exception("No trade has been opened.")
+        unrealized_pnl_pct = self.get_open_profit_loss_percent()
+        if not self._trade_close_records:
+            return unrealized_pnl_pct
+
+        return None
 
     def get_current_open_premium(self):
         """
-        Calculates and returns the current market value of the option position. If the option does not
+        Calculates and returns the current unrealized value of the option position. If the option does not
         have any open contracts, the value is zero.
         :return: The current premium value of the option.
         :rtype: float
         """
-        if self._option_quote is None:
-            return None
+        if self._trade_open is None:
+            raise Exception("No trade has been opened.")
 
         price = decimalize_2(self._option_quote.price)
         quantity = decimalize_0(self._quantity)
@@ -448,7 +486,7 @@ class Option:
         return float(premium)
 
     def get_days_in_trade(self):
-        if self._trade_open.date is None:
+        if self._trade_open is None:
             raise Exception("No trade has been opened.")
 
         # if the trade has any open contracts, use current quote date.
@@ -458,7 +496,7 @@ class Option:
         else:
             dt_date = self._trade_close_records[-1].date.date()
 
-        time_delta = self._trade_open.date.date() - dt_date
+        time_delta = dt_date - self._trade_open.date.date()
         return time_delta.days
 
     def itm(self):
