@@ -2,15 +2,50 @@ import datetime
 from options_framework.option_types import OptionType
 from options_framework.option import Option
 
-ticker = "SPXW"
 test_expiration = datetime.datetime.strptime("07-16-2021", "%m-%d-%Y")
 test_quote_date = datetime.datetime.strptime("2021-07-01 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
 test_update_quote_date = datetime.datetime.strptime("2021-07-02 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
 test_update_quote_date2 = datetime.datetime.strptime("2021-07-02 14:31:00.000000", "%Y-%m-%d %H:%M:%S.%f")
-long_quantity = 10
-short_quantity = -10
 standard_fee = 0.50
+ticker = "XYZ"
 
+def get_test_call_option():
+    _id = 1
+    strike = 100
+    spot_price, bid, ask, price = (110, 1.0, 2.0, 1.5)
+    test_option = Option(id, ticker, strike, test_expiration, OptionType.CALL, quote_date=test_quote_date,
+               spot_price=spot_price, bid=bid, ask=ask, price=price)
+    return test_option
+
+def get_test_call_option_extended_properties():
+    _id = 1
+    strike = 100
+    spot_price, bid, ask, price = (110, 1.0, 2.0, 1.5)
+    delta, gamma, theta, vega, open_interest, rho, iv = (0.3459, -0.1234, 0.0485, 0.0935, 100, 0.132, 0.3301)
+    test_option = Option(id, ticker, strike, test_expiration, OptionType.CALL, quote_date=test_quote_date,
+                         spot_price=spot_price, bid=bid, ask=ask, price=price,
+                         delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, implied_volatility=iv,
+                         open_interest=open_interest)
+    return test_option
+
+def get_test_put_option():
+    _id = 1
+    strike = 100
+    spot_price, bid, ask, price = (105, 1.0, 2.0, 1.5)
+    test_option = Option(id, ticker, strike, test_expiration, OptionType.PUT, quote_date=test_quote_date,
+                         spot_price=spot_price, bid=bid, ask=ask, price=price)
+    return test_option
+
+def get_test_put_option_with_extended_properties():
+    _id = 1
+    strike = 100
+    spot_price, bid, ask, price = (105, 1.0, 2.0, 1.5)
+    delta, gamma, theta, vega, open_interest, rho, iv = (-0.4492, -0.1045, 0.0412, 0.1143, 900, 0.0282, 0.3347)
+    test_option = Option(id, ticker, strike, test_expiration, OptionType.PUT, quote_date=test_quote_date,
+                         spot_price=spot_price, bid=bid, ask=ask, price=price,
+                         delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, implied_volatility=iv,
+                         open_interest=open_interest)
+    return test_option
 
 def get_4210_put_option():
     _id = 1

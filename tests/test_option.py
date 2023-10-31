@@ -8,7 +8,7 @@ from options_test_helper import *
 # Test initialization
 def test_option_init_with_only_option_contract_parameters():
     _id = 1
-    strike = 4305
+    strike = 100
     test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL)
 
     option_contract = test_option.option_contract
@@ -28,8 +28,8 @@ def test_option_init_with_only_option_contract_parameters():
 
 def test_option_init_with_quote_data():
     _id = 1
-    strike = 4305
-    bid, ask, price, spot_price = (32.7, 33.2, 32.95, 4308)
+    strike = 100
+    spot_price, bid, ask, price = (95, 1.0, 2.0, 1.5)
     test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL, test_quote_date, spot_price, bid, ask,
                          price)
 
@@ -42,16 +42,15 @@ def test_option_init_with_quote_data():
 
 
 def test_option_init_with_extended_properties():
-    bid, ask, price, delta, spot_price, iv, gamma, theta, vega, open_interest, rho = (32.7, 33.2, 32.95,
-                                                                                      -0.4916, 4308, 0.0951, 0.0048,
-                                                                                      -1.0935, 3.5141, 24, -90.0008)
+    spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest, rho, iv = (95, 1.0, 2.0, 1.5,
+                                                                                      0.3459, -0.1234, 0.0485,
+                                                                                      0.0935, 100, 0.132, 0.3301)
     _id = 1
-    strike = 4305
+    strike = 100
     fee = 0.5
 
     test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL, test_quote_date, spot_price, bid, ask,
-                         price,
-                         open_interest=open_interest, implied_volatility=iv, delta=delta, gamma=gamma,
+                         price, open_interest=open_interest, implied_volatility=iv, delta=delta, gamma=gamma,
                          theta=theta, vega=vega, rho=rho, fee=fee)
 
     option_contract = test_option.option_contract
@@ -82,12 +81,12 @@ def test_option_init_with_extended_properties():
 
 def test_option_init_with_user_defined_attributes():
     _id = 1
-    strike = 4305
+    strike = 100
     test_value = 'test value'
 
-    bid, ask, price, delta, spot_price, iv, gamma, theta, vega, open_interest, rho = (32.7, 33.2, 32.95,
-                                                                                      -0.4916, 4308, 0.0951, 0.0048,
-                                                                                      -1.0935, 3.5141, 24, -90.0008)
+    spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest, rho, iv = (95, 1.0, 2.0, 1.5,
+                                                                                      0.3459, -0.1234, 0.0485,
+                                                                                      0.0935, 100, 0.132, 0.3301)
 
     test_option = Option(_id, ticker, strike, test_expiration, OptionType.CALL, test_quote_date, spot_price, bid, ask,
                          price,
@@ -101,77 +100,66 @@ def test_option_init_raises_exception_if_missing_required_fields():
     # missing id
     _id = None
     with pytest.raises(ValueError, match="option_id is required"):
-        Option(option_id=_id, symbol="XYZ", strike=4305, expiration=test_expiration, option_type=OptionType.CALL)
+        Option(option_id=_id, symbol=ticker, strike=100, expiration=test_expiration, option_type=OptionType.CALL)
 
     # missing ticker symbol
     _id = 1
-    symbol = None
+    none_symbol = None
     with pytest.raises(ValueError, match="symbol is required"):
-        Option(option_id=_id, symbol=symbol, strike=4305, expiration=test_expiration, option_type=OptionType.CALL)
+        Option(option_id=_id, symbol=none_symbol, strike=100, expiration=test_expiration, option_type=OptionType.CALL)
 
     # missing strike
-    strike = None
+    none_strike = None
     with pytest.raises(ValueError, match="strike is required"):
-        Option(option_id=_id, symbol="XYZ", strike=strike, expiration=test_expiration, option_type=OptionType.CALL)
+        Option(option_id=_id, symbol=ticker, strike=none_strike, expiration=test_expiration, option_type=OptionType.CALL)
 
     # missing expiration
-    expiration = None
+    none_expiration = None
     with pytest.raises(ValueError, match="expiration is required"):
-        Option(option_id=_id, symbol="XYZ", strike=4305, expiration=expiration, option_type=OptionType.CALL)
+        Option(option_id=_id, symbol=ticker, strike=100, expiration=none_expiration, option_type=OptionType.CALL)
 
     # missing option type
-    option_type = None
+    none_option_type = None
     with pytest.raises(ValueError, match="option_type is required"):
-        Option(option_id=_id, symbol="XYZ", strike=4305, expiration=test_expiration, option_type=option_type)
+        Option(option_id=_id, symbol=ticker, strike=100, expiration=test_expiration, option_type=none_option_type)
 
 
 def test_option_init_raises_exception_if_quote_date_is_greater_than_expiration():
     bad_open_date = datetime.datetime.strptime("2021-07-17 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
-    strike = 4380
-    spot_price, bid, ask, price = (4308, 5.4, 5.7, 5.55)
+    strike = 100
+    spot_price, bid, ask, price = (95, 1.0, 2.0, 1.5)
     with pytest.raises(Exception, match="Cannot create an option with a quote date past its expiration date"):
         Option(id, ticker, strike, test_expiration, OptionType.CALL, quote_date=bad_open_date,
                spot_price=spot_price, bid=bid, ask=ask, price=price)
 
 
-# repr tests
-def test_call_option_string_representation():
-    call = get_4380_call_option()
-    expected_call_repr = '<CALL SPXW 4380 2021-07-16>'
-    call_repr = str(call)
+@pytest.mark.parametrize("test_option, expected_repr", [
+    (get_test_call_option(), '<CALL XYZ 100 2021-07-16>'),
+    (get_test_put_option(), '<PUT XYZ 100 2021-07-16>')])
+def test_call_option_string_representation(test_option, expected_repr):
+    assert str(test_option) == expected_repr
 
-    assert call_repr == expected_call_repr
-
-
-def test_put_option_string_representation():
-    put = get_4210_put_option()
-    expected_put_repr = '<PUT SPXW 4210 2021-07-16>'
-    put_repr = str(put)
-
-    assert put_repr == expected_put_repr
-
-
-# update tests
 def test_update_sets_correct_values():
-    call = get_4390_call_option()
+    call = get_test_call_option_extended_properties()
 
-    # get updated values for 7/2/2021
-    spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest = \
-        (4330.27, 6, 6.2, 6.10, 0.1762, 0.004, -0.5858, 2.217, 606)
+    spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest, rho, iv = \
+        (95, 3.4, 3.50, 3.45, 0.4714, 0.1239, -0.0401, 0.1149, 1000, 0.279, 0.3453)
     test_value = 'test value'
     call.update(test_update_quote_date, spot_price, bid, ask, price, delta=delta, gamma=gamma, theta=theta, vega=vega,
+                rho=rho, implied_volatility=iv,
                 open_interest=open_interest, user_defined=test_value)
 
-    expected_price = 6.1
-    actual_price = call.option_quote.price
-    assert actual_price == expected_price
-    assert call.greeks.delta == 0.1762
-    assert call.greeks.gamma == 0.004
-    assert call.greeks.theta == -0.5858
-    assert call.greeks.vega == 2.217
-    assert call.extended_properties.open_interest == 606
-    assert call.option_quote.spot_price == 4330.27
+    assert call.option_quote.spot_price == spot_price
     assert call.option_quote.quote_date == test_update_quote_date
+    assert call.option_quote.bid == bid
+    assert call.option_quote.ask == ask
+    assert call.greeks.delta == delta
+    assert call.greeks.gamma == gamma
+    assert call.greeks.theta == theta
+    assert call.greeks.vega == vega
+    assert call.greeks.rho == rho
+    assert call.extended_properties.open_interest == open_interest
+    assert call.extended_properties.implied_volatility == iv
     assert call.user_defined == test_value
 
 
@@ -179,34 +167,34 @@ def test_update_raises_exception_if_missing_required_fields():
     call = get_4390_call_option()
 
     # quote_date
-    quote_date = None
+    none_quote_date = None
     with pytest.raises(ValueError, match="quote_date is required"):
-        call.update(quote_date=quote_date, spot_price=4330, bid=6, ask=6.2, price=6.10)
+        call.update(quote_date=none_quote_date, spot_price=4330, bid=6, ask=6.2, price=6.10)
 
     # spot price
-    spot_price = None
+    none_spot_price = None
     with pytest.raises(ValueError, match="spot_price is required"):
-        call.update(quote_date=test_update_quote_date, spot_price=spot_price, bid=6, ask=6.2, price=6.10)
+        call.update(quote_date=test_update_quote_date, spot_price=none_spot_price, bid=6, ask=6.2, price=6.10)
 
     # bid
-    bid = None
+    none_bid = None
     with pytest.raises(ValueError, match="bid is required"):
-        call.update(quote_date=test_update_quote_date, spot_price=4330, bid=bid, ask=6.2, price=6.10)
+        call.update(quote_date=test_update_quote_date, spot_price=4330, bid=none_bid, ask=6.2, price=6.10)
 
     # ask
-    ask = None
+    none_ask = None
     with pytest.raises(ValueError, match="ask is required"):
-        call.update(quote_date=test_update_quote_date, spot_price=4330, bid=6, ask=ask, price=6.10)
+        call.update(quote_date=test_update_quote_date, spot_price=4330, bid=6, ask=none_ask, price=6.10)
 
     # price
-    price = None
+    none_price = None
     with pytest.raises(ValueError, match="price is required"):
-        call.update(quote_date=test_update_quote_date, spot_price=4330, bid=6, ask=6.2, price=price)
+        call.update(quote_date=test_update_quote_date, spot_price=4330, bid=6, ask=6.2, price=none_price)
 
 
 def test_update_raises_exception_if_quote_date_is_greater_than_expiration():
     bad_quote_date = datetime.datetime.strptime("2021-07-17 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
-    put = get_4210_put_option()
+    put = get_test_put_option()
     spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest = \
         (4330.27, 8.8, 9.1, 8.95, -0.1471, 0.002, -0.9392, 1.9709, 349)
     with pytest.raises(Exception, match="Cannot update to a date past the option expiration"):
@@ -718,21 +706,21 @@ def test_is_trade_open_returns_false_if_trade_was_opened_and_then_closed():
     assert call.is_trade_open() == expected_result
 
 
-def test_get_profit_loss_raises_exception_if_trade_was_not_opened():
+def test_get_open_profit_loss_raises_exception_if_trade_was_not_opened():
     call = get_4380_call_option()
 
     with pytest.raises(Exception, match="No trade has been opened."):
         call.get_open_profit_loss()
 
 
-def test_get_profit_loss_is_zero_if_quote_data_is_not_updated():
+def test_get_open_profit_loss_is_zero_if_quote_data_is_not_updated():
     call = get_4380_call_option()
     call.open_trade(10)
 
     assert call.get_open_profit_loss() == 0.0
 
 
-def test_get_profit_loss_is_zero_when_no_contracts_are_open():
+def test_get_open_profit_loss_is_zero_when_no_contracts_are_open():
     call = get_4380_call_option()
     call.open_trade(10)
     update_4380_call_option(call)
@@ -755,14 +743,31 @@ def test_get_profit_loss_is_zero_when_no_contracts_are_open():
     (get_4220_put_option(), -10, 4349.73, 8.30, 8.50, 8.4, 6_600.0),
     (get_4220_put_option(), -10, 4308, 14.8, 15.2, 15.00, 0.0)
 ])
-def test_get_profit_loss_value(test_option, quantity, spot_price, bid, ask, price, expected_profit_loss):
+def test_get_open_profit_loss_value(test_option, quantity, spot_price, bid, ask, price, expected_profit_loss):
     test_option.open_trade(quantity)
     test_option.update(test_update_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     assert test_option.get_open_profit_loss() == expected_profit_loss
 
+@pytest.mark.parametrize("test_option, new_price, expected_profit_loss", [
+    (get_4380_call_option(), 5.56, 10.0),
 
-def test_get_profit_loss_percent_raises_exception_if_trade_was_not_opened():
+])
+def test_get_open_profit_loss(test_option, new_price, expected_profit_loss):
+    test_option.open_trade(10)
+    test_option.update(quote_date=test_quote_date, spot_price=4400, bid=1, ask=2, price=new_price)
+
+    actual_profit_loss = test_option.get_open_profit_loss()
+    assert actual_profit_loss == expected_profit_loss
+    test_option.close_trade(1)
+    assert actual_profit_loss == expected_profit_loss
+
+    test_option.update(quote_date=test_quote_date, spot_price=4400, bid=1, ask=2, price=new_price + 0.01)
+    actual_profit_loss = test_option.get_total_profit_loss()
+    assert actual_profit_loss == 0
+
+
+def test_get_open_profit_loss_percent_raises_exception_if_trade_was_not_opened():
     call = get_4380_call_option()
 
     with pytest.raises(Exception, match="No trade has been opened."):
@@ -841,3 +846,69 @@ def test_get_days_in_trade():
     test_option.update(quote_date, spot_price, bid, ask, price)
 
     assert test_option.get_days_in_trade() == 12
+
+def test_get_total_profit_loss_raises_exception_if_not_traded():
+    test_option = get_4380_call_option()
+
+    with pytest.raises(Exception, match="No trade has been opened."):
+        test_option.get_total_profit_loss()
+
+def test_get_total_profit_loss_returns_unrealized_when_no_contracts_are_closed():
+    test_option = get_4380_call_option()
+    test_option.open_trade(10)
+
+    assert test_option.get_total_profit_loss() == 0.0
+
+    update_4380_call_option(test_option)
+
+    assert test_option.get_total_profit_loss() == 2_550.0
+
+    update_4380_call_option_2(test_option)
+
+    assert test_option.get_total_profit_loss() == 8_950.0
+
+def test_get_total_profit_loss_returns_closed_pnl_when_all_contracts_are_closed():
+    test_option = get_4380_call_option()
+    test_option.open_trade(10)
+    update_4380_call_option(test_option)
+    test_option.close_trade(10)
+
+    assert test_option.get_total_profit_loss() == 2_550.0
+
+def test_get_total_profit_loss_returns_unrealized_and_closed_pnl_when_partially_closed():
+    test_option = get_4380_call_option()
+    test_option.open_trade(10)
+    update_4380_call_option(test_option)
+    test_option.close_trade(5)
+    update_4380_call_option_2(test_option)
+
+    assert test_option.get_total_profit_loss() == 2_550.0
+
+def test_get_total_profit_loss_percent_raises_exception_if_not_traded():
+    test_option = get_4380_call_option()
+
+    with pytest.raises(Exception, match="No trade has been opened."):
+        test_option.get_total_profit_loss_percent()
+
+
+def test_get_total_profit_loss_percent_returns_unrealized_when_no_contracts_are_closed():
+    test_option = get_4380_call_option()
+    test_option.open_trade(10)
+
+    assert test_option.get_total_profit_loss_percent() == 0.0
+
+    update_4380_call_option(test_option)
+
+    assert test_option.get_total_profit_loss_percent() == 0.4595
+
+    update_4380_call_option_2(test_option)
+
+    assert test_option.get_total_profit_loss_percent() == 1.6036
+
+def test_get_total_profit_loss_percent_returns_closed_pnl_when_all_contracts_are_closed():
+    test_option = get_4380_call_option()
+    test_option.open_trade(10)
+    update_4380_call_option(test_option)
+    test_option.close_trade(10)
+
+    assert test_option.get_total_profit_loss_percent() == 0.4595

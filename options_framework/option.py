@@ -101,7 +101,6 @@ class Option:
         self._total_fees = 0
 
         self._trade_open = None
-        self._trade_close = None
         self._trade_close_records = []
         self._position_type = None
         self._quantity = 0
@@ -438,7 +437,7 @@ class Option:
         # if no contracts were closed, this is just the open pnl
         if not self._trade_close_records:
             return unrealized_pnl
-        realized_pnl = self._trade_close.profit_loss
+        realized_pnl = sum(x.profit_loss for x in self._trade_close_records) # self._trade_close.profit_loss
 
         total_profit_loss = unrealized_pnl + realized_pnl
         return total_profit_loss
@@ -467,7 +466,9 @@ class Option:
         if not self._trade_close_records:
             return unrealized_pnl_pct
 
-        return None
+        total_profit_loss = None # self._trade_close.profit_loss + unrealized_pnl_pct
+
+        return total_profit_loss
 
     def get_current_open_premium(self):
         """
