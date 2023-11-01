@@ -195,48 +195,52 @@ def test_update_raises_exception_if_missing_required_fields():
 def test_update_raises_exception_if_quote_date_is_greater_than_expiration():
     bad_quote_date = datetime.datetime.strptime("2021-07-17 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
     put = get_test_put_option()
-    spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest = \
-        (4330.27, 8.8, 9.1, 8.95, -0.1471, 0.002, -0.9392, 1.9709, 349)
+    spot_price, bid, ask, price = (105, 1.0, 2.0, 1.5)
     with pytest.raises(Exception, match="Cannot update to a date past the option expiration"):
-        put.update(bad_quote_date, spot_price, bid, ask, price, delta=delta,
-                   gamma=gamma, theta=theta, vega=vega, open_interest=open_interest)
+        put.update(bad_quote_date, spot_price, bid, ask, price)
 
 
 # open trade
-def test_open_trade_sets_correct_values():
-    call = get_4390_call_option()
+def test_open_trade_sets_correct_trade_open_info_values():
+    test_option = get_test_call_option()
     quantity = 10
 
-    premium = call.open_trade(quantity, spot_price=4308.00)
-    trade_open_info = call.get_trade_open_info()
+    premium = quantity.open_trade(quantity, comment="my super insightful comment")
+    trade_open_info = test_option.get_trade_open_info()
     assert trade_open_info.date == test_quote_date
     assert trade_open_info.quantity == 10
     assert trade_open_info.price == 4.20
     assert trade_open_info.premium == 4200
     assert premium == 4200
-    assert call.quantity == 10
+    assert test_option.quantity == 10
 
     # kwargs were set as attributes
-    assert call.spot_price == 4308.00
+    assert test_option.comment == "my super insightful comment"
 
 
 def test_option_that_is_not_open_has_none_position_type():
-    call = get_4380_call_option()
-    assert call.position_type is None
+    test_option = get_test_call_option()
+    assert test_option.position_type is None
 
 
 @pytest.mark.parametrize("quantity, position_type", [(10, OptionPositionType.LONG), (-10, OptionPositionType.SHORT)])
 def test_open_trade_has_correct_position_type(quantity, position_type):
-    call = get_4380_call_option()
-    call.open_trade(quantity)
+    test_option = get_test_call_option()
+    test_option.open_trade(quantity)
 
-    assert call.position_type == position_type
+    assert test_option.position_type == position_type
 
 
-@pytest.mark.parametrize("quantity, expected_premium", [(10, 5_550), (1, 555), (-10, -5_550)])
-def test_open_trade_returns_correct_open_value(quantity, expected_premium):
-    call = get_4380_call_option()
-    premium = call.open_trade(quantity)
+@pytest.mark.parametrize("test_option, quantity, expected_premium", [
+    (get_test_call_option(), 10, 1_500.0),
+    (get_test_call_option(), 5, 750.0),
+    (get_test_call_option(), -10, -1_500.0),
+    (get_test_put_option(), 10, 1_500.0),
+    (get_test_put_option(), -10, -1_500.0),
+    (get_test_put_option(), 5, 750.0),
+    ])
+def test_open_trade_returns_correct_premium_value(test_option, quantity, expected_premium):
+    premium = test_option.open_trade(quantity)
     assert premium == expected_premium
 
 
@@ -244,179 +248,162 @@ def test_open_trade_returns_correct_open_value(quantity, expected_premium):
                                                                       (10, False, 0.0), (2, False, 0.0),
                                                                       (-3, False, 0.0)])
 def test_open_trade_sets_total_fees_when_incur_fees_flag_is_true(quantity, incur_fees_flag, expected_fees):
-    call = get_4380_call_option()
-    call.open_trade(quantity=quantity, incur_fees=incur_fees_flag)
+    test_option = get_test_call_option()
+    test_option.fee_per_contract = standard_fee
+    test_option.open_trade(quantity=quantity, incur_fees=incur_fees_flag)
 
-    assert call.total_fees == expected_fees
+    assert test_option.total_fees == expected_fees
 
 
 def test_open_trade_when_there_is_no_quote_data_raises_exception():
-    _id = 6
-    strike = 4390
-    test_option = Option(_id, ticker, strike, test_expiration, option_type=OptionType.CALL)
-    quantity = 10
+    test_option = Option(1, ticker, 100, test_expiration, OptionType.CALL)
     with pytest.raises(ValueError, match="Cannot open a position that does not have price data"):
+        test_option.open_trade(1)
+
+@pytest.mark.parametrize("quantity", [None, 1.5, 0, -1.5, "abc"])
+def test_open_trade_with_invalid_quantity_raises_exception(quantity):
+    test_option = get_test_call_option()
+
+    with pytest.raises(ValueError, match="Quantity must be a non-zero integer."):
         test_option.open_trade(quantity)
 
 
-def test_open_trade_with_invalid_quantity_raises_exception():
-    call = get_4390_call_option()
-
-    # quantity is None
-    quantity = None
-    with pytest.raises(ValueError, match="Quantity must be a non-zero integer."):
-        call.open_trade(quantity)
-
-    # quantity is not an integer
-    quantity = 1.5
-    with pytest.raises(ValueError, match="Quantity must be a non-zero integer."):
-        call.open_trade(quantity)
-
-    # quantity is zero
-    quantity = 0
-    with pytest.raises(ValueError, match="Quantity must be a non-zero integer."):
-        call.open_trade(quantity)
-
-
 def test_open_trade_when_trade_is_already_open_raises_exception():
-    call = get_4390_call_option()
+    test_option = get_test_call_option()
     quantity = 10
-    call.open_trade(quantity)
+    test_option.open_trade(quantity)
 
     with pytest.raises(ValueError, match="Cannot open position. A position is already open."):
-        call.open_trade(quantity)
+        test_option.open_trade(quantity)
 
 
-# close trade tests
 def test_close_trade_closes_entire_position_with_default_values():
-    call = get_4390_call_option()
+    test_option = get_test_call_option()
     quantity = 10
-    call.open_trade(quantity)
+    test_option.open_trade(quantity)
+    assert test_option.quantity == quantity
 
-    call.close_trade()  # Missing or none quantity closes entire position
+    test_option.close_trade()  # Missing quantity closes entire position
 
-    assert call.quantity == 0
+    assert test_option.quantity == 0
 
+@pytest.mark.parametrize("quantity, close_quantity, remaining_quantity", [
+    (10, 8, 2), (-10, -8, -2), (10, None, 0), (-10, None, 0)])
+def test_close_partial_trade(quantity, close_quantity, remaining_quantity):
+    test_option = get_test_call_option()
+    test_option.open_trade(quantity)
+    test_option.close_trade(quantity=close_quantity)
 
-def test_close_partial_trade():
-    call = get_4390_call_option()
-    quantity = 10
-    call.open_trade(quantity)
-
-    close_quantity = 2
-    call.close_trade(quantity=close_quantity)  # Missing or none quantity closes entire position
-
-    assert call.quantity == 8
+    assert test_option.quantity == remaining_quantity
 
 
 @pytest.mark.parametrize("open_qty, close1_qty, close2_qty, expected_qty", [(10, 2, 8, 0), (10, 2, 3, 5),
-                                                                            (-10, 2, 8, 0), (-10, 2, 3, -5)])
+                                                                            (-10, -2, -8, 0), (-10, -2, -3, -5)])
 def test_close_trade_with_multiple_partial_close(open_qty, close1_qty, close2_qty, expected_qty):
-    call = get_4380_call_option()
-    quantity = open_qty
-    call.open_trade(quantity)
-    update_4380_call_option(call)
+    test_option = get_test_call_option()
+    test_option.open_trade(open_qty)
 
-    # close half of contracts
-    call.close_trade(quantity=close1_qty)
+    test_option.close_trade(quantity=close1_qty)
+    test_option.close_trade(quantity=close2_qty)
 
-    update_4380_call_option_2(call)
-
-    call.close_trade(quantity=close2_qty)
-
-    assert call.quantity == expected_qty
+    assert test_option.quantity == expected_qty
 
 
 @pytest.mark.parametrize("open_quantity, close_quantity", [(10, 12), (-10, -12)])
 def test_close_trade_with_greater_than_quantity_open_raises_exception(open_quantity, close_quantity):
-    call = get_4380_call_option()
-    call.open_trade(open_quantity)
-    update_4380_call_option(call)
+    test_option = get_test_call_option()
+    test_option.open_trade(open_quantity)
 
     with pytest.raises(ValueError, match="Quantity to close is greater than the current open quantity."):
-        call.close_trade(close_quantity)
+        test_option.close_trade(close_quantity)
 
 
-@pytest.mark.parametrize("quantity", [10, -10])
-def test_close_partial_trade_with_greater_than_remaining_quantity_raises_exception(quantity):
-    call = get_4380_call_option()
-    call.open_trade(quantity)
-    update_4380_call_option(call)
-    call.close_trade(quantity=2)  # close partial trade
-    update_4380_call_option_2(call)
+@pytest.mark.parametrize("open_qty, close1_qty, close2_qty", [(10, 6, 6), (10, 10, 1), (-10, -7, -4), (-10, -10, -1)])
+def test_close_partial_trade_with_greater_than_remaining_quantity_raises_exception(open_qty, close1_qty, close2_qty):
+    test_option = get_test_call_option()
+    test_option.open_trade(open_qty)
+    test_option.close_trade(quantity=close1_qty)  # close partial trade
 
     with pytest.raises(ValueError, match="Quantity to close is greater than the current open quantity."):
-        call.close_trade(quantity)
+        test_option.close_trade(close2_qty)
 
 
 @pytest.mark.parametrize("incur_fees_flag, open_quantity, close_quantity, fee_amount", [(True, 10, 10, 5.0),
-                                                                                        (True, -10, 10, 5.0),
+                                                                                        (True, -10, -10, 5.0),
                                                                                         (True, 10, 2, 1.0),
                                                                                         (False, 10, 10, 0.0),
-                                                                                        (False, -10, 10, 0.0),
-                                                                                        (False, -10, 2, 0.0)])
+                                                                                        (False, -10, -10, 0.0),
+                                                                                        (False, -10, -2, 0.0)])
 def test_close_trade_updates_total_fees_incur_fees_flag(incur_fees_flag, open_quantity, close_quantity, fee_amount):
-    call = get_4380_call_option()
-    call.open_trade(open_quantity, incur_fees=False)  # do not incur fees on open
-    assert call.total_fees == 0.0
+    test_option = get_test_call_option()
+    test_option.fee_per_contract = standard_fee
+    test_option.open_trade(open_quantity, incur_fees=False)  # do not incur fees on open
+    assert test_option.total_fees == 0.0
 
-    call.close_trade(quantity=close_quantity, incur_fees=incur_fees_flag)  # default incur fees flag is true
+    test_option.close_trade(quantity=close_quantity, incur_fees=incur_fees_flag)
 
-    assert call.total_fees == fee_amount
+    assert test_option.total_fees == fee_amount
 
-
-@pytest.mark.parametrize(
-    "open_qty, close_qty, close_date, close_price, close_pnl, pnl_pct, close_fees, remaining_qty",
-    [
-        (10, 10, test_update_quote_date, 8.1, 2_550.0, 0.4595, 5, 0),
-        (-10, 10, test_update_quote_date, 8.1, -2_550, -0.4595, 5, 0),
-        (10, 1, test_update_quote_date, 8.1, 255.0, 0.0459, 0.5, 9),
-        (-10, 5, test_update_quote_date, 8.1, -1_275.0, -0.2297, 2.5, -5)
+# "open_qty, close_qty, expected_qty, close_dt, close_price, close_pnl, close_pnl_pct, close_fees", [
+#         (10, 10, -10, test_update_quote_date, 10.0, 0.0, 0.0, 5.0),
+#         (-10, -10, 10, test_update_quote_date, 10.0, 0.0, 0.0, 5.0),
+#         (10, 1, test_update_quote_date, 10.0, 0.0, 0.0, 0.5),
+#         (-10, 5, test_update_quote_date, 10.0, 0.0, 0.0, 2.5)
+@pytest.mark.parametrize("open_qty, close_qty, expected_qty, close_dt, close_pnl, close_pnl_pct, close_fees", [
+    (10, 10, -10, test_update_quote_date, 8_500.0, 5.6667, 5.0),
+    (-10, -10, 10, test_update_quote_date, -8_500.0, -5.6667, 5.0),
+    (10, 1, -1, test_update_quote_date, 850.0, 5.6667, 0.5),
+    (-10, -5, 5, test_update_quote_date, -4_250.0, -5.6667, 2.5)
     ])
-def test_close_trade_values_with_one_close_trade(open_qty, close_qty, close_date, close_price,
-                                                 close_pnl, pnl_pct, close_fees, remaining_qty):
-    call = get_4380_call_option()
-    call.open_trade(open_qty)
-    update_4380_call_option(call)
+def test_close_trade_values_with_one_close_trade(open_qty, close_qty, expected_qty, close_dt, close_pnl,
+                                                 close_pnl_pct, close_fees):
+    test_option = get_test_call_option()
+    test_option.fee_per_contract = standard_fee
+    test_option.open_trade(open_qty)
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1()
+    test_option.update(quote_date, spot_price, bid, ask, price)
+    test_option.get_current_open_premium()
+    trade_close_info = test_option.close_trade(close_qty)
 
-    pnl = call.close_trade(quantity=close_qty)
-
-    trade_close_info = call.get_trade_close_info()
-    assert trade_close_info.date == close_date
-    assert trade_close_info.quantity == close_qty if open_qty < 0 else close_qty * -1
-    assert trade_close_info.price == close_price
+    assert trade_close_info.date == quote_date
+    assert trade_close_info.quantity == close_qty*-1
+    assert trade_close_info.price == price
     assert trade_close_info.profit_loss == close_pnl
-    assert trade_close_info.profit_loss_percent == pnl_pct
+    assert trade_close_info.profit_loss_percent == close_pnl_pct
     assert trade_close_info.fees == close_fees
 
-    assert call.quantity == remaining_qty
-    assert pnl == close_pnl
 
 @pytest.mark.parametrize(
-    "open_qty, close_qty, close_date, close_price, close_pnl, pnl_pct, close_fees, remaining_qty",
-    [(10, 2, test_update_quote_date2, 11.91, 3_180.0, 0.5730, 2.5, 5),
-     (-10, 3, test_update_quote_date2, 11.73, -4_325, -0.7793, 3.5, -3),
-     (10, 1, test_update_quote_date2, 12.33, 2_035.0, 0.3667, 1.5, 7),
-     (-10, 4, test_update_quote_date2, 11.63, -5_470.0, -0.9856, 4.5, -1)])
-def test_call_option_close_trade_values_with_multiple_close_trades(open_qty, close_qty, close_date, close_price,
-                                                                   close_pnl, pnl_pct, close_fees, remaining_qty):
-    test_option = get_4380_call_option()
+    "open_qty, cqty1, cqty2, close_date, close_price, close_pnl, pnl_pct, close_fees, closed_qty, remaining_qty",
+    [(10, 2, 3, test_update_quote_date2, 7.0, 2_750.0, 1.8333, 2.5, -5, 5),
+     (-10, -3, -5, test_update_quote_date2, 6.88, -4_300, -2.8667, 4.0, 8, -2),
+     (10, 8, 1, test_update_quote_date2, 9.44, 7_150.0, 4.7667, 4.5, -9, 1),
+     (-10, -1, -1, test_update_quote_date2, 7.5, -1_200.0, -0.8000, 1.0, 2, -8)
+     ])
+def test_call_option_close_trade_values_with_multiple_close_trades(open_qty, cqty1, cqty2, close_date, close_price,
+                                                                   close_pnl, pnl_pct, close_fees,
+                                                                   closed_qty, remaining_qty):
+    test_option = get_test_call_option()
+    test_option.fee_per_contract = standard_fee
     test_option.open_trade(open_qty)
-    update_4380_call_option(test_option)
+    # first update
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1()
+    test_option.update(quote_date, spot_price, bid, ask, price)
+    test_option.close_trade(quantity=cqty1)
 
-    test_option.close_trade(quantity=close_qty)
-    update_4380_call_option_2(test_option)
-    test_option.close_trade(quantity=close_qty + 1)
+    # second update
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_2()
+    test_option.update(quote_date, spot_price, bid, ask, price)
+    test_option.close_trade(quantity=cqty2)
 
+    # get close info for closed trades
     trade_close_info = test_option.get_trade_close_info()
-
     assert trade_close_info.date == close_date
-
     assert trade_close_info.price == close_price
     assert trade_close_info.profit_loss == close_pnl
     assert trade_close_info.fees == close_fees
 
-    assert trade_close_info.quantity == (open_qty - remaining_qty) * -1
+    assert trade_close_info.quantity == closed_qty
     assert test_option.quantity == remaining_qty
 
 

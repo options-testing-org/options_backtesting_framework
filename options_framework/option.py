@@ -190,7 +190,11 @@ class Option:
 
     def open_trade(self, quantity, incur_fees=True, *args, **kwargs):
         """
-        Opens a trade with a given quantity
+        Opens a trade with a given quantity. Returns the premium amount of the trade.
+        The premium is the cost to open the trade.
+        A positive number for quantity opens a long position, which returns a positive
+        amount for the premium. If the quantity is negative, a short position is
+        opened, and premium amount is negative.
 
         :param quantity: quantity to open. Positive quantity will open long option.
             Negative quantity will open short option
@@ -201,6 +205,8 @@ class Option:
         :type: list
         :param kwargs: keyword arguments
         :type: dictionary
+        :return: The premium amount to open the trade.
+        :rtype: float
 
         additional user-defined parameters passed as keyword arguments will be defined as attributes
         """
@@ -213,6 +219,9 @@ class Option:
         fees = 0
         if incur_fees:
             fees = self._incur_fees(quantity)
+
+        # calculate premium debit or credit. If this is a long position, the premium is a positive number.
+        # If it is a short position, the premium is a negative number.
         premium = float(decimalize_2(self._option_quote.price) * 100 * decimalize_0(quantity))
 
         trade_open = TradeOpen(date=self._option_quote.quote_date, quantity=quantity, price=self._option_quote.price,
@@ -223,37 +232,43 @@ class Option:
 
         self._set_additional_attributes(kwargs)
 
-        return premium
+        return trade_open
 
-    def close_trade(self, quantity=None, incur_fees=True):
+    def close_trade(self, quantity=None, incur_fees=True, *args, **kwargs):
         """
         Calculates the closing price and sets the close date, price and profit/loss info for the
         quantity closed.
         :param quantity: If a quantity is provided, only that quantity will be closed.
         :param incur_fees: if True, calculates the fees for the closing transaction
             and adds that to the total fees
-        :return: the profit/loss of the closed quantity
+        :return: the profit/loss of the closed quantity of the trade
         :rtype: float
         """
         if self._trade_open.date is None:
             raise ValueError("Cannot close an option that is not open.")
-        # if len(self._trade_close_records) > 0:
-        #     raise ValueError("Cannot close an option that is already closed.")
-        if quantity == 0:
+
+        if quantity is None:
+            quantity = decimalize_0(self._quantity)*-1
+        elif not (isinstance(quantity, int)) or (quantity == 0):
             raise ValueError("Must supply a non-zero quantity.")
-
-        quantity = decimalize_0(self._quantity) if quantity is None else decimalize_0(quantity)
-        if self._position_type == OptionPositionType.LONG:
-            quantity = quantity*-1
-
-        if abs(quantity) > abs(self._quantity):
+        # elif self._position_type == OptionPositionType.LONG and quantity + self._quantity - closed_quantity:
+        #     raise ValueError("Quantity to close is greater than the current open quantity.")
+        elif quantity < 0 and self._position_type == OptionPositionType.LONG:
+            raise ValueError(
+                "This is a long option position. The quantity to close should be a positive number.")
+        elif quantity > 0 and self._position_type == OptionPositionType.SHORT:
+            raise ValueError(
+                "This is a short option position. The quantity should be a negative number.")
+        elif ((self._position_type == OptionPositionType.LONG) and quantity > self._quantity) \
+                or ((self._position_type == OptionPositionType.SHORT) and quantity < self._quantity):
             raise ValueError("Quantity to close is greater than the current open quantity.")
+        else:
+            quantity = decimalize_0(quantity)*-1
 
-        # date quantity, price, close_value
         close_price = decimalize_2(self.get_closing_price())
         open_price = decimalize_2(self._trade_open.price)
         profit_loss = (open_price * 100 * quantity) - (close_price * 100 * quantity)
-        profit_loss_percent = decimalize_4((open_price - close_price)/open_price) * (quantity/abs(quantity))
+        profit_loss_percent = decimalize_4((close_price - open_price)/open_price) * (quantity*-1/abs(quantity))
 
         fees = 0
         if incur_fees:
@@ -263,11 +278,14 @@ class Option:
         trade_close_record = TradeClose(date=self._option_quote.quote_date, quantity=int(quantity),
                                         price=float(close_price),
                                         profit_loss=float(profit_loss),
-                                        profit_loss_percent=float(decimalize_4(profit_loss_percent)),
+                                        profit_loss_percent=float(profit_loss_percent),
                                         fees=fees)
         self._trade_close_records.append(trade_close_record)
-        self._quantity = int(quantity) + self._quantity
-        return float(profit_loss)
+        self._quantity = self._quantity + int(quantity)
+
+        self._set_additional_attributes(kwargs)
+
+        return trade_close_record
 
     def get_closing_price(self):
         """
@@ -354,11 +372,11 @@ class Option:
         records = self._trade_close_records
         date = records[-1].date
         quantity = sum(decimalize_0(x.quantity) for x in records)
-        open_premium = decimalize_2(self._trade_open.premium)
+        trade_open_premium = decimalize_2(self._trade_open.premium)
         price = decimalize_2(sum((decimalize_2(x.price)*decimalize_0(x.quantity))/quantity for x in records))
 
         profit_loss = sum(decimalize_2(x.profit_loss) for x in records)
-        profit_loss_percent = decimalize_4(profit_loss / open_premium) * (quantity*-1 / abs(quantity))
+        profit_loss_percent = decimalize_4(profit_loss / trade_open_premium) * (quantity*-1 / abs(quantity))
         fees = sum(x.fees for x in records)
 
         trade_close = TradeClose(date=date, quantity=int(quantity), price=float(price),

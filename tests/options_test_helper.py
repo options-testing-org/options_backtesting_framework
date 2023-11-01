@@ -6,16 +6,29 @@ test_expiration = datetime.datetime.strptime("07-16-2021", "%m-%d-%Y")
 test_quote_date = datetime.datetime.strptime("2021-07-01 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
 test_update_quote_date = datetime.datetime.strptime("2021-07-02 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
 test_update_quote_date2 = datetime.datetime.strptime("2021-07-02 14:31:00.000000", "%Y-%m-%d %H:%M:%S.%f")
+test_update_quote_date3 = datetime.datetime.strptime("2021-07-16 11:31:00.000000", "%Y-%m-%d %H:%M:%S.%f")
 standard_fee = 0.50
 ticker = "XYZ"
 
 def get_test_call_option():
     _id = 1
     strike = 100
-    spot_price, bid, ask, price = (110, 1.0, 2.0, 1.5)
+    spot_price, bid, ask, price = (90, 1.0, 2.0, 1.5)
     test_option = Option(id, ticker, strike, test_expiration, OptionType.CALL, quote_date=test_quote_date,
-               spot_price=spot_price, bid=bid, ask=ask, price=price)
+                         spot_price=spot_price, bid=bid, ask=ask, price=price)
     return test_option
+
+def get_test_call_option_update_values_1():
+    quote_date, spot_price, bid, ask, price = (test_update_quote_date, 110, 9.50, 10.5, 10.00)
+    return quote_date, spot_price, bid, ask, price
+
+def get_test_call_option_update_values_2():
+    quote_date, spot_price, bid, ask, price = (test_update_quote_date2, 105, 4.50, 5.5, 5.00)
+    return quote_date, spot_price, bid, ask, price
+
+def test_call_option_update_3(test_option):
+    quote_date, spot_price, bid, ask, price = (test_update_quote_date3, 95, 0, .05, 0.03)
+    test_option.update(quote_date, spot_price, bid, ask, price)
 
 def get_test_call_option_extended_properties():
     _id = 1
