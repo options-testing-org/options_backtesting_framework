@@ -435,12 +435,18 @@ class Option:
         """
         if self._trade_open is None:
             raise Exception("No trade has been opened.")
+
         trade_price = decimalize_2(self._trade_open.price)
         price = decimalize_2(self._option_quote.price)
         quantity = decimalize_0(self._quantity)
-        price_diff = price - trade_price
-        value = price_diff * 100 * quantity
+        trade_premium = trade_price * 100 * quantity
+        current_premium = price * 100 * quantity
+        value = current_premium - trade_premium
         return float(value)
+
+        # price_diff = price - trade_price
+        # value = price_diff * 100 * quantity
+        # return float(value)
 
     def get_total_profit_loss(self):
         """
@@ -480,29 +486,15 @@ class Option:
     def get_total_profit_loss_percent(self):
         if self._trade_open is None:
             raise Exception("No trade has been opened.")
-        unrealized_pnl_pct = self.get_open_profit_loss_percent()
-        if not self._trade_close_records:
-            return unrealized_pnl_pct
-
-        total_profit_loss = None # self._trade_close.profit_loss + unrealized_pnl_pct
-
-        return total_profit_loss
-
-    def get_current_open_premium(self):
-        """
-        Calculates and returns the current unrealized value of the option position. If the option does not
-        have any open contracts, the value is zero.
-        :return: The current premium value of the option.
-        :rtype: float
-        """
-        if self._trade_open is None:
-            raise Exception("No trade has been opened.")
 
         price = decimalize_2(self._option_quote.price)
         quantity = decimalize_0(self._quantity)
-        premium = price * 100 * quantity
-
-        return float(premium)
+        trade_value = decimalize_2(self._trade_open.premium)
+        closed_trades_value = sum(decimalize_2(x.price)*100*decimalize_0(x.quantity)*-1
+                                  for x in self._trade_close_records)
+        open_value = price * 100 * quantity
+        profit_loss_percent = decimalize_4((closed_trades_value + open_value) / trade_value)
+        return float(profit_loss_percent)
 
     def get_days_in_trade(self):
         if self._trade_open is None:
@@ -521,11 +513,10 @@ class Option:
     def itm(self):
         """
         In the Money
+        A call option is in the money when the current price is higher than or equal to the strike price
+        A put option is in the money when the current price is lower than or equal to the strike price
         Returns a boolean value indicating whether the option is currently in the money.
-        :return: ITM returns true if the option is "in the money" and false if the option is "out of the money".
-            An option is ITM when the strike price has been exceeded by the price of the underlying.
-            The intrinsic value is the value it will have at expiration if the price of the underlying
-            does not change.
+        :return: Returns a boolean value indicating whether the option is currently in the money.
         :rtype: bool
         """
         if self._option_quote is None:
@@ -539,11 +530,9 @@ class Option:
     def otm(self):
         """
         Out of the Money
-        Returns a boolean value indicating whether the option is currently out of the money.
-        :return: OTM returns true if the option is "out of the money" and false if the option is "in the money".
-            An option is OTM when an option has a strike price that the option has not
-            reached. The option has no instrinsic value. If the underlying price
-            does not change, the option will expire worthless.
+        A call option is out of the money when the current price is lower than the spot price.
+        A put option is out of the money when the current price is greater than the spot price.
+        :return: Returns a boolean value indicating whether the option is currently out of the money.
         :rtype: bool
         """
         if self._option_quote is None:
