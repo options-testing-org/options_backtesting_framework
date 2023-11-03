@@ -489,11 +489,15 @@ class Option:
 
         price = decimalize_2(self._option_quote.price)
         quantity = decimalize_0(self._quantity)
-        trade_value = decimalize_2(self._trade_open.premium)
-        closed_trades_value = sum(decimalize_2(x.price)*100*decimalize_0(x.quantity)*-1
+        opening_trade_value = decimalize_2(self._trade_open.premium)
+        closed_contracts_value = sum(decimalize_2(x.price)*100*decimalize_0(x.quantity)*-1
                                   for x in self._trade_close_records)
-        open_value = price * 100 * quantity
-        profit_loss_percent = decimalize_4((closed_trades_value + open_value) / trade_value)
+        open_contracts_value = price * 100 * quantity
+        value_of_trade = open_contracts_value + closed_contracts_value
+        profit_loss_percent = (decimalize_4((value_of_trade - opening_trade_value) / opening_trade_value))
+        if self._position_type == OptionPositionType.SHORT:
+            profit_loss_percent *= -1
+
         return float(profit_loss_percent)
 
     def get_days_in_trade(self):

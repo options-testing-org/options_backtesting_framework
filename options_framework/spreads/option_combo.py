@@ -1,4 +1,4 @@
-from ..option_types import OptionTradeType
+from ..option_types import OptionTradeType, OptionCombinationType
 from ..utils.helpers import decimalize_2, decimalize_4
 
 class OptionCombination:
@@ -18,54 +18,56 @@ class OptionCombination:
         self._options = options
 
         if not hasattr(self, '_option_combination_type'):
-            self._option_combination_type = None
+            self._option_combination_type = OptionCombinationType.CUSTOM
 
         for key, value in kwargs.items():
             setattr(self, key, value)
-            # for o in options:
-            #     setattr(o, key, value)
 
     def __repr__(self):
-        return ''
+        return f'<Custom options spread with {len(self._options)} options>'
 
-    def premium(self):
-        """
 
-        :return:
-        """
-        if not all(o.trade_open_date is not None for o in self._options):
-            raise ValueError("Premium cannot be calculated unless a trade has been opened for all options")
-        premium = sum(decimalize_2(o.price) * (decimalize_2(o.quantity)/abs(decimalize_2(o.quantity)))
-                      for o in self._options)
-        return float(premium)
 
-    def trade_cost(self):
-        """
-        The net premium to open the trade
-        :return: A positive number indicates a debit, and a negative number indicates a credit
-        """
-        if not all(o.trade_open_date is not None for o in self._options):
-            raise ValueError("Trade cost cannot be calculated unless a trade has been opened for all options")
-        return sum(o.total_premium() for o in self._options)
 
-    def current_gain_loss(self):
-        """
-        The current gain or loss. This is the unrealized gain or loss unless the trade is closed.
-        :return: sum of the current value of all options in the trade
-        """
-        if not all(o.trade_open_date is not None for o in self._options):
-            raise ValueError("Current value cannot be calculated unless a trade has been opened for all options")
-        return sum(o.current_gain_loss() for o in self._options)
-
-    def profit_loss_percent(self):
-        """
-        The current gain or loss percentage. This is the unrealized gain or loss unless the trade is closed.
-        :return:
-        """
-        starting_value = decimalize_2(self.trade_cost())
-        total_current_value = starting_value + decimalize_2(self.current_gain_loss())
-        percent_gain_loss = (total_current_value - starting_value) / starting_value
-        return float(decimalize_4(percent_gain_loss))
+    #
+    # def premium(self):
+    #     """
+    #
+    #     :return:
+    #     """
+    #     if not all(o.trade_open_date is not None for o in self._options):
+    #         raise ValueError("Premium cannot be calculated unless a trade has been opened for all options")
+    #     premium = sum(decimalize_2(o.price) * (decimalize_2(o.quantity)/abs(decimalize_2(o.quantity)))
+    #                   for o in self._options)
+    #     return float(premium)
+    #
+    # def trade_cost(self):
+    #     """
+    #     The net premium to open the trade
+    #     :return: A positive number indicates a debit, and a negative number indicates a credit
+    #     """
+    #     if not all(o.trade_open_date is not None for o in self._options):
+    #         raise ValueError("Trade cost cannot be calculated unless a trade has been opened for all options")
+    #     return sum(o.total_premium() for o in self._options)
+    #
+    # def current_gain_loss(self):
+    #     """
+    #     The current gain or loss. This is the unrealized gain or loss unless the trade is closed.
+    #     :return: sum of the current value of all options in the trade
+    #     """
+    #     if not all(o.trade_open_date is not None for o in self._options):
+    #         raise ValueError("Current value cannot be calculated unless a trade has been opened for all options")
+    #     return sum(o.current_gain_loss() for o in self._options)
+    #
+    # def profit_loss_percent(self):
+    #     """
+    #     The current gain or loss percentage. This is the unrealized gain or loss unless the trade is closed.
+    #     :return:
+    #     """
+    #     starting_value = decimalize_2(self.trade_cost())
+    #     total_current_value = starting_value + decimalize_2(self.current_gain_loss())
+    #     percent_gain_loss = (total_current_value - starting_value) / starting_value
+    #     return float(decimalize_4(percent_gain_loss))
 
     def max_profit(self):
         """

@@ -33,6 +33,7 @@ class OptionCombinationType(Enum):
     CONDOR = 10
     IRON_CONDOR = 11
     COLLAR = 12
+    CUSTOM = 100
 
 
 class OptionTradeType(Enum):
