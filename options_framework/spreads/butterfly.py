@@ -1,3 +1,4 @@
+from sqlite3 import SQLITE_IOERR_BLOCKED
 from options_framework.spreads.option_combo import OptionCombination
 
 class Butterfly(OptionCombination):
@@ -7,4 +8,6 @@ class Butterfly(OptionCombination):
         if not all(o.expiration == first_option[0].expiration for o in options):
             raise ValueError("All options in the spread must have the same expiration")
         if not first_option.strike < center_option.strike < third_option.strike:
-            raise ValueError("The options provided do not form a butterfly spread")
+            if not (first_option.strike + third_option.strike)/2 <> center_option.strike:
+                raise ValueError("The options provided do not form a butterfly spread")
+    
