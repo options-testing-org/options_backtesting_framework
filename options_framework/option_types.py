@@ -8,6 +8,12 @@ class OptionType(Enum):
     CALL = 1
     PUT = 2
 
+class TransactionType(Enum):
+    """
+    A transaction is either a buy or a sell
+    """
+    BUY = 1
+    SELL = 2
 
 class OptionPositionType(Enum):
     """
