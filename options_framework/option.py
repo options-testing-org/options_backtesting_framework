@@ -563,6 +563,25 @@ class Option:
         return self._option_contract
 
     @property
+    def option_id(self):
+        return self._option_contract.option_id
+
+    @property
+    def symbol(self):
+        return self._option_contract.symbol
+
+    @property
+    def strike(self):
+        return self._option_contract.strike
+
+    @property
+    def expiration(self):
+        return self._option_contract.expiration
+
+    def option_type(self):
+        return self._option_contract.option_type
+
+    @property
     def option_quote(self):
         """
         The option quote contains all the information that will change throughout it's lifetime, such as the price
@@ -582,6 +601,22 @@ class Option:
         return self._option_quote
 
     @property
+    def quote_date(self):
+        return self._option_quote.quote_date
+
+    def spot_price(self):
+        return self._option_quote.spot_price
+
+    def bid(self):
+        return self._option_quote.bid
+
+    def ask(self):
+        return self._option_quote.ask
+
+    def price(self):
+        return self._option_quote.price
+
+    @property
     def extended_properties(self):
         """
         The extended properties are optional properties that can be set and updated on an option.
@@ -591,6 +626,13 @@ class Option:
         :rtype: ExtendedProperties named tuple containing: implied_volatility, open_interest
         """
         return self._extended_properties
+
+    @property
+    def implied_volatility(self):
+        return self._extended_properties.implied_volatility
+
+    def open_interest(self):
+        return self._extended_properties.open_interest
 
     @property
     def greeks(self):
@@ -603,6 +645,26 @@ class Option:
         :rtype: A Greeks named tuple containing: delta, gamma, theta, vega, rho
         """
         return self._greeks
+
+    @property
+    def delta(self):
+        return self._greeks.delta
+
+    @property
+    def gamma(self):
+        return self._greeks.gamma
+
+    @property
+    def theta(self):
+        return self._greeks.theta
+
+    @property
+    def vega(self):
+        return self._greeks.vega
+
+    @property
+    def rho(self):
+        return self._greeks.rho
 
     @property
     def trade_close_records(self):
