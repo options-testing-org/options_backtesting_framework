@@ -583,6 +583,7 @@ class Option:
     def expiration(self):
         return self._option_contract.expiration
 
+    @property
     def option_type(self):
         return self._option_contract.option_type
 
@@ -609,15 +610,19 @@ class Option:
     def quote_date(self):
         return self._option_quote.quote_date
 
+    @property
     def spot_price(self):
         return self._option_quote.spot_price
 
+    @property
     def bid(self):
         return self._option_quote.bid
 
+    @property
     def ask(self):
         return self._option_quote.ask
 
+    @property
     def price(self):
         return self._option_quote.price
 
@@ -636,6 +641,7 @@ class Option:
     def implied_volatility(self):
         return self._extended_properties.implied_volatility
 
+    @property
     def open_interest(self):
         return self._extended_properties.open_interest
 

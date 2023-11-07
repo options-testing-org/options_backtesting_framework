@@ -53,23 +53,26 @@ class OptionChain:
         distinct_strikes = list(distinct([x.strikes for x in self._chain if x.expiration.date() == expiration_date.date()]))
         return distinct_strikes
 
-    def load_daily_data_from_file(self, file_path, select_option_type=None, select_strike_range=None,
-                                        select_expiration_range=None,
-                                        select_delta_range=None, *args, **kwargs):
+    def load_delta_neutral_data_from_file(self, file_path, option_type_filter=None, strike_range=None,
+                                        expiration_range=None, delta_range=None, *args, **kwargs):
         """
-
-        :param file_path:
-        :param select_option_type:
-        :param select_strike_range:
-        :param select_expiration_range:
-        :param select_delta_range:
+        Loads data for one ticker, one day.
+        To filter the data, use the select parameters:
+        :param file_path: The absolute path to the data file
+        :param option_type_filter: set to OptionType.PUT or OptionType.CALL to filter for option type. Default is None.
+        :param strike_range: None for all strikes.
+                Dictionary for strike range: {'low': <low value>, 'high': <high value>}
+        :param expiration_range: None for all expirations
+                Dictionary for expiration range: {"low": <first exp>, "high": <last exp>}
+        :param delta_range: None for all deltas.
+                Dictionary for delta range: {'low': <low value>, 'high': <high value>}
         :param args:
         :param kwargs:
         """
         data_file = open(file_path, 'r')
         data_file.readline()  # read header line and ignore
-        opt_gen = self._import_daily_options_from_file(data_file, select_option_type, select_strike_range,
-                                                       select_expiration_range, select_delta_range)
+        opt_gen = self._delta_neutral_generator(data_file, option_type_filter, strike_range,
+                                                       expiration_range, delta_range)
 
         options = [o for o in opt_gen]
 
@@ -77,71 +80,45 @@ class OptionChain:
 
         self._chain = options
 
-    def load_intraday_options_from_file(self, file_path):
-        pass
+    def _delta_neutral_generator(self, f, option_type_filter=None, strike_range=None,
+                                        expiration_range=None,
+                                        delta_range=None):
 
-    def _import_daily_options_from_file(self, data_file, select_option_type=None, select_strike_range=None,
-                                        select_expiration_range=None,
-                                        select_delta_range=None):
-
-        if select_delta_range is None:
-            select_delta_range = []
-        else:
-            select_delta_range.sort()
-
-        if select_expiration_range is None:
-            select_expiration_range = []
-        else:
-            select_expiration_range.sort()
-
-        if select_strike_range is None:
-            select_strike_range = []
-        else:
-            select_strike_range.sort()
-
-        line = data_file.readline()  # get next record
-
+        line = f.readline()  # get next record
         while line:
 
             values = line.split(',')
 
             expiration = datetime.datetime.strptime(values[dni_exp], "%m/%d/%Y")
-            hi_date = None
-            if select_expiration_range:
-                low_date = select_expiration_range[0]
-                hi_date = select_expiration_range[1]
-                if expiration < low_date:
-                    line = data_file.readline()  # get next record
+            if expiration_range:
+                if expiration < expiration_range['low']:
+                    line = f.readline()  # get next record
                     continue  # don't process this record if it's not the correct expiration
-                if expiration > hi_date:
+                if expiration > expiration_range['high']:
                     return  # stop processing all records when out of expiration range
 
             strike = float(values[dni_strike])
-            if select_strike_range:
-                lo_strike = select_strike_range[0]
-                hi_strike = select_strike_range[1]
-                if strike < lo_strike:
-                    line = data_file.readline()  # get next record
+            if strike_range:
+                if strike < strike_range['low']:
+                    line = f.readline()  # get next record
                     continue # don't process if it's not within the strike range
-                if strike > hi_strike:
-                    if select_expiration_range and expiration == hi_date:
-                        return  # last strike in expiration range was reached. Stop processing the file.
+                if strike > strike_range['high']:
+                    if expiration_range and expiration == expiration_range['high']:
+                        return  # high strike in expiration range was reached. Stop processing the file.
                     else:
-                        line = data_file.readline()  # get next record
+                        line = f.readline()  # get next record
                         continue
 
             delta = float(values[dni_delta])
-            if select_delta_range:
-                lo_delta = select_delta_range[0]
-                hi_delta = select_delta_range[1]
-                if delta < lo_delta or delta > hi_delta:
-                    line = data_file.readline()  # get next record
+            if delta_range:
+                if delta < delta_range['low'] or delta > delta_range['high']:
+                    line = f.readline()  # get next record
                     continue
 
             option_type = OptionType.CALL if values[dni_type] == 'call' else OptionType.PUT
-            if select_option_type:
-                if not option_type == select_option_type:
-                    line = data_file.readline()
+            if option_type_filter:
+                if not option_type == option_type_filter:
+                    line = f.readline()
                     continue
 
             option_id, symbol = values[dni_id], values[dni_symbol]
@@ -156,5 +133,37 @@ class OptionChain:
                             price, delta=delta, gamma=gamma, theta=theta, vega=vega,
                             open_interest=open_interest, implied_volatility=implied_volatility)
             yield option
-            line = data_file.readline()  # get next record
+            line = f.readline()  # get next record
 
+    def load_cboe_options_from_file(self, file_path, option_type_filter=None, strike_range=None,
+                                        expiration_range=None,
+                                        delta_range=None):
+        """
+        Loads intraday data for one ticker, one day.
+        To filter the data, use the select parameters:
+        :param file_path: The absolute path to the data file
+        :param option_type_filter: set to OptionType.PUT or OptionType.CALL to filter for option type. Default is None.
+        :param strike_range: None for all strikes.
+                Dictionary for strike range: {'low': <low value>, 'high': <high value>}
+        :param expiration_range: None for all expirations
+                Dictionary for expiration range: {"low": <first exp>, "high": <last exp>}
+        :param delta_range: None for all deltas.
+                Dictionary for delta range: {'low': <low value>, 'high': <high value>}
+        :param args:
+        :param kwargs:
+        """
+        data_file = open(file_path, 'r')
+        data_file.readline()  # read header line and ignore
+        opt_gen = self._cboe_generator(data_file, option_type_filter, strike_range,
+                                                expiration_range, delta_range)
+
+        options = [o for o in opt_gen]
+
+        data_file.close()
+
+        self._chain = options
+
+    def _cboe_generator(self, f, option_type_filter=None, strike_range=None,
+                                        expiration_range=None,
+                                        delta_range=None):
+        pass
