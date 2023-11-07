@@ -32,3 +32,16 @@ def decimalize_4(value):
     dec_val = Decimal(value)
     quantize_val = dec_val.quantize(Decimal('1.0000'))
     return quantize_val
+
+def distinct(iterable):
+    """
+    Returns a list of distinct items from a given iterable
+    :param iterable:
+    :return: list of distinct items
+    """
+    distinct_values = set()
+    for x in iterable:
+        if x in distinct_values:
+            continue
+        yield x
+        distinct_values.add(x)

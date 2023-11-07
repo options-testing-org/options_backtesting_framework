@@ -4,7 +4,7 @@ from .option_types import OptionPositionType, OptionType
 from .utils.helpers import decimalize_0, decimalize_2, decimalize_4
 from collections import namedtuple
 
-optional_fields = ['open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega', 'rho', 'fee']
+optional_fields = ['open_interest', 'implied_volatility', 'delta', 'gamma', 'theta', 'vega', 'rho', 'fee']
 
 OptionContract = namedtuple("OptionContract", "option_id symbol expiration strike option_type")
 OptionQuote = namedtuple("OptionQuote", "quote_date spot_price bid ask price")
@@ -27,6 +27,7 @@ class Option:
         Creates an option object. An option must have an id, symbol, strike, expiration and type at a minimum.
         Price information can be included or can be set using the update method.
 
+        :rtype: object
         :param option_id: unique identifier for the option *required*
         :type option_id: Any
         :param symbol: ticker symbol for underlying asset *required*
@@ -74,9 +75,13 @@ class Option:
         self._option_contract = OptionContract(option_id=option_id, symbol=symbol, expiration=expiration,
                                                strike=strike, option_type=option_type)
 
-        if quote_date is None or spot_price is None or bid is None or ask is None or price is None:
+        if (any([quote_date, spot_price, bid is not None, ask is not None, price is not None])
+                and not all([quote_date, spot_price, bid is not None, ask is not None, price is not None])):
+            raise ValueError(
+                "All the required option quote values must be passed to set any quote values: quote date, spot price, bid, ask, price.")
+        elif not any([quote_date, spot_price, bid is not None, ask is not None, price is not None]):
             self._option_quote = None
-        else:
+        elif all([quote_date, spot_price, bid is not None, ask is not None, price is not None]):
             self._option_quote = OptionQuote(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
         # The optional attributes are set using keyword arguments
