@@ -608,23 +608,23 @@ class Option:
 
     @property
     def quote_date(self):
-        return self._option_quote.quote_date
+        return None if self._option_quote is None else self._option_quote.quote_date
 
     @property
     def spot_price(self):
-        return self._option_quote.spot_price
+        return None if self._option_quote is None else self._option_quote.spot_price
 
     @property
     def bid(self):
-        return self._option_quote.bid
+        return None if self._option_quote is None else self._option_quote.bid
 
     @property
     def ask(self):
-        return self._option_quote.ask
+        return None if self._option_quote is None else self._option_quote.ask
 
     @property
     def price(self):
-        return self._option_quote.price
+        return None if self._option_quote is None else self._option_quote.price
 
     @property
     def extended_properties(self):
@@ -639,11 +639,11 @@ class Option:
 
     @property
     def implied_volatility(self):
-        return self._extended_properties.implied_volatility
+        return None if self._extended_properties is None else self._extended_properties.implied_volatility
 
     @property
     def open_interest(self):
-        return self._extended_properties.open_interest
+        return None if self._extended_properties is None else self._extended_properties.open_interest
 
     @property
     def greeks(self):
@@ -659,23 +659,23 @@ class Option:
 
     @property
     def delta(self):
-        return self._greeks.delta
+        return None if self._greeks is None else self._greeks.delta
 
     @property
     def gamma(self):
-        return self._greeks.gamma
+        return None if self._greeks is None else self._greeks.gamma
 
     @property
     def theta(self):
-        return self._greeks.theta
+        return None if self._greeks is None else self._greeks.theta
 
     @property
     def vega(self):
-        return self._greeks.vega
+        return None if self._greeks is None else self._greeks.vega
 
     @property
     def rho(self):
-        return self._greeks.rho
+        return None if self._greeks is None else self._greeks.rho
 
     @property
     def trade_close_records(self):

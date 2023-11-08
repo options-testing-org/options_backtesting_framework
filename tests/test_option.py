@@ -164,32 +164,32 @@ def test_update_sets_correct_values():
 
 
 def test_update_raises_exception_if_missing_required_fields():
-    call = get_4390_call_option()
+    test_option = get_test_call_option()
 
     # quote_date
     none_quote_date = None
     with pytest.raises(ValueError, match="quote_date is required"):
-        call.update(quote_date=none_quote_date, spot_price=4330, bid=6, ask=6.2, price=6.10)
+        test_option.update(quote_date=none_quote_date, spot_price=90.0, bid=1.0, ask=2.0, price=1.5)
 
     # spot price
     none_spot_price = None
     with pytest.raises(ValueError, match="spot_price is required"):
-        call.update(quote_date=test_update_quote_date, spot_price=none_spot_price, bid=6, ask=6.2, price=6.10)
+        test_option.update(quote_date=test_update_quote_date, spot_price=none_spot_price, bid=1.0, ask=2.0, price=1.5)
 
     # bid
     none_bid = None
     with pytest.raises(ValueError, match="bid is required"):
-        call.update(quote_date=test_update_quote_date, spot_price=4330, bid=none_bid, ask=6.2, price=6.10)
+        test_option.update(quote_date=test_update_quote_date, spot_price=90.0, bid=none_bid, ask=2.0, price=1.5)
 
     # ask
     none_ask = None
     with pytest.raises(ValueError, match="ask is required"):
-        call.update(quote_date=test_update_quote_date, spot_price=4330, bid=6, ask=none_ask, price=6.10)
+        test_option.update(quote_date=test_update_quote_date, spot_price=90.0, bid=1.0, ask=none_ask, price=1.5)
 
     # price
     none_price = None
     with pytest.raises(ValueError, match="price is required"):
-        call.update(quote_date=test_update_quote_date, spot_price=4330, bid=6, ask=6.2, price=none_price)
+        test_option.update(quote_date=test_update_quote_date, spot_price=90.0, bid=1.0, ask=2.0, price=none_price)
 
 
 def test_update_raises_exception_if_quote_date_is_greater_than_expiration():
@@ -797,7 +797,7 @@ def test_get_days_in_trade(quote_date, expected_days_in_trade):
     assert test_option.get_days_in_trade() == expected_days_in_trade
 
 def test_get_total_profit_loss_raises_exception_if_not_traded():
-    test_option = get_4380_call_option()
+    test_option = get_test_call_option()
 
     with pytest.raises(Exception, match="No trade has been opened."):
         test_option.get_total_profit_loss()
@@ -916,5 +916,26 @@ def test_get_total_profit_loss_percent_returns_unrealized_and_closed_pnl_when_mu
 
     actual_value = test_option.get_total_profit_loss_percent()
     assert actual_value == expected_value
+
+def test_single_option_properties_return_none_when_property_group_is_none():
+    test_option = test_option = Option(id, ticker, 100.0, test_expiration, OptionType.CALL)
+
+    assert test_option.option_quote is None
+    assert test_option.quote_date is None
+    assert test_option.spot_price is None
+    assert test_option.bid is None
+    assert test_option.ask is None
+    assert test_option.price is None
+
+    assert test_option.greeks is None
+    assert test_option.delta is None
+    assert test_option.gamma is None
+    assert test_option.theta is None
+    assert test_option.vega is None
+    assert test_option.rho is None
+
+    assert test_option.extended_properties is None
+    assert test_option.open_interest is None
+    assert test_option.implied_volatility is None
 
 
