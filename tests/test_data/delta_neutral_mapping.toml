@@ -1,0 +1,52 @@
+title = "Column Mapping for Delta Neutral Option Data Files"
+
+[properties]
+first_row_is_header = true
+put_value_in_data = 'put'
+call_value_in_data = 'call'
+data_folder = 'C:\data'
+
+# list all the columns in the data file in order, even unused columns
+[file_columns]
+'AKA' = 0
+'UnderlyingSymbol' = 1
+'UnderlyingPrice' = 2
+'Exchange' = 3
+'OptionSymbol' = 4
+'OptionExt' = 5
+'Type' = 6
+'Expiration' = 7
+'DataDate' = 8
+'Strike' = 9
+'Last' = 10
+'Bid' = 11
+'Ask' = 12
+'Volume' = 13
+'OpenInterest' = 14
+'IV' = 15
+'Delta' = 16
+'Gamma' = 17
+'Theta' = 18
+'Vega' = 19
+
+
+# Map the data file columns to the option fields
+# The id field may contain multiple columns that will be concatenated
+[field_mappings]
+id = ['AKA']
+symbol = 'UnderlyingSymbol'
+strike = 'Strike'
+expiration = 'Expiration'
+option_type = 'Type'
+quote_date = 'DataDate'
+spot_price = 'UnderlyingPrice'
+bid = 'Bid'
+ask = 'Ask'
+delta = 'Delta'
+gamma = 'Gamma'
+theta = 'Theta'
+vega = 'Vega'
+open_interest = 'OpenInterest'
+implied_volatility = 'IV'
+
+
