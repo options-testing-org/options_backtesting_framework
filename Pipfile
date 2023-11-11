@@ -4,11 +4,11 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-dynaconf = "*"
+dynaconf = "==3.2.4"
 
 [dev-packages]
 pytest = "==7.4.3"
-black = "*"
+black = "==23.11.0"
 
 [requires]
 python_version = "3.11"
