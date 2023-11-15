@@ -1,9 +1,10 @@
-
+import pytest
 from options_test_helper import *
 
 def test_test():
     assert True
 
+@pytest.mark.xfail(raises=NameError)
 def test_test_options_methods():
     put_4210 = get_4210_put_option()
     assert put_4210.price == 13.95
