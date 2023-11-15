@@ -1,5 +1,7 @@
 import datetime
 import pytest
+import os
+import pathlib
 from options_framework.option_types import OptionType, TransactionType
 from options_framework.option_chain import OptionChain
 from options_framework.config import settings
@@ -7,6 +9,17 @@ from options_framework.config import settings
 @pytest.fixture
 def test_data_dir():
     return settings.TEST_DATA_DIR
+def test_get_data_file_map_for_delta_neutral_file_format():
+    # all_headers = ['AKA', 'UnderlyingSymbol', 'UnderlyingPrice', 'Exchange', 'OptionSymbol', 'OptionExt', 'Type',
+    #               'Expiration', 'DataDate', 'Strike', 'Last', 'Bid', 'Ask', 'Volume', 'OpenInterest', 'IV', 'Delta',
+    #               'Gamma', 'Theta', 'Vega']
+    # map = DataFileMap(all_headers)
+
+    test_folder = pathlib.Path(os.getcwd())
+    mapping_toml_file = test_folder.joinpath("test_data", "delta_neutral_mapping.toml")
+    DataFileMap.load_column_mapping(mapping_toml_file)
+
+    pass
 
 def test_read_all_records_from_daily_option_file(test_data_dir):
     test_data_file = test_data_dir / "L2_options_20230301.csv"
