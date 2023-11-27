@@ -1,13 +1,16 @@
 import datetime
-from pathlib import Path
 from options_framework.option_chain import OptionChain
 from options_framework.data.file_data_loader import FileDataLoader
-from options_framework.config import settings
 
-def test_option_chain_init_with_day_quote_time_granularity(datafile_settings_file_name, datafile_file_name):
-    quote_date = datetime.datetime(2023, 3, 1)
+def test_load_option_chain(datafile_settings_file_name, datafile_file_name):
+    quote_datetime = datetime.datetime.strptime("03/01/2023", "%m/%d/%Y")
     data_loader = FileDataLoader(datafile_settings_file_name)
+    option_chain = OptionChain()
 
-    oc = OptionChain(quote_datetime=quote_date, data_loader=data_loader)
+    data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
 
-    pass
+    data_loader.load_data(quote_datetime=quote_datetime, symbol='MSFT', file_path=datafile_file_name)
+
+    assert len(option_chain.option_chain) == 2190
+    assert len(option_chain.expirations) == 19
+    assert len(option_chain.expiration_strikes[0][1]) == 58

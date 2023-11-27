@@ -26,17 +26,22 @@ def test_file_data_loader_maps_file_columns_to_fields(datafile_settings_file_nam
     assert file_data_loader.field_mapping['option_type'] == 6
 
 def test_file_data_loader_load_data_loads_options_records_from_file(datafile_settings_file_name, datafile_file_name):
+    quote_datetime = datetime.datetime.strptime("03/01/2023", "%m/%d/%Y")
     file_data_loader = FileDataLoader(datafile_settings_file_name)
-    options_data = file_data_loader.load_data(symbol='MSFT', file_path=datafile_file_name)
+    options_data = file_data_loader.load_data(quote_datetime=quote_datetime,
+                                              symbol='MSFT', file_path=datafile_file_name)
     assert len(options_data) == 2190
 
 def test_file_data_loader_option_type_filter(datafile_settings_file_name, datafile_file_name):
+    quote_datetime = datetime.datetime.strptime("03/01/2023", "%m/%d/%Y")
     file_data_loader = FileDataLoader(datafile_settings_file_name)
-    options_data = file_data_loader.load_data(symbol='MSFT', option_type_filter=OptionType.PUT,
+    options_data = file_data_loader.load_data(quote_datetime=quote_datetime,
+                                              symbol='MSFT', option_type_filter=OptionType.PUT,
                                               file_path=datafile_file_name)
     assert len(options_data) == 1095
 
 def test_cboe_file_data_loader_with_range_filters():
+    quote_datetime = datetime.datetime.strptime("11/2/2022", "%m/%d/%Y")
     settings_file_name = "cboe_settings.toml"
     data_file = "spx_11_02_2022.csv"
     file_data_loader = FileDataLoader(settings_file_name)
@@ -45,7 +50,8 @@ def test_cboe_file_data_loader_with_range_filters():
                        'high': datetime.datetime.strptime("11/3/2022", "%m/%d/%Y")},
         'strike': {'low': 3830, 'high': 3840},
         'delta': {'low': 0.60, 'high': 0.61}}
-    options_data = file_data_loader.load_data(symbol='SPXW', option_type_filter=OptionType.CALL,
+    options_data = file_data_loader.load_data(quote_datetime=quote_datetime,
+                                              symbol='SPXW', option_type_filter=OptionType.CALL,
                                               range_filters=range_filter, file_path=data_file)
 
     assert len(options_data) == 4

@@ -1,7 +1,7 @@
 import datetime
 import io
 from pathlib import Path
-from typing import List
+from pydispatch import Dispatcher
 
 from options_framework.config import settings
 from options_framework.data.data_loader import DataLoader
@@ -16,8 +16,8 @@ class FileDataLoader(DataLoader):
         self.field_mapping = self._map_data_file_fields()
         self.fields = list(self.field_mapping.keys())
 
-    def load_data(self, symbol: str, option_type_filter: OptionType = None,
-                  range_filters: dict = None, file_path: str = None, **kwargs) -> List[Option]:
+    def load_data(self, quote_datetime: datetime.datetime, symbol: str, option_type_filter: OptionType = None,
+                  range_filters: dict = None, file_path: str = None, **kwargs):
         if 'file_path' is None:
             raise ValueError('Must provide file_path')
         data_root_folder = settings.DATA_FILES_ROOT_FOLDER
@@ -31,7 +31,7 @@ class FileDataLoader(DataLoader):
         options = [o for o in option_data_reader]
         data_file.close()
 
-        return options
+        super().on_data_loaded(quote_datetime=quote_datetime, option_chain=options)
 
     def _load_data_generator(self, f: io.TextIOWrapper, symbol: str, option_type_filter: OptionType = None,
                              range_filters: dict = None):
