@@ -1,0 +1,60 @@
+DATA_IMPORT_NAME = "Test Flat Files Import CBOE"
+DATA_FILES_ROOT_FOLDER = "C:\\_code\\options_backtesting_framework\\tests\\test_data"
+
+[DATA_IMPORT_FILE_PROPERTIES]
+first_row_is_header = true
+put_value_in_data = 'P'
+call_value_in_data = 'C'
+option_id_columns = ['root', 'strike', 'expiration', 'option_type']
+expiration_date_format = "%m/%d/%Y"
+quote_date_format = "%m/%d/%Y %h:%m"
+column_delimiter = ','
+
+# list all the columns in the data file in order, even unused columns
+[COLUMN_ORDER]
+underlying_symbol = 0
+quote_datetime = 1
+root = 2
+expiration = 3
+strike = 4
+option_type = 5
+open = 6
+high = 7
+low = 8
+close = 9
+trade_volume = 10
+bid_size = 11
+bid = 12
+ask_size = 13
+ask = 14
+underlying_bid = 15
+underlying_ask = 16
+implied_underlying_price = 17
+active_underlying_price  = 18
+implied_volatility = 19
+delta = 20
+gamma = 21
+theta = 22
+vega = 23
+rho = 24
+open_interest = 25
+
+
+# Map the data file columns to the option fields
+# The id field may contain multiple columns that will be concatenated
+[FIELD_MAPPING]
+symbol = 'root'
+strike = 'strike'
+expiration = 'expiration'
+option_type = 'option_type'
+quote_date = 'quote_datetime'
+spot_price = 'active_underlying_price'
+bid = 'bid'
+ask = 'ask'
+delta = 'delta'
+gamma = 'gamma'
+theta = 'theta'
+vega = 'vega'
+rho = 'rho'
+open_interest = 'open_interest'
+implied_volatility = 'implied_volatility'

@@ -1,64 +1,16 @@
 import datetime
-import pytest
-import os
-import pathlib
-from options_framework.option_types import OptionType, TransactionType
 from options_framework.option_chain import OptionChain
-from options_framework.config import settings
+from options_framework.data.file_data_loader import FileDataLoader
 
-@pytest.fixture
-def get_data_dir():
-    return settings.TEST_DATA_DIR
-def test_get_data_file_map_for_delta_neutral_file_format():
-    # all_headers = ['AKA', 'UnderlyingSymbol', 'UnderlyingPrice', 'Exchange', 'OptionSymbol', 'OptionExt', 'Type',
-    #               'Expiration', 'DataDate', 'Strike', 'Last', 'Bid', 'Ask', 'Volume', 'OpenInterest', 'IV', 'Delta',
-    #               'Gamma', 'Theta', 'Vega']
-    # map = DataFileMap(all_headers)
+def test_load_option_chain(datafile_settings_file_name, datafile_file_name):
+    quote_datetime = datetime.datetime.strptime("03/01/2023", "%m/%d/%Y")
+    data_loader = FileDataLoader(datafile_settings_file_name)
+    option_chain = OptionChain()
 
-    test_folder = pathlib.Path(os.getcwd())
-    mapping_toml_file = test_folder.joinpath("test_data", "delta_neutral_mapping.toml")
-    DataFileMap.load_column_mapping(mapping_toml_file)
+    data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
 
-    pass
+    data_loader.load_data(quote_datetime=quote_datetime, symbol='MSFT', file_path=datafile_file_name)
 
-def test_read_all_records_from_daily_option_file(get_data_dir):
-    test_data_file = get_data_dir / "L2_options_20230301.csv"
-    chain = OptionChain()
-    chain.load_delta_neutral_data_from_file(test_data_file)
-    test_chain = chain.option_chain
-
-    assert len(test_chain) == 2_190
-
-
-def test_get_list_of_expirations_in_chain(get_data_dir):
-    test_data_file = get_data_dir / "L2_options_20230301.csv"
-    chain = OptionChain()
-    chain.load_delta_neutral_data_from_file(test_data_file)
-    expirations = chain.get_expirations()
-
-    assert len(expirations) == 19
-
-
-def test_get_chain_for_expiration_range_from_daily_options_file(get_data_dir):
-    first_exp = datetime.datetime.strptime("03-11-2023", "%m-%d-%Y")
-    last_exp = datetime.datetime.strptime("04-06-2023", "%m-%d-%Y")
-    exp_range = {"low": first_exp, "high": last_exp}
-    test_data_file = get_data_dir / "L2_options_20230301.csv"
-    chain = OptionChain()
-    chain.load_delta_neutral_data_from_file(test_data_file, expiration_range=exp_range)
-    expirations = chain.get_expirations()
-
-    assert len(expirations) == 4
-    assert expirations[-1] == last_exp
-
-def test_get_chain_with_option_type_filter(get_data_dir):
-    first_exp = datetime.datetime.strptime("03-03-2023", "%m-%d-%Y")
-    last_exp = datetime.datetime.strptime("03-03-2023", "%m-%d-%Y")
-    exp_range = {"low": first_exp, "high": last_exp}
-    test_data_file = get_data_dir / "L2_options_20230301.csv"
-    chain = OptionChain()
-    chain.load_delta_neutral_data_from_file(test_data_file, option_type_filter=OptionType.CALL,
-                                            expiration_range=exp_range)
-    options = chain.option_chain
-
-    assert all(o.option_type == OptionType.CALL for o in options)
+    assert len(option_chain.option_chain) == 2190
+    assert len(option_chain.expirations) == 19
+    assert len(option_chain.expiration_strikes[0][1]) == 58

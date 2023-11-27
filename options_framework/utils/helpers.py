@@ -1,6 +1,6 @@
 from decimal import Context, Decimal, getcontext
 
-def decimalize_0(value):
+def decimalize_0(value: int | float | Decimal) -> Decimal:
     """
     Floating numbers can produce unexpected results in calculation.
     Decimal numbers fix this. This returns a decimal number with 0 decimal places.
@@ -11,7 +11,7 @@ def decimalize_0(value):
     quantize_val = dec_val.quantize(Decimal('1'))
     return quantize_val
 
-def decimalize_2(value):
+def decimalize_2(value: float | Decimal) -> Decimal:
     """
     Floating numbers can produce unexpected results in calculation.
     Decimal numbers fix this. This returns a decimal number with 2 decimal places.
@@ -22,7 +22,7 @@ def decimalize_2(value):
     quantize_val = dec_val.quantize(Decimal('1.00'))
     return quantize_val
 
-def decimalize_4(value):
+def decimalize_4(value: float | Decimal) -> Decimal:
     """
     Floating numbers can produce unexpected results in calculation.
     Decimal numbers fix this. This returns a decimal number with 4 decimal places.
@@ -33,7 +33,7 @@ def decimalize_4(value):
     quantize_val = dec_val.quantize(Decimal('1.0000'))
     return quantize_val
 
-def distinct(iterable):
+def distinct(iterable: list) -> list:
     """
     Returns a list of distinct items from a given iterable
     :param iterable:

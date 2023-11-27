@@ -1,4 +1,5 @@
 from ..option_types import OptionTradeType, OptionCombinationType
+from abc import ABC, abstractmethod, abstractproperty
 from ..utils.helpers import decimalize_2, decimalize_4
 
 class OptionCombination:
@@ -16,9 +17,6 @@ class OptionCombination:
         :param kwargs: Any keyword arguments will be added to the object as attributes
         """
         self._options = options
-
-        if not hasattr(self, '_option_combination_type'):
-            self._option_combination_type = OptionCombinationType.CUSTOM
 
         for key, value in kwargs.items():
             setattr(self, key, value)
