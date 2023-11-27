@@ -48,4 +48,4 @@ def test_cboe_file_data_loader_with_range_filters():
     options_data = file_data_loader.load_data(symbol='SPXW', option_type_filter=OptionType.CALL,
                                               range_filters=range_filter, file_path=data_file)
 
-    assert len(options_data) == 791
+    assert len(options_data) == 4

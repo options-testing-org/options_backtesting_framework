@@ -685,7 +685,7 @@ def test_set_expired_sets_expired_flag_correctly(get_test_put_option, ticker, ge
     test_option.expiration = expiration_date_test
 
     _, spot_price, bid, ask, price = get_test_put_option_update_values_1
-    test_option.quote_datetime = quote_date
+    test_option.quote_date = quote_date
     test_option.spot_price = spot_price
     test_option.bid = bid
     test_option.ask = ask

@@ -1,0 +1,3 @@
+standard_fee=0.50
+incur_fees=true
+data_file_settings_folder = "C:\\_code\\options_backtesting_framework\\tests\\test_data\\config_settings"

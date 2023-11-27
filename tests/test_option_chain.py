@@ -9,5 +9,5 @@ def test_option_chain_init_with_day_quote_time_granularity(datafile_settings_fil
     data_loader = FileDataLoader(datafile_settings_file_name)
 
     oc = OptionChain(quote_datetime=quote_date, data_loader=data_loader)
-    oc.
+
     pass
