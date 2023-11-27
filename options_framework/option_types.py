@@ -1,4 +1,4 @@
-from enum import Enum
+from enum import Enum, StrEnum, Flag, auto
 
 
 class OptionType(Enum):
@@ -22,24 +22,31 @@ class OptionPositionType(Enum):
     SHORT = 1
     LONG = 2
 
+class OptionStatus(Flag):
+    CREATED = auto()
+    INITIALIZED = auto()
+    EXPIRED = auto()
+    TRADE_IS_OPEN = auto()
+    TRADE_PARTIALLY_CLOSED = auto()
+    TRADE_IS_CLOSED = auto()
 
-class OptionCombinationType(Enum):
+class OptionCombinationType(StrEnum):
     """
     This is the type of predefined option combinations used.
     """
-    SINGLE = 1
-    VERTICAL = 2
-    RATIO = 3
-    CALENDAR = 4
-    DIAGONAL = 5
-    STRADDLE = 6
-    STRANGLE = 7
-    BUTTERFLY = 8
-    IRON_BUTTERFLY = 9
-    CONDOR = 10
-    IRON_CONDOR = 11
-    COLLAR = 12
-    CUSTOM = 100
+    SINGLE = auto()
+    VERTICAL = auto()
+    RATIO = auto()
+    CALENDAR = auto()
+    DIAGONAL = auto()
+    STRADDLE = auto()
+    STRANGLE = auto()
+    BUTTERFLY = auto()
+    IRON_BUTTERFLY = auto()
+    CONDOR = auto()
+    IRON_CONDOR = auto()
+    COLLAR = auto()
+    CUSTOM = auto()
 
 
 class OptionTradeType(Enum):
