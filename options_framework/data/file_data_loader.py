@@ -11,14 +11,16 @@ from options_framework.option_types import OptionType
 
 class FileDataLoader(DataLoader):
 
-    def __init__(self, settings_file: str, fields: list = None, *args, **kwargs):
-        super().__init__(settings_file=settings_file, fields=fields, *args, **kwargs)
+    def __init__(self, settings_file: str, select_fields: list = None,
+                 order_by_fields: list = None, *args, **kwargs):
+        super().__init__(settings_file=settings_file, select_fields=select_fields,
+                         order_by_fields=order_by_fields, *args, **kwargs)
         self.field_mapping = self._map_data_file_fields()
         self.fields = list(self.field_mapping.keys())
 
     def load_data(self, quote_datetime: datetime.datetime, symbol: str, option_type_filter: OptionType = None,
                   range_filters: dict = None, file_path: str = None, **kwargs):
-        if 'file_path' is None:
+        if file_path is None:
             raise ValueError('Must provide file_path')
         data_root_folder = settings.DATA_FILES_ROOT_FOLDER
         data_file_path = Path(data_root_folder, file_path)
@@ -63,7 +65,7 @@ class FileDataLoader(DataLoader):
                                                     settings.DATA_IMPORT_FILE_PROPERTIES.expiration_date_format)
             if range_filters and 'expiration' in range_filters.keys():
                 expiration_range = range_filters['expiration']
-                if expiration < expiration_range['low'] or expiration > expiration_range['high']:
+                if expiration.date() < expiration_range['low'] or expiration.date() > expiration_range['high']:
                     line = f.readline()
                     continue
 

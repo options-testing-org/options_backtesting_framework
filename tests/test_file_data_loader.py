@@ -60,8 +60,8 @@ def test_cboe_file_data_loader_with_range_filters():
     data_file = "spx_11_02_2022.csv"
     file_data_loader = FileDataLoader(settings_file_name)
     range_filter = {
-        'expiration': {'low': datetime.datetime.strptime("11/3/2022" , "%m/%d/%Y"),
-                       'high': datetime.datetime.strptime("11/3/2022", "%m/%d/%Y")},
+        'expiration': {'low': datetime.date(2022, 11, 3), # datetime.datetime.strptime("11/3/2022" , "%m/%d/%Y"),
+                       'high': datetime.date(2022, 11, 3)}, # datetime.datetime.strptime("11/3/2022", "%m/%d/%Y")},
         'strike': {'low': 3830, 'high': 3840},
         'delta': {'low': 0.60, 'high': 0.61}}
     options_data = []
