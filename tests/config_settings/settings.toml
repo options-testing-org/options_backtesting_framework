@@ -1,0 +1,4 @@
+standard_fee=0.50
+incur_fees=true
+database_settings = 'SQL_SERVER'
+database_secrets = 'config_settings/.secrets.toml'

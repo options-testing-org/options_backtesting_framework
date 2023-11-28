@@ -141,3 +141,7 @@ def datafile_settings_file_name():
 @pytest.fixture
 def datafile_file_name():
     return "L2_options_20230301.csv"
+
+@pytest.fixture
+def database_settings_file_name():
+    return ".secrets.toml"

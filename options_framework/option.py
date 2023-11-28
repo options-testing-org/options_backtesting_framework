@@ -1,5 +1,6 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 import datetime
 
@@ -127,7 +128,7 @@ class Option:
         return f'<{self.option_type.name} {self.symbol} {self.strike} ' \
             + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}>'
 
-    def _incur_fees(self, quantity: int) -> float:
+    def _incur_fees(self, quantity: int | Decimal) -> float:
         """
         Calculates fees for a transaction and adds to the total fees
         :return: fees that were added to the option
