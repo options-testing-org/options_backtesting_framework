@@ -1,43 +1,43 @@
-DATA_IMPORT_NAME = "Test Flat Files Import Custom"
+DATA_IMPORT_NAME = "Test Flat Files Import"
 DATA_FILES_ROOT_FOLDER = "C:\\_code\\options_backtesting_framework\\tests\\test_data"
 
 [DATA_IMPORT_FILE_PROPERTIES]
 first_row_is_header = true
 put_value_in_data = 'put'
 call_value_in_data = 'call'
-option_id_columns = ['AKA']
+option_id_columns = ['Alias']
 expiration_date_format = "%m/%d/%Y"
-quote_date_format = "%m/%d/%Y"
+quote_date_format = "%m/%d/%Y %h:%m"
 column_delimiter = ','
 
 [COLUMN_ORDER]
-AKA = 0
-UnderlyingSymbol = 1
-UnderlyingPrice = 2
-Exchange = 3
-OptionSymbol = 4
-OptionExt = 5
-Type = 6
-Expiration = 7
-DataDate = 8
-Strike = 9
-Last = 10
-Bid = 11
-Ask = 12
-Volume = 13
-OpenInterest = 14
-IV = 15
-Delta = 16
-Gamma = 17
-Theta = 18
-Vega = 19
+UnderlyingSymbol = 0
+UnderlyingPrice = 1
+Exchange = 2
+OptionSymbol = 3
+Blank = 4
+Type = 5
+Expiration = 6
+DataDate = 7
+Strike = 8
+Last = 9
+Bid = 10
+Ask = 11
+Volume = 12
+OpenInterest = 13
+IV = 14
+Delta = 15
+Gamma = 16
+Theta = 17
+Vega = 18
+Alias = 19
 
 [FIELD_MAPPING]
 symbol = 'UnderlyingSymbol'
 strike = 'Strike'
 expiration = 'Expiration'
 option_type = 'Type'
-quote_date = 'DataDate'
+quote_datetime = 'DataDate'
 spot_price = 'UnderlyingPrice'
 bid = 'Bid'
 ask = 'Ask'

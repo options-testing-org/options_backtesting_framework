@@ -11,8 +11,8 @@ from options_framework.option_types import OptionType
 
 class FileDataLoader(DataLoader):
 
-    def __init__(self, settings_file: str, *args, **kwargs):
-        super().__init__(settings_file, *args, **kwargs)
+    def __init__(self, settings_file: str, fields: list = None, *args, **kwargs):
+        super().__init__(settings_file=settings_file, fields=fields, *args, **kwargs)
         self.field_mapping = self._map_data_file_fields()
         self.fields = list(self.field_mapping.keys())
 

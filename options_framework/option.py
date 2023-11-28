@@ -1,5 +1,6 @@
 from collections import namedtuple
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 import datetime
 
@@ -33,7 +34,7 @@ class Option:
     """Put or Call"""
 
     # mutable fields, but must be updated with update method instead of directly
-    quote_date: Optional[datetime.datetime] = field(default=None, compare=False)
+    quote_datetime: Optional[datetime.datetime] = field(default=None, compare=False)
     """The date of the current price information: spot_price, bid, ask, and price"""
     spot_price: Optional[int | float] = field(default=None, compare=False)
     """The current price of the underlying asset"""
@@ -105,19 +106,19 @@ class Option:
 
         self.status = OptionStatus.CREATED
 
-        if (any([self.quote_date is not None, self.spot_price is not None, self.bid is not None, self.ask is not None,
+        if (any([self.quote_datetime is not None, self.spot_price is not None, self.bid is not None, self.ask is not None,
                  self.price is not None])
-                and not all([self.quote_date is not None, self.spot_price is not None,
+                and not all([self.quote_datetime is not None, self.spot_price is not None,
                              self.bid is not None, self.ask is not None, self.price is not None])):
             raise ValueError(
                 "All the required option quote values must be passed to set any quote values: "
                 + "quote date, spot price, bid, ask, price.")
 
         # make sure the quote date is not past the expiration date
-        if self.quote_date is not None and self.quote_date > self.expiration:
+        if self.quote_datetime is not None and self.quote_datetime > self.expiration:
             raise ValueError("Cannot create an option with a quote date past its expiration date")
 
-        if self.quote_date:
+        if self.quote_datetime:
             self.status = OptionStatus.INITIALIZED
 
         self.incur_fees = settings.incur_fees
@@ -127,7 +128,7 @@ class Option:
         return f'<{self.option_type.name} {self.symbol} {self.strike} ' \
             + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}>'
 
-    def _incur_fees(self, quantity: int) -> float:
+    def _incur_fees(self, quantity: int | Decimal) -> float:
         """
         Calculates fees for a transaction and adds to the total fees
         :return: fees that were added to the option
@@ -147,8 +148,8 @@ class Option:
         """
         if OptionStatus.EXPIRED in self.status or OptionStatus.INITIALIZED not in self.status:
             return
-        quote_date, expiration_date = self.quote_date.date(), self.expiration.date()
-        quote_time, exp_time = self.quote_date.time(), datetime.time(16, 15)
+        quote_date, expiration_date = self.quote_datetime.date(), self.expiration.date()
+        quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
         if (quote_date == expiration_date and quote_time >= exp_time) or (quote_date > expiration_date):
             self.status |= OptionStatus.EXPIRED
 
@@ -190,7 +191,7 @@ class Option:
         if quote_date.date() > self.expiration.date():
             raise ValueError("Cannot update to a date past the option expiration")
 
-        self.quote_date = quote_date
+        self.quote_datetime = quote_date
         self.spot_price = spot_price
         self.bid = bid
         self.ask = ask
@@ -245,7 +246,7 @@ class Option:
         # If it is a short position, the premium is a negative number.
         premium = float(decimalize_2(self.price) * 100 * decimalize_0(quantity))
 
-        trade_open_info = TradeOpenInfo(date=self.quote_date, quantity=quantity,
+        trade_open_info = TradeOpenInfo(date=self.quote_datetime, quantity=quantity,
                                         price=self.price,
                                         premium=premium, fees=fees)
         self.trade_open_info = trade_open_info
@@ -298,7 +299,7 @@ class Option:
             fees = self._incur_fees(abs(quantity))
 
         # date quantity price premium profit_loss fees
-        trade_close_record = TradeCloseInfo(date=self.quote_date, quantity=int(quantity),
+        trade_close_record = TradeCloseInfo(date=self.quote_datetime, quantity=int(quantity),
                                             price=float(close_price),
                                             profit_loss=float(profit_loss),
                                             profit_loss_percent=float(profit_loss_percent),
@@ -421,7 +422,7 @@ class Option:
         """
         if OptionStatus.INITIALIZED not in self.status:
             return None
-        dt_date = self.quote_date.date()
+        dt_date = self.quote_datetime.date()
         time_delta = self.expiration.date() - dt_date
         return time_delta.days
 
@@ -506,7 +507,7 @@ class Option:
         # if the trade has any open contracts, use current quote date.
         # if the trade is closed, then use the latest close date.
         if OptionStatus.TRADE_IS_OPEN in self.status:
-            dt_date = self.quote_date.date()
+            dt_date = self.quote_datetime.date()
         elif OptionStatus.TRADE_IS_CLOSED in self.status:
             dt_date = self.trade_close_records[-1].date.date()
         else:

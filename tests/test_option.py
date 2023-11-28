@@ -25,13 +25,13 @@ def test_option_init_with_quote_data(option_id, ticker, test_expiration, test_qu
     strike = 100
     spot_price, bid, ask, price = (95, 1.0, 2.0, 1.5)
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.CALL, quote_date=test_quote_date, spot_price=spot_price,
+                         option_type=OptionType.CALL, quote_datetime=test_quote_date, spot_price=spot_price,
                          bid=bid, ask=ask, price=price)
 
     assert test_option.bid == bid
     assert test_option.ask == ask
     assert test_option.price == price
-    assert test_option.quote_date == test_quote_date
+    assert test_option.quote_datetime == test_quote_date
     assert OptionStatus.INITIALIZED in test_option.status
 
 
@@ -42,7 +42,7 @@ def test_option_init_with_extended_properties(option_id, ticker, test_expiration
     strike = 100
 
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.CALL, quote_date=test_quote_date, spot_price=spot_price,
+                         option_type=OptionType.CALL, quote_datetime=test_quote_date, spot_price=spot_price,
                          bid=bid, ask=ask, price=price, open_interest=open_interest, implied_volatility=iv,
                          delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, fee_per_contract=standard_fee)
 
@@ -53,7 +53,7 @@ def test_option_init_with_extended_properties(option_id, ticker, test_expiration
     assert test_option.bid == bid
     assert test_option.ask == ask
     assert test_option.price == price
-    assert test_option.quote_date == test_quote_date
+    assert test_option.quote_datetime == test_quote_date
 
     assert test_option.delta == delta
     assert test_option.gamma == gamma
@@ -78,7 +78,7 @@ def test_option_set_user_defined_attributes(option_id, ticker, test_expiration, 
                                                                                       0.0935, 100, 0.132, 0.3301)
 
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.CALL, quote_date=test_quote_date, spot_price=spot_price,
+                         option_type=OptionType.CALL, quote_datetime=test_quote_date, spot_price=spot_price,
                          bid=bid, ask=ask, price=price, open_interest=open_interest,
                          implied_volatility=iv, delta=delta, gamma=gamma,
                          theta=theta, vega=vega, rho=rho,
@@ -124,7 +124,7 @@ def test_option_init_raises_exception_if_quote_date_is_greater_than_expiration(o
     spot_price, bid, ask, price = (95, 1.0, 2.0, 1.5)
     with pytest.raises(Exception, match="Cannot create an option with a quote date past its expiration date"):
         Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-               option_type=OptionType.CALL, quote_date=bad_open_date,
+               option_type=OptionType.CALL, quote_datetime=bad_open_date,
                spot_price=spot_price, bid=bid, ask=ask, price=price)
 
 
@@ -152,7 +152,7 @@ def test_update_sets_correct_values(option_id, test_expiration, test_quote_date,
                        open_interest=open_interest, user_defined1=test_value_1, user_defined2=test_value_2)
 
     assert test_option.spot_price == spot_price
-    assert test_option.quote_date == test_update_quote_date
+    assert test_option.quote_datetime == test_update_quote_date
     assert test_option.bid == bid
     assert test_option.ask == ask
     assert test_option.delta == delta
@@ -481,7 +481,7 @@ def test_total_fees_returns_all_fees_incurred(option_id, ticker, test_expiration
     strike, spot_price, bid, ask, price = (100, 90, 1.0, 2.0, 1.5)
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
                          option_type=OptionType.CALL,
-                         quote_date=test_quote_date, spot_price=spot_price, bid=bid,
+                         quote_datetime=test_quote_date, spot_price=spot_price, bid=bid,
                          ask=ask, price=price, fee_per_contract=standard_fee)  # add fee when creating option object
 
     test_option.open_trade(quantity=10)
@@ -634,7 +634,7 @@ def test_call_option_otm(option_id, ticker, test_expiration, test_quote_date, op
     bid, ask, price = (9.50, 10.5, 10.00)
     test_option = Option(option_id=option_id, symbol=ticker, strike=100, expiration=test_expiration,
                          option_type=option_type,
-                         quote_date=test_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+                         quote_datetime=test_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     actual_value = test_option.otm()
     assert actual_value == expected_value
@@ -650,7 +650,7 @@ def test_call_option_itm(option_id, ticker, test_expiration, test_quote_date, op
     bid, ask, price = (9.50, 10.5, 10.00)
     test_option = Option(option_id=option_id, symbol=ticker, strike=100, expiration=test_expiration,
                          option_type=option_type,
-                         quote_date=test_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+                         quote_datetime=test_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     actual_value = test_option.itm()
     assert actual_value == expected_value
@@ -685,7 +685,7 @@ def test_set_expired_sets_expired_flag_correctly(get_test_put_option, ticker, ge
     test_option.expiration = expiration_date_test
 
     _, spot_price, bid, ask, price = get_test_put_option_update_values_1
-    test_option.quote_date = quote_date
+    test_option.quote_datetime = quote_date
     test_option.spot_price = spot_price
     test_option.bid = bid
     test_option.ask = ask
@@ -985,7 +985,7 @@ def test_single_option_properties_return_none_when_no_quote_data(option_id, tick
     test_option = test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
                                        option_type=OptionType.CALL)
 
-    assert test_option.quote_date is None
+    assert test_option.quote_datetime is None
     assert test_option.spot_price is None
     assert test_option.bid is None
     assert test_option.ask is None
