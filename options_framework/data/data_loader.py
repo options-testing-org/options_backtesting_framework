@@ -10,11 +10,14 @@ from pydispatch import Dispatcher
 
 class DataLoader(ABC, Dispatcher):
     _events_ = ['option_chain_loaded']
-    _default_fields = ['symbol', 'expiration', 'strike', 'option_type', 'spot_price', 'bid', 'ask', 'price']
+    _default_fields = ['symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
+                       'bid', 'ask', 'price']
 
     def __init__(self, settings_file: str, fields: list = None, *args, **kwargs):
         path_to_settings = Path(os.getcwd(), settings.data_file_settings_folder, settings_file)
         settings.load_file(path_to_settings)
+        path_to_secrets = Path(os.getcwd(), settings.data_file_settings_folder, '.secrets.toml')
+        settings.load_file(path_to_secrets)
         self.select_fields = self._default_fields if fields is None else fields
 
     @abstractmethod

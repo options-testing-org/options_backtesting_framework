@@ -58,7 +58,7 @@ def option_id():
 def get_test_call_option(option_id, test_expiration, test_quote_date, ticker):
     strike, spot_price, bid, ask, price = (100.0, 90.0, 1.0, 2.0, 1.5)
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.CALL, quote_date=test_quote_date,
+                         option_type=OptionType.CALL, quote_datetime=test_quote_date,
                          spot_price=spot_price, bid=bid, ask=ask, price=price)
     return test_option
 
@@ -87,7 +87,7 @@ def get_test_call_option_extended_properties(option_id, test_expiration, test_qu
     spot_price, bid, ask, price = (110.0, 1.0, 2.0, 1.5)
     delta, gamma, theta, vega, open_interest, rho, iv = (0.3459, -0.1234, 0.0485, 0.0935, 100, 0.132, 0.3301)
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.CALL, quote_date=test_quote_date,
+                         option_type=OptionType.CALL, quote_datetime=test_quote_date,
                          spot_price=spot_price, bid=bid, ask=ask, price=price,
                          delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, implied_volatility=iv,
                          open_interest=open_interest)
@@ -98,7 +98,7 @@ def get_test_call_option_extended_properties(option_id, test_expiration, test_qu
 def get_test_put_option(option_id, test_expiration, test_quote_date, ticker):
     strike, spot_price, bid, ask, price = (100.0, 105.0, 1.0, 2.0, 1.5)
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.PUT, quote_date=test_quote_date,
+                         option_type=OptionType.PUT, quote_datetime=test_quote_date,
                          spot_price=spot_price, bid=bid, ask=ask, price=price)
     return test_option
 
@@ -127,7 +127,7 @@ def get_test_put_option_with_extended_properties(option_id, test_expiration, tes
     spot_price, bid, ask, price = (105, 1.0, 2.0, 1.5)
     delta, gamma, theta, vega, open_interest, rho, iv = (-0.4492, -0.1045, 0.0412, 0.1143, 900, 0.0282, 0.3347)
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.PUT, quote_date=test_quote_date,
+                         option_type=OptionType.PUT, quote_datetime=test_quote_date,
                          spot_price=spot_price, bid=bid, ask=ask, price=price,
                          delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, implied_volatility=iv,
                          open_interest=open_interest)
@@ -144,4 +144,4 @@ def datafile_file_name():
 
 @pytest.fixture
 def database_settings_file_name():
-    return ".secrets.toml"
+    return "sql_server_settings.toml"
