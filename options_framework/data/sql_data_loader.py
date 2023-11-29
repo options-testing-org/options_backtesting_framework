@@ -40,7 +40,7 @@ class SQLServerDataLoader(DataLoader):
         options = [Option(
             option_id=row['option_id'],
             symbol=row['symbol'],
-            expiration=row['expiration'],
+            expiration=row['expiration'].date(),
             strike=row['strike'],
             option_type=OptionType.CALL if row['option_type'] == 1 else OptionType.PUT,
             quote_datetime=i if 'quote_datetime' in self.select_fields else None,

@@ -24,9 +24,6 @@ class OptionCombination:
     def __repr__(self):
         return f'<Custom options spread with {len(self._options)} options>'
 
-
-
-
     #
     # def premium(self):
     #     """
@@ -95,7 +92,7 @@ class OptionCombination:
     @property
     def option_trade_type(self):
         """
-        Determines whether the premium received is positive or negative.
+        Determines whether the premium is positive or negative.
         If net positive, the trader paid to purchase the options, and the spread is a debit
         If net negative, the trader received premium, and the spread is a credit
         :return: OptionTradeType.CREDIT or OptionTradeType.DEBIT

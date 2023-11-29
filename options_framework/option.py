@@ -11,7 +11,6 @@ from options_framework.config import settings
 TradeOpenInfo = namedtuple("TradeOpen", "date quantity price premium fees")
 TradeCloseInfo = namedtuple("TradeClose", "date quantity price profit_loss profit_loss_percent fees")
 
-
 @dataclass(repr=False, kw_only=True, slots=True)
 class Option:
     """
@@ -28,7 +27,7 @@ class Option:
     """The ticker symbol"""
     strike: int | float = field(compare=True)
     """The option strike"""
-    expiration: datetime.datetime = field(compare=True)
+    expiration: datetime.date = field(compare=True)
     """The expiration date"""
     option_type: OptionType = field(compare=True)
     """Put or Call"""
@@ -115,7 +114,7 @@ class Option:
                 + "quote date, spot price, bid, ask, price.")
 
         # make sure the quote date is not past the expiration date
-        if self.quote_datetime is not None and self.quote_datetime > self.expiration:
+        if self.quote_datetime is not None and self.quote_datetime.date() > self.expiration:
             raise ValueError("Cannot create an option with a quote date past its expiration date")
 
         if self.quote_datetime:
