@@ -665,22 +665,17 @@ def test_set_expired_does_not_set_expired_flag_when_no_quote_data(option_id, tic
 
 
 @pytest.mark.parametrize("expiration_date_test, quote_date, expected_result", [
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-01 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f"), False),
-    (datetime.datetime.strptime("06-30-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-01 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f"), True),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-16 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f"), False),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-16 16:14:00.000000", "%Y-%m-%d %H:%M:%S.%f"), False),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-16 16:15:00.000000", "%Y-%m-%d %H:%M:%S.%f"), True),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-16", "%Y-%m-%d"), False),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-17", "%Y-%m-%d"), True)])
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 1, 9, 45), False),
+    (datetime.date(2021, 6, 30), datetime.datetime(2021, 7, 1, 9, 45), True),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 16,9, 45), False),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 16, 16, 14), False),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 16, 16, 15), True),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 16), False),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 17), True),
+])
 def test_set_expired_sets_expired_flag_correctly(get_test_put_option, ticker, get_test_put_option_update_values_1,
                                                  expiration_date_test, quote_date, expected_result):
+
     test_option = get_test_put_option
     test_option.expiration = expiration_date_test
 

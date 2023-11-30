@@ -1,28 +1,34 @@
-from options_framework.option_types import OptionType, OptionCombinationType, OptionPositionType, OptionTradeType
+import datetime
+import weakref
+
+from options_framework.option import Option
+from options_framework.option_types import OptionType, OptionCombinationType
 from options_framework.spreads.option_combo import OptionCombination
-from options_framework.utils.helpers import decimalize_2
 
 class Single(OptionCombination):
 
-    def __init__(self, option, *args, **kwargs):
-        self._option = option
+    def __init__(self, option: Option, *args, **kwargs):
+        self.option = option
+        self.expiration = option.expiration
+        self.option_type = option.option_type
+        self.strike = option.strike
         self._option_combination_type = OptionCombinationType.SINGLE
         super().__init__([option], args, kwargs)
 
-    @property
-    def option_trade_type(self):
-        if self._option.position_type == OptionPositionType.LONG:
-            return OptionTradeType.DEBIT
-        else:
-            return OptionTradeType.CREDIT
+    @classmethod
+    def get_single_option(cls, *, options: list[Option], expiration: datetime.date, option_type: OptionType,
+                          strike: float | int):
 
-    def breakeven_price(self):
-        trade_price = decimalize_2(self._option.trade_price)
+        candidates = [o for o in options if o.expiration == expiration
+                      and o.option_type == option_type and o.strike == strike]
+        if not candidates:
+            raise ValueError("No option was found")
+        if len(candidates) > 1:
+            raise ValueError("Multiple options match the parameters provided.")
+        option = candidates[0]
+        single = Single(option)
+        return single
 
-        if self._option.option_type == OptionType.CALL:
-            breakeven_price = self._option.strike + trade_price
-        else:
-            breakeven_price = self._option.strike - trade_price
-
-        return float(breakeven_price)
+    def open_trade(self, *, quantity: int, **kwargs: dict):
+        self.option.open_trade(quantity=quantity)
 

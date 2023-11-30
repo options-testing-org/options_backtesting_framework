@@ -5,4 +5,4 @@ name="Options Testing Framework"
 standard_fee=0.50
 incur_fees=true
 
-data_file_settings_folder = "config_settings"
+data_file_settings_folder = "C:\\_code\\options_backtesting_framework\\tests\\config_settings"

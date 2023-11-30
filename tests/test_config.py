@@ -16,4 +16,4 @@ def test_settings_toml_exists():
 
 
 def test_settings_toml_file_has_default_message():
-    assert config.settings.DEFAULT_MESSAGE == "Default message"
+    assert config.settings.DEFAULT_MESSAGE == "Config Default message"

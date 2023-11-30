@@ -3,35 +3,31 @@ import pytest
 from options_framework.option_types import OptionType
 from options_framework.option import Option
 
-
 @pytest.fixture
 def test_expiration():
-    return datetime.datetime.strptime("07-16-2021", "%m-%d-%Y")
-
+    return datetime.date(2021, 7, 16)
 
 @pytest.fixture
 def test_quote_date():
-    return datetime.datetime.strptime("2021-07-01 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
-
+    return (datetime.datetime(2021, 7, 1, 9, 45))
 
 @pytest.fixture
 def test_update_quote_date():
-    return datetime.datetime.strptime("2021-07-02 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
-
+    return (datetime.datetime(2021, 7, 2, 9, 45))
 
 @pytest.fixture
 def test_update_quote_date2():
-    return datetime.datetime.strptime("2021-07-02 14:31:00.000000", "%Y-%m-%d %H:%M:%S.%f")
+    return datetime.datetime(2021, 7, 2, 14, 31)
 
 
 @pytest.fixture
 def test_update_quote_date3():
-    return datetime.datetime.strptime("2021-07-16 11:31:00.000000", "%Y-%m-%d %H:%M:%S.%f")
+    return datetime.datetime(2021, 7, 16, 11, 31)
 
 
 @pytest.fixture
 def at_expiration_quote_date():
-    return datetime.datetime.strptime("2021-07-16 16:15:00.000000", "%Y-%m-%d %H:%M:%S.%f")
+    return datetime.datetime(2021, 7, 16, 15)
 
 
 @pytest.fixture

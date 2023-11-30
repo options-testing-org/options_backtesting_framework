@@ -2,7 +2,7 @@ import pathlib
 from dynaconf import Dynaconf
 
 settings = Dynaconf(
-    envvar_prefix="DYNACONF",
+    envvar_prefix="OPT_TESTING",
     settings_files=["config/settings.toml", "config/.secrets.toml"],
 )
 

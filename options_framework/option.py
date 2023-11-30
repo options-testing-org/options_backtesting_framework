@@ -147,7 +147,7 @@ class Option:
         """
         if OptionStatus.EXPIRED in self.status or OptionStatus.INITIALIZED not in self.status:
             return
-        quote_date, expiration_date = self.quote_datetime.date(), self.expiration.date()
+        quote_date, expiration_date = self.quote_datetime.date(), self.expiration
         quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
         if (quote_date == expiration_date and quote_time >= exp_time) or (quote_date > expiration_date):
             self.status |= OptionStatus.EXPIRED
@@ -187,7 +187,7 @@ class Option:
             raise ValueError("ask cannot be None")
         if price is None:
             raise ValueError("price cannot be None")
-        if quote_date.date() > self.expiration.date():
+        if quote_date.date() > self.expiration:
             raise ValueError("Cannot update to a date past the option expiration")
 
         self.quote_datetime = quote_date
@@ -422,7 +422,7 @@ class Option:
         if OptionStatus.INITIALIZED not in self.status:
             return None
         dt_date = self.quote_datetime.date()
-        time_delta = self.expiration.date() - dt_date
+        time_delta = self.expiration - dt_date
         return time_delta.days
 
     def get_unrealized_profit_loss(self) -> float:

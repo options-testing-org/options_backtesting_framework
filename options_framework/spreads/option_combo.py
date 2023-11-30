@@ -1,14 +1,16 @@
 from ..option_types import OptionTradeType, OptionCombinationType
 from abc import ABC, abstractmethod, abstractproperty
 from ..utils.helpers import decimalize_2, decimalize_4
+from pydispatch import Dispatcher
 
-class OptionCombination:
+class OptionCombination(ABC):
     """
     OptionCombination is a base class an options trade that is constructed with one or more option types,
     quantities, and expirations.
     There are several pre-defined classes for popular options spreads, but you can create a
     custom class, or just pass a list of options that make up the trade
     """
+
     def __init__(self, options, *args, **kwargs):
         """
         Creates the option spread.
@@ -17,12 +19,19 @@ class OptionCombination:
         :param kwargs: Any keyword arguments will be added to the object as attributes
         """
         self._options = options
+        # for option in options:
+        #     self.bind(open_transaction_executed=option.open_trade)
+        #     self.bind(close_transaction_executed=option.close_trade)
 
         for key, value in kwargs.items():
             setattr(self, key, value)
 
     def __repr__(self):
-        return f'<Custom options spread with {len(self._options)} options>'
+        return f'<Custom options spread {self._option_combination_type} with {len(self._options)} options>'
+
+    @abstractmethod
+    def open_trade(self, *, quantity: int, **kwargs: dict):
+        pass
 
     #
     # def premium(self):
