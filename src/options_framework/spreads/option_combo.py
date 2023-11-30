@@ -1,31 +1,37 @@
+from dataclasses import dataclass, field
+from typing import Optional
+
+from ..option import Option
 from ..option_types import OptionTradeType, OptionCombinationType
 from abc import ABC, abstractmethod, abstractproperty
 from ..utils.helpers import decimalize_2, decimalize_4
 
-class OptionCombination:
+@dataclass(repr=False, slots=True)
+class OptionCombination(ABC):
     """
     OptionCombination is a base class an options trade that is constructed with one or more option types,
     quantities, and expirations.
     There are several pre-defined classes for popular options spreads, but you can create a
     custom class, or just pass a list of options that make up the trade
     """
-    def __init__(self, options, *args, **kwargs):
-        """
-        Creates the option spread.
-        :param options: The options that make up the trade position
-        :param args: This is currently not used
-        :param kwargs: Any keyword arguments will be added to the object as attributes
-        """
-        self._options = options
 
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+    options: list[Option]
+    option_combination_type: Optional[OptionCombinationType] = field(default=None)
+
+    def __post_init__(self):
+        # The OptionCombination object should not be instantiated directly, but only through subclasses.
+        raise NotImplementedError
 
     def __repr__(self):
-        return f'<Custom options spread with {len(self._options)} options>'
+        return f'<{self.option_combination_type.name} Quantity: {len(self.options)} options>'
 
+    @abstractmethod
+    def open_trade(self, *, quantity: int, **kwargs: dict):
+        raise NotImplementedError
 
-
+    @abstractmethod
+    def close_trade(self, * quantity: int):
+        raise NotImplementedError
 
     #
     # def premium(self):
@@ -67,37 +73,37 @@ class OptionCombination:
     #     percent_gain_loss = (total_current_value - starting_value) / starting_value
     #     return float(decimalize_4(percent_gain_loss))
 
-    def max_profit(self):
-        """
-        If there is a determinate max profit, that is returned by the parent class.
-        If there is an infinite max profit, as is the case for a naked option type, returns None
-        :return: None or the max profit of the spread
-        """
-        return None
+    # def max_profit(self):
+    #     """
+    #     If there is a determinate max profit, that is returned by the parent class.
+    #     If there is an infinite max profit, as is the case for a naked option type, returns None
+    #     :return: None or the max profit of the spread
+    #     """
+    #     return None
+    #
+    # def max_loss(self):
+    #     """
+    #     If there is a determinate max loss, that is returned by the parent class.
+    #     If there is an infinite max loss, as is the case for a naked option type, returns None
+    #     :return: None or the max loss of the spread
+    #     """
+    #     return None
 
-    def max_loss(self):
-        """
-        If there is a determinate max loss, that is returned by the parent class.
-        If there is an infinite max loss, as is the case for a naked option type, returns None
-        :return: None or the max loss of the spread
-        """
-        return None
-
-    @property
-    def option_combination_type(self):
-        """
-        Returns the type of spread of the parent class.
-        The different types of spreads are defined in the OptionCombinationType enum.
-        :return: The option combination type of the parent class
-        """
-        return self._option_combination_type
-
-    @property
-    def option_trade_type(self):
-        """
-        Determines whether the premium received is positive or negative.
-        If net positive, the trader paid to purchase the options, and the spread is a debit
-        If net negative, the trader received premium, and the spread is a credit
-        :return: OptionTradeType.CREDIT or OptionTradeType.DEBIT
-        """
-        return OptionTradeType.CREDIT if self.premium() < 0 else OptionTradeType.DEBIT
+    # @property
+    # def option_combination_type(self):
+    #     """
+    #     Returns the type of spread of the parent class.
+    #     The different types of spreads are defined in the OptionCombinationType enum.
+    #     :return: The option combination type of the parent class
+    #     """
+    #     return self._option_combination_type
+    #
+    # @property
+    # def option_trade_type(self):
+    #     """
+    #     Determines whether the premium is positive or negative.
+    #     If net positive, the trader paid to purchase the options, and the spread is a debit
+    #     If net negative, the trader received premium, and the spread is a credit
+    #     :return: OptionTradeType.CREDIT or OptionTradeType.DEBIT
+    #     """
+    #     return OptionTradeType.CREDIT if self.premium() < 0 else OptionTradeType.DEBIT

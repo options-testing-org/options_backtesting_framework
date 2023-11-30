@@ -2,10 +2,8 @@ import datetime
 import pytest
 
 from options_framework.option_types import OptionPositionType, OptionType, OptionStatus
-from options_framework import option
 from options_framework.option import Option
-from options_framework.utils.exceptions import InvalidAssignmentError
-
+from options_framework.config import settings
 
 def test_option_init_with_only_option_contract_parameters(option_id, ticker, test_expiration):
     strike = 100
@@ -35,7 +33,7 @@ def test_option_init_with_quote_data(option_id, ticker, test_expiration, test_qu
     assert OptionStatus.INITIALIZED in test_option.status
 
 
-def test_option_init_with_extended_properties(option_id, ticker, test_expiration, test_quote_date, standard_fee):
+def test_option_init_with_extended_properties(option_id, ticker, test_expiration, test_quote_date):
     spot_price, bid, ask, price, delta, gamma, theta, vega, open_interest, rho, iv = (95, 1.0, 2.0, 1.5,
                                                                                       0.3459, -0.1234, 0.0485,
                                                                                       0.0935, 100, 0.132, 0.3301)
@@ -44,7 +42,7 @@ def test_option_init_with_extended_properties(option_id, ticker, test_expiration
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
                          option_type=OptionType.CALL, quote_datetime=test_quote_date, spot_price=spot_price,
                          bid=bid, ask=ask, price=price, open_interest=open_interest, implied_volatility=iv,
-                         delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, fee_per_contract=standard_fee)
+                         delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho)
 
     assert test_option.option_id == option_id
     assert test_option.symbol == ticker
@@ -64,7 +62,6 @@ def test_option_init_with_extended_properties(option_id, ticker, test_expiration
     assert test_option.implied_volatility == iv
     assert test_option.open_interest == open_interest
 
-    assert test_option.fee_per_contract == standard_fee
     assert OptionStatus.INITIALIZED in test_option.status
 
 
@@ -196,12 +193,13 @@ def test_update_raises_exception_if_missing_required_fields(get_test_call_option
         test_option.update(quote_date=test_update_quote_date, spot_price=90.0, bid=1.0, ask=2.0, price=none_price)
 
 
-def test_update_raises_exception_if_quote_date_is_greater_than_expiration(get_test_put_option):
+def test_update_sets_expiration_status_if_quote_date_is_greater_than_expiration(get_test_put_option):
     bad_quote_date = datetime.datetime.strptime("2021-07-17 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
     test_option = get_test_put_option
     spot_price, bid, ask, price = (105, 1.0, 2.0, 1.5)
-    with pytest.raises(Exception, match="Cannot update to a date past the option expiration"):
-        test_option.update(quote_date=bad_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_date=bad_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+
+    assert OptionStatus.EXPIRED in test_option.status
 
 
 def test_open_trade_sets_correct_trade_open_info_values(get_test_call_option, test_quote_date):
@@ -252,11 +250,10 @@ def test_open_trade_returns_correct_premium_value(get_test_call_option, get_test
 @pytest.mark.parametrize("quantity, incur_fees, expected_fees", [(10, True, 5.0), (2, True, 1.0), (-3, True, 1.5),
                                                                  (10, False, 0.0), (2, False, 0.0),
                                                                  (-3, False, 0.0)])
-def test_open_trade_sets_total_fees_when_incur_fees_is_true(get_test_call_option, standard_fee, quantity,
+def test_open_trade_sets_total_fees_when_incur_fees_is_true(get_test_call_option, quantity,
                                                             incur_fees, expected_fees):
     test_option = get_test_call_option
-    test_option.fee_per_contract = standard_fee
-    test_option.incur_fees = incur_fees
+    settings.INCUR_FEES = incur_fees
     test_option.open_trade(quantity=quantity)
 
     assert test_option.total_fees == expected_fees
@@ -343,7 +340,7 @@ def test_close_trade_updates_total_fees_incur_fees_flag(get_test_call_option, st
                                                         open_quantity, close_quantity, fee_amount):
     test_option = get_test_call_option
     test_option.fee_per_contract = standard_fee
-    test_option.incur_fees = incur_fees_flag
+    settings.INCUR_FEES = incur_fees_flag
     test_option.open_trade(quantity=open_quantity)
     test_option.close_trade(quantity=close_quantity)
 
@@ -360,6 +357,7 @@ def test_close_trade_values_with_one_close_trade(get_test_call_option, standard_
                                                  get_test_call_option_update_values_1, open_qty, close_qty,
                                                  expected_qty, close_dt, close_pnl,
                                                  close_pnl_pct, close_fees, status):
+    settings.INCUR_FEES = True
     test_option = get_test_call_option
     test_option.fee_per_contract = standard_fee
     test_option.open_trade(quantity=open_qty)
@@ -482,7 +480,7 @@ def test_total_fees_returns_all_fees_incurred(option_id, ticker, test_expiration
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
                          option_type=OptionType.CALL,
                          quote_datetime=test_quote_date, spot_price=spot_price, bid=bid,
-                         ask=ask, price=price, fee_per_contract=standard_fee)  # add fee when creating option object
+                         ask=ask, price=price)
 
     test_option.open_trade(quantity=10)
 
@@ -656,31 +654,26 @@ def test_call_option_itm(option_id, ticker, test_expiration, test_quote_date, op
     assert actual_value == expected_value
 
 
-def test_set_expired_does_not_set_expired_flag_when_no_quote_data(option_id, ticker, test_expiration):
+def test_check_expired_does_not_set_expired_flag_when_no_quote_data(option_id, ticker, test_expiration):
     test_option = Option(option_id=option_id, symbol=ticker, strike=100, expiration=test_expiration,
                          option_type=OptionType.CALL)
 
-    test_option._set_expired()
+    test_option._check_expired()
     assert OptionStatus.EXPIRED not in test_option.status
 
 
 @pytest.mark.parametrize("expiration_date_test, quote_date, expected_result", [
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-01 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f"), False),
-    (datetime.datetime.strptime("06-30-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-01 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f"), True),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-16 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f"), False),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-16 16:14:00.000000", "%Y-%m-%d %H:%M:%S.%f"), False),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-16 16:15:00.000000", "%Y-%m-%d %H:%M:%S.%f"), True),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-16", "%Y-%m-%d"), False),
-    (datetime.datetime.strptime("07-16-2021", "%m-%d-%Y"),
-     datetime.datetime.strptime("2021-07-17", "%Y-%m-%d"), True)])
-def test_set_expired_sets_expired_flag_correctly(get_test_put_option, ticker, get_test_put_option_update_values_1,
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 1, 9, 45), False),
+    (datetime.date(2021, 6, 30), datetime.datetime(2021, 7, 1, 9, 45), True),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 16,9, 45), False),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 16, 16, 14), False),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 16, 16, 15), True),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 16), False),
+    (datetime.date(2021, 7, 16), datetime.datetime(2021, 7, 17), True),
+])
+def test_check_expired_sets_expired_flag_correctly(get_test_put_option, ticker, get_test_put_option_update_values_1,
                                                  expiration_date_test, quote_date, expected_result):
+
     test_option = get_test_put_option
     test_option.expiration = expiration_date_test
 
@@ -693,7 +686,7 @@ def test_set_expired_sets_expired_flag_correctly(get_test_put_option, ticker, ge
 
     assert OptionStatus.EXPIRED not in test_option.status
 
-    test_option._set_expired()
+    test_option._check_expired()
 
     assert (OptionStatus.EXPIRED in test_option.status) == expected_result
 
@@ -881,7 +874,7 @@ def test_get_profit_loss_returns_unrealized_and_closed_pnl_when_partially_closed
     test_option.open_trade(quantity=10)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
     test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
-    test_option.close_trade(5)  # 4250
+    test_option.close_trade(quantity=5)  # 4250
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_2
     test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)  # 1750
 
@@ -999,3 +992,169 @@ def test_single_option_properties_return_none_when_no_quote_data(option_id, tick
 
     assert test_option.open_interest is None
     assert test_option.implied_volatility is None
+
+def test_open_option_emits_open_transaction_completed_event(get_test_call_option):
+    test_option = get_test_call_option
+    test_open_info = None
+    class MyPortfolio:
+
+        @staticmethod
+        def on_option_opened(trade_open_info):
+            nonlocal test_open_info
+            test_open_info = trade_open_info
+
+    my_portfolio = MyPortfolio()
+    test_option.bind(open_transaction_completed=my_portfolio.on_option_opened)
+
+    test_option.open_trade(quantity=1)
+
+    assert test_open_info is not None
+    assert test_open_info.option_id == test_option.option_id
+    assert test_open_info.date == test_option.quote_datetime
+    assert test_open_info.quantity == 1
+
+def test_close_option_emits_close_transaction_completed_event(get_test_call_option,
+                                                              get_test_call_option_update_values_1):
+    test_option = get_test_call_option
+    test_close_info = None
+
+    class MyPortfolio:
+
+        @staticmethod
+        def on_option_closed(trade_close_info):
+            nonlocal test_close_info
+            test_close_info = trade_close_info
+
+    my_portfolio = MyPortfolio()
+    test_option.bind(close_transaction_completed=my_portfolio.on_option_closed)
+
+    test_option.open_trade(quantity=10)
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
+    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.close_trade(quantity=5)
+
+    assert test_close_info is not None
+    assert test_close_info.option_id == test_option.option_id
+    assert test_close_info.date == quote_date
+    assert test_close_info.quantity == -5
+
+def test_update_to_expired_date_emits_option_expired_event(get_test_call_option, past_expiration_quote_date,
+                                                           get_test_call_option_update_values_1):
+    test_option = get_test_call_option
+    _, spot_price, bid, ask, price = get_test_call_option_update_values_1
+
+    expired_option_id = None
+
+    class MyPortfolio:
+
+        @staticmethod
+        def on_option_expired(option_id):
+            nonlocal expired_option_id
+            expired_option_id = option_id
+
+    my_portfolio = MyPortfolio()
+    test_option.bind(option_expired=my_portfolio.on_option_expired)
+
+    test_option.update(quote_date=past_expiration_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    assert expired_option_id == test_option.option_id
+
+def test_fees_incurred_event_emitted_when_open_or_close_fees_are_incurred(get_test_call_option, get_test_call_option_update_values_1):
+    test_option = get_test_call_option
+
+    my_fees = None
+    my_option_id = None
+
+    class MyPortfolio:
+
+        @staticmethod
+        def on_fees_incurred(option_id, fees):
+            nonlocal my_fees
+            nonlocal my_option_id
+            my_option_id = option_id
+            my_fees = fees
+
+    my_portfolio = MyPortfolio()
+    test_option.bind(fees_incurred=my_portfolio.on_fees_incurred)
+
+    test_option.open_trade(quantity=10)
+    assert my_option_id == test_option.option_id
+    assert my_fees == 5.0
+
+    my_fees = 0
+
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
+    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    assert my_fees == 0
+
+    test_option.close_trade(quantity=5)
+    assert my_fees == 2.5
+
+
+def test_current_value_is_zero_if_no_trades(get_test_call_option):
+    test_option = get_test_call_option
+
+    assert test_option.current_value == 0.0
+
+def test_current_value_is_same_as_open_premium_if_no_price_change(get_test_call_option):
+    test_option = get_test_call_option
+    open_info = test_option.open_trade(quantity=1)
+    premium = open_info.premium
+
+    assert test_option.current_value == premium
+
+def test_current_value_is_updated_when_price_changes(get_test_call_option, get_test_call_option_update_values_1):
+    test_option = get_test_call_option
+    test_option.open_trade(quantity=1)
+
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
+    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+
+    new_premium = 1_000.0
+
+    assert test_option.current_value == new_premium
+
+
+def test_current_value_when_partially_closed_price_changes(get_test_call_option, get_test_call_option_update_values_1,
+                                                           get_test_call_option_update_values_2,
+                                                           get_test_call_option_update_values_3):
+    test_option = get_test_call_option
+    test_option.open_trade(quantity=10)
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
+    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    assert test_option.current_value == 10_000.0
+
+    test_option.close_trade(quantity=5)
+    assert test_option.current_value == 5_000.0
+
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_2
+    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    assert test_option.current_value == 2_500.0
+    test_option.close_trade(quantity=3)
+    assert test_option.current_value == 1_000.0
+
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_3
+    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    assert test_option.current_value == 6.0
+
+    test_option.close_trade(quantity=2)
+    assert test_option.current_value == 0.0
+
+def test_current_value_is_not_updated_after_all_contracts_closed(get_test_call_option,
+                                                                 get_test_call_option_update_values_1,
+                                                                 get_test_call_option_update_values_2):
+    test_option = get_test_call_option
+    test_option.open_trade(quantity=10)
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
+    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+
+    test_option.close_trade(quantity=10)
+    assert test_option.current_value == 0.0
+
+    quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
+    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    assert test_option.current_value == 0.0
+
+
+
+
+

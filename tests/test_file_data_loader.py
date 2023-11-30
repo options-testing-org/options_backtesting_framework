@@ -33,8 +33,8 @@ def test_file_data_loader_load_data_loads_options_records_from_file(datafile_set
         options = option_chain
 
     file_data_loader.bind(option_chain_loaded=on_data_loaded)
-    file_data_loader.load_data(quote_datetime=quote_datetime,
-                                              symbol='MSFT', file_path=datafile_file_name)
+    file_data_loader.load_option_chain(quote_datetime=quote_datetime,
+                                       symbol='MSFT', file_path=datafile_file_name)
     assert len(options) == 2190
 
 def test_file_data_loader_option_type_filter(datafile_settings_file_name, datafile_file_name):
@@ -48,9 +48,9 @@ def test_file_data_loader_option_type_filter(datafile_settings_file_name, datafi
         options_data = option_chain
 
     file_data_loader.bind(option_chain_loaded=on_data_loaded)
-    file_data_loader.load_data(quote_datetime=quote_datetime,
-                               symbol='MSFT', option_type_filter=OptionType.PUT,
-                               file_path=datafile_file_name)
+    file_data_loader.load_option_chain(quote_datetime=quote_datetime,
+                                       symbol='MSFT', filters={'option_type': OptionType.PUT},
+                                       file_path=datafile_file_name)
 
     assert len(options_data) == 1095
 
@@ -58,8 +58,10 @@ def test_cboe_file_data_loader_with_range_filters():
     quote_datetime = datetime.datetime.strptime("11/2/2022", "%m/%d/%Y")
     settings_file_name = "cboe_settings.toml"
     data_file = "spx_11_02_2022.csv"
-    file_data_loader = FileDataLoader(settings_file_name)
-    range_filter = {
+    fields = FileDataLoader._default_fields + ['delta']
+    file_data_loader = FileDataLoader(settings_file=settings_file_name, select_fields=fields)
+    filter = {
+        'option_type': OptionType.CALL,
         'expiration': {'low': datetime.date(2022, 11, 3), # datetime.datetime.strptime("11/3/2022" , "%m/%d/%Y"),
                        'high': datetime.date(2022, 11, 3)}, # datetime.datetime.strptime("11/3/2022", "%m/%d/%Y")},
         'strike': {'low': 3830, 'high': 3840},
@@ -72,8 +74,7 @@ def test_cboe_file_data_loader_with_range_filters():
 
     file_data_loader.bind(option_chain_loaded=on_data_loaded)
 
-    file_data_loader.load_data(quote_datetime=quote_datetime,
-                                              symbol='SPXW', option_type_filter=OptionType.CALL,
-                                              range_filters=range_filter, file_path=data_file)
+    file_data_loader.load_option_chain(quote_datetime=quote_datetime,
+                                       symbol='SPXW', filters=filter, file_path=data_file)
 
     assert len(options_data) == 4

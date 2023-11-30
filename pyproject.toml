@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+
+[project]
+name = "options_backtesting_framework"
+version= "0.0.1"
+authors = [
+    {name = "Annie Bougie", email = "anne.bougie@gmail.com"}
+]
+description = "Options testing framework that works with the Backtrader library to back test options trading strategies"
+readme = "README.md"
+requires-python = ">=3.10"
+keywords = ["backtrader", "options", "backtesting", "trading"]
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python",
+    "Programming Language :: Python :: 3",
+]
+dependencies = ["pandas", "dynaconf", "python-dispatch"]

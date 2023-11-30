@@ -15,18 +15,18 @@ class DataLoader(ABC, Dispatcher):
     order_by_fields = ['quote_datetime', 'expiration', 'strike']
 
     def __init__(self, settings_file: str, select_fields: list = None, order_by_fields: list = None, *args, **kwargs):
-        path_to_settings = Path(os.getcwd(), settings.data_file_settings_folder, settings_file)
+        path_to_settings = Path(settings.data_file_settings_folder, settings_file)
         settings.load_file(path_to_settings)
-        path_to_secrets = Path(os.getcwd(), settings.data_file_settings_folder, '.secrets.toml')
+        path_to_secrets = Path(settings.data_file_settings_folder, '.secrets.toml')
         settings.load_file(path_to_secrets)
         self.select_fields = self._default_fields if select_fields is None else select_fields
         self.order_by_fields = self.order_by_fields if order_by_fields is None else order_by_fields
 
     @abstractmethod
-    def load_data(self, quote_datetime: datetime.datetime, symbol: str, option_type_filter: OptionType = None,
-                  range_filters: dict = None, *args, **kwargs):
+    def load_option_chain(self, *, quote_datetime: datetime.datetime, symbol: str,
+                          filters: dict = None, **kwargs):
         return NotImplemented
 
-    def on_data_loaded(self, quote_datetime: datetime.datetime, option_chain: list[Option]):
+    def on_option_chain_loaded_loaded(self, quote_datetime: datetime.datetime, option_chain: list[Option]):
         self.emit('option_chain_loaded', quote_datetime=quote_datetime, option_chain=option_chain)
 

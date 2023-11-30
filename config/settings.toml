@@ -1,8 +1,0 @@
-# settings
-DEFAULT_MESSAGE = 'Config Default message'
-
-name="Options Testing Framework"
-standard_fee=0.50
-incur_fees=true
-
-data_file_settings_folder = "config_settings"

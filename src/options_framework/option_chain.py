@@ -1,10 +1,8 @@
 import datetime
 
 from dataclasses import dataclass, field
-from .option_types import OptionType, TransactionType
 from .option import Option
 from .utils.helpers import distinct
-from options_framework.config import settings
 
 @dataclass
 class OptionChain:
@@ -17,7 +15,7 @@ class OptionChain:
         self.quote_datetime = quote_datetime
         self.option_chain = option_chain
         self.expirations = list(distinct([option.expiration for option in option_chain]))
-        self.expiration_strikes = [(e,list(distinct([strike for strike in [option.strike
-                for option in option_chain if option.expiration == e]]))) for e in self.expirations]
-
-
+        self.expiration_strikes = [(e, list(distinct([strike for strike in [option.strike
+                                                                            for option in option_chain if
+                                                                            option.expiration == e]]))) for e in
+                                   self.expirations]
