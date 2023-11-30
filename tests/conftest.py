@@ -29,6 +29,10 @@ def test_update_quote_date3():
 def at_expiration_quote_date():
     return datetime.datetime(2021, 7, 16, 15)
 
+@pytest.fixture
+def past_expiration_quote_date():
+    return datetime.datetime(2021, 7, 17, 9, 45)
+
 
 @pytest.fixture
 def standard_fee():

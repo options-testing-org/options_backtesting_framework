@@ -2,8 +2,10 @@ import pytest
 import datetime
 
 from options_framework.data.sql_data_loader import SQLServerDataLoader
+from options_framework.option import Option
 from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionType, OptionCombinationType, OptionStatus
+from options_framework.spreads.option_combo import OptionCombination
 from options_framework.spreads.single import Single
 @pytest.fixture()
 def option_chain(database_settings_file_name):
@@ -51,3 +53,5 @@ def test_open_single_option(option_chain, option_values):
     single_option.open_trade(quantity=1)
 
     assert OptionStatus.TRADE_IS_OPEN in single_option.option.status
+    assert single_option.option.quantity == 1
+
