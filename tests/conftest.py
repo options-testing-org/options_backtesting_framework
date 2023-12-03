@@ -27,7 +27,7 @@ def test_update_quote_date3():
 
 @pytest.fixture
 def at_expiration_quote_date():
-    return datetime.datetime(2021, 7, 16, 15)
+    return datetime.datetime(2021, 7, 16, 16, 15)
 
 @pytest.fixture
 def past_expiration_quote_date():
@@ -135,13 +135,6 @@ def get_test_put_option_with_extended_properties(option_id, test_expiration, tes
 
 
 @pytest.fixture
-def datafile_settings_file_name():
-    return "custom_settings.toml"
-
-@pytest.fixture
 def datafile_file_name():
     return "L2_options_20230301.csv"
 
-@pytest.fixture
-def database_settings_file_name():
-    return "sql_server_settings.toml"

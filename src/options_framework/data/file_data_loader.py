@@ -11,23 +11,24 @@ from options_framework.option_types import OptionType
 
 class FileDataLoader(DataLoader):
 
-    def __init__(self, settings_file: str, select_fields: list = None,
+    def __init__(self, select_fields: list = None,
                  order_by_fields: list = None, *args, **kwargs):
-        super().__init__(settings_file=settings_file, select_fields=select_fields,
-                         order_by_fields=order_by_fields, *args, **kwargs)
+        settings.load_file(settings.DATA_FILE_FORMAT_SETTINGS)
         self.field_mapping = self._map_data_file_fields()
         self.fields = list(self.field_mapping.keys())
+        super().__init__(select_fields=select_fields, order_by_fields=order_by_fields, *args, **kwargs)
 
     def load_option_chain(self, *, quote_datetime: datetime.datetime, symbol: str,
-                          filters: dict = None, file_path: str = None):
-        if file_path is None:
-            raise ValueError('Must provide file_path')
+                          filters: dict = None, data_file_name: str = None):
+        # if file_path is None:
+        #     raise ValueError('Must provide file_path')
         if filters and not all([f in self.select_fields for f in filters.keys()]):
             raise ValueError('Filter fields must be included in the select fields.')
         if filters is None:
             filters = {}
-        data_root_folder = settings.DATA_FILES_ROOT_FOLDER
-        data_file_path = Path(data_root_folder, file_path)
+        data_root_folder = settings.DATA_FILES_FOLDER
+
+        data_file_path = Path(data_root_folder, data_file_name)
 
         data_file = open(data_file_path, 'r')
         if settings.DATA_IMPORT_FILE_PROPERTIES.first_row_is_header:

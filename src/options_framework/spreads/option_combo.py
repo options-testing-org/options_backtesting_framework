@@ -1,3 +1,4 @@
+import itertools
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -17,20 +18,25 @@ class OptionCombination(ABC):
 
     options: list[Option]
     option_combination_type: Optional[OptionCombinationType] = field(default=None)
+    position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
 
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.
         raise NotImplementedError
 
     def __repr__(self):
-        return f'<{self.option_combination_type.name} Quantity: {len(self.options)} options>'
+        return f'<{self.option_combination_type.name}({self.position_id}) Quantity: {len(self.options)} options>'
 
-    @abstractmethod
-    def open_trade(self, *, quantity: int, **kwargs: dict):
+    @property
+    def quantity(self):
         raise NotImplementedError
 
     @abstractmethod
-    def close_trade(self, * quantity: int):
+    def open_trade(self, *, quantity: int, **kwargs: dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
         raise NotImplementedError
 
     #

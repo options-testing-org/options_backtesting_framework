@@ -5,6 +5,20 @@ from options_framework.option_types import OptionPositionType, OptionType, Optio
 from options_framework.option import Option
 from options_framework.config import settings
 
+@pytest.fixture
+def incur_fees_true():
+    original_setting = settings.INCUR_FEES
+    settings.INCUR_FEES = True
+    yield
+    settings.INCUR_FEES = original_setting
+
+@pytest.fixture
+def incur_fees_false():
+    original_setting = settings.INCUR_FEES
+    settings.INCUR_FEES = False
+    yield
+    settings.INCUR_FEES = original_setting
+
 def test_option_init_with_only_option_contract_parameters(option_id, ticker, test_expiration):
     strike = 100
     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
@@ -126,8 +140,8 @@ def test_option_init_raises_exception_if_quote_date_is_greater_than_expiration(o
 
 
 @pytest.mark.parametrize("option_type, expected_repr", [
-    (OptionType.CALL, '<CALL XYZ 100.0 2021-07-16>'),
-    (OptionType.PUT, '<PUT XYZ 100.0 2021-07-16>')])
+    (OptionType.CALL, '<CALL(1) XYZ 100.0 2021-07-16>'),
+    (OptionType.PUT, '<PUT(1) XYZ 100.0 2021-07-16>')])
 def test_call_option_string_representation(get_test_call_option, get_test_put_option, option_type, expected_repr):
     test_option = get_test_call_option if option_type == OptionType.CALL else get_test_put_option
     assert str(test_option) == expected_repr
@@ -247,17 +261,22 @@ def test_open_trade_returns_correct_premium_value(get_test_call_option, get_test
     assert trade_open_info.premium == expected_premium
 
 
-@pytest.mark.parametrize("quantity, incur_fees, expected_fees", [(10, True, 5.0), (2, True, 1.0), (-3, True, 1.5),
-                                                                 (10, False, 0.0), (2, False, 0.0),
-                                                                 (-3, False, 0.0)])
-def test_open_trade_sets_total_fees_when_incur_fees_is_true(get_test_call_option, quantity,
-                                                            incur_fees, expected_fees):
+@pytest.mark.parametrize("quantity, expected_fees", [(10, 5.0), (2, 1.0), (-3, 1.5)])
+def test_open_trade_sets_total_fees_when_incur_fees_is_true(get_test_call_option, incur_fees_true, quantity,
+                                                            expected_fees):
+
     test_option = get_test_call_option
-    settings.INCUR_FEES = incur_fees
     test_option.open_trade(quantity=quantity)
 
     assert test_option.total_fees == expected_fees
 
+@pytest.mark.parametrize("quantity, expected_fees", [(10, 0.0), (2, 0.0), (-3, 0.0)])
+def test_open_trade_sets_total_fees_to_zero_when_incur_fees_is_false(get_test_call_option, incur_fees_false, quantity,
+                                                                     expected_fees):
+    test_option = get_test_call_option
+    test_option.open_trade(quantity=quantity)
+
+    assert test_option.total_fees == expected_fees
 
 def test_open_trade_when_quote_data_not_initialized_raises_exception(option_id, ticker, test_expiration):
     test_option = Option(option_id=option_id, symbol=ticker, strike=100, expiration=test_expiration,
@@ -1062,22 +1081,18 @@ def test_fees_incurred_event_emitted_when_open_or_close_fees_are_incurred(get_te
     test_option = get_test_call_option
 
     my_fees = None
-    my_option_id = None
 
     class MyPortfolio:
 
         @staticmethod
-        def on_fees_incurred(option_id, fees):
+        def on_fees_incurred(fees):
             nonlocal my_fees
-            nonlocal my_option_id
-            my_option_id = option_id
             my_fees = fees
 
     my_portfolio = MyPortfolio()
     test_option.bind(fees_incurred=my_portfolio.on_fees_incurred)
 
     test_option.open_trade(quantity=10)
-    assert my_option_id == test_option.option_id
     assert my_fees == 5.0
 
     my_fees = 0

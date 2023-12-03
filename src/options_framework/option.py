@@ -11,7 +11,7 @@ from options_framework.config import settings
 from pydispatch import Dispatcher
 
 TradeOpenInfo = namedtuple("TradeOpen", "option_id date quantity price premium fees")
-TradeCloseInfo = namedtuple("TradeClose", "option_id date quantity price profit_loss profit_loss_percent fees")
+TradeCloseInfo = namedtuple("TradeClose", "option_id date quantity price premium profit_loss profit_loss_percent fees")
 
 
 @dataclass(repr=False, kw_only=True, slots=True)
@@ -23,8 +23,7 @@ class Option(Dispatcher):
     The trade_open and trade_close methods are used to capture open/close price and dates.
     """
 
-    _events_ = ["open_transaction_completed", "close_transaction_completed", "option_expired",
-                "option_values_updated", "fees_incurred"]
+    _events_ = ["open_transaction_completed", "close_transaction_completed", "option_expired", "fees_incurred"]
 
     # immutable fields
     option_id: str = field(compare=True)
@@ -126,7 +125,7 @@ class Option(Dispatcher):
             self.status = OptionStatus.INITIALIZED
 
     def __repr__(self) -> str:
-        return f'<{self.option_type.name} {self.symbol} {self.strike} ' \
+        return f'<{self.option_type.name}({self.option_id}) {self.symbol} {self.strike} ' \
             + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}>'
 
     def _incur_fees(self, *, quantity: int | Decimal) -> float:
@@ -142,7 +141,7 @@ class Option(Dispatcher):
         self.total_fees = float(total_fees)
         fees = float(fees)
 
-        self.emit("fees_incurred", self.option_id, fees)
+        self.emit("fees_incurred", fees)
 
         return fees
 
@@ -210,10 +209,6 @@ class Option(Dispatcher):
         self.theta = theta
         self.vega = vega
         self.rho = rho
-
-        self.emit("option_values_updated", self.option_id, [quote_date, spot_price, bid, ask, price,
-                                                            delta, gamma, theta, vega, rho, open_interest,
-                                                            implied_volatility])
 
         self._check_expired()
 
@@ -302,6 +297,7 @@ class Option(Dispatcher):
 
         close_price = decimalize_2(self.get_closing_price())
         open_price = decimalize_2(self.trade_open_info.price)
+        premium = decimalize_2(close_price) * 100 * quantity*-1
         profit_loss = (open_price * 100 * quantity) - (close_price * 100 * quantity)
         profit_loss_percent = decimalize_4((close_price - open_price) / open_price) * (quantity * -1 / abs(quantity))
 
@@ -312,6 +308,7 @@ class Option(Dispatcher):
         # date quantity price premium profit_loss fees
         trade_close_record = TradeCloseInfo(option_id=self.option_id, date=self.quote_datetime, quantity=int(quantity),
                                             price=float(close_price),
+                                            premium=float(premium),
                                             profit_loss=float(profit_loss),
                                             profit_loss_percent=float(profit_loss_percent),
                                             fees=fees)
@@ -414,16 +411,18 @@ class Option(Dispatcher):
         # date quantity price premium profit_loss fees
         records = self.trade_close_records
         date = records[-1].date
-        quantity = sum(decimalize_0(x.quantity) for x in records)
+        quantity = decimalize_0(sum(decimalize_0(x.quantity) for x in records))
         trade_open_premium = decimalize_2(self.trade_open_info.premium)
         price = decimalize_2(sum((decimalize_2(x.price) * decimalize_0(x.quantity)) / quantity for x in records))
-
+        premium = price * 100 * quantity*-1
         profit_loss = sum(decimalize_2(x.profit_loss) for x in records)
         profit_loss_percent = decimalize_4(profit_loss / trade_open_premium) * (quantity * -1 / abs(quantity))
         fees = sum(x.fees for x in records)
 
         trade_close = TradeCloseInfo(option_id=self.option_id, date=date, quantity=int(quantity), price=float(price),
-                                     profit_loss=float(profit_loss), profit_loss_percent=float(profit_loss_percent),
+                                     premium=float(premium),
+                                     profit_loss=float(profit_loss),
+                                     profit_loss_percent=float(profit_loss_percent),
                                      fees=fees)
 
         self.trade_close_info = trade_close
