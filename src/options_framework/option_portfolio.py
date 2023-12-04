@@ -1,4 +1,4 @@
-import itertools
+import datetime
 
 from dataclasses import dataclass, field
 from typing import Optional
@@ -57,3 +57,11 @@ class OptionPortfolio:
     def on_fees_incurred(self, fees):
         self.cash -= fees
         print("portfolio: fees incurred")
+
+    def on_options_updated(self, quote_datetime: datetime.datetime, option_chain: list[Option]):
+        options = [option for position in self.positions.values() for option in position.options]
+        for my_option in options:
+            opt = [option for option in option_chain if option.option_id == my_option.option_id][0]
+            my_option.update(quote_datetime=opt.quote_datetime, spot_price=opt.spot_price, bid=opt.bid, ask=opt.ask,
+                             price=opt.price, delta=opt.delta, gamma=opt.gamma, theta=opt.theta, vega=opt.vega,
+                             rho=opt.rho, open_interest=opt.open_interest, implied_volatility=opt.implied_volatility)

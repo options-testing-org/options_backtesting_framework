@@ -9,7 +9,8 @@ import sqlalchemy as sa
 from numpy import isnan
 
 from options_framework.option_types import OptionType
-from options_framework.test_manager import OptionTestManager, SelectFilter
+from options_framework.test_manager import OptionTestManager
+from options_framework.option_types import OptionType, SelectFilter, FilterRange
 
 warnings.filterwarnings('ignore')
 
@@ -76,9 +77,6 @@ class HullMADirectionalStrategy(bt.Strategy):
         else:
             tod = 'afternoon'
 
-
-
-
 if __name__ == "__main__":
     pp(settings.as_dict())
 
@@ -99,9 +97,10 @@ if __name__ == "__main__":
     df = pd.read_sql(query, connection, index_col='datetime', parse_dates=True)
     connection.close()
 
-    options_filter = SelectFilter(symbol='SPXW', option_type=OptionType.CALL, strike_range=FilterRange(1, 3))
+    options_filter = SelectFilter(symbol='SPXW', option_type=OptionType.CALL, strike_range=FilterRange(2000, 4000))
 
-    option_test_manager = OptionTestManager(start_datetime=startdate, end_datetime=enddate, select_filter=options_filter)
+    option_test_manager = OptionTestManager(start_datetime=startdate, end_datetime=enddate,
+                                            select_filter=options_filter, starting_cash=starting_cash)
 
     ohlc = {
         'open': 'first',

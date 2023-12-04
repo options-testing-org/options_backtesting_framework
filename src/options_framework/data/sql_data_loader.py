@@ -12,11 +12,12 @@ from options_framework.option_types import OptionType, SelectFilter
 
 class SQLServerDataLoader(DataLoader):
 
+    def get_next_option_chain(self, quote_datetime):
+        pass
+
     def __init__(self, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
                  fields_list: list[str], *args, **kwargs):
         super().__init__(start, end, select_filter, fields_list, *args, **kwargs)
-        self.data_cache = None
-        settings.load_file(settings.SQL_DATA_FORMAT_SETTINGS)
         server = settings.SERVER
         database = settings.DATABASE
         username = settings.USERNAME
@@ -65,7 +66,7 @@ class SQLServerDataLoader(DataLoader):
         fields = ['option_id'] + self.fields_list
         field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
                                   if option_field in fields])
-        ranges = [f for f in dataclasses.fields(self.select_filter) if 'range' in f]
+        filter_dict = dataclasses.asdict(self.select_filter)
         query = settings.SELECT_OPTIONS_QUERY['select']
         query += field_mapping
         query += settings.SELECT_OPTIONS_QUERY['from']
@@ -73,15 +74,16 @@ class SQLServerDataLoader(DataLoader):
                   .replace('{symbol}', self.select_filter.symbol)
                   .replace('{start_date}', str(self.start_datetime))
                   .replace('{end_date}', str(self.end_datetime)))
-        for fltr in self.select_filter.ranges:
-            if fltr == 'option_type':
-                query += f' and {fltr} = {self.select_filter.ranges[fltr].value} '
-            elif fltr == 'expiration':
-                low_val, high_val = self.select_filter.ranges[fltr].low, self.select_filter.ranges[fltr].high
-                query += f' and {fltr} between CONVERT(datetime2, \'{low_val}\') and CONVERT(datetime2, \'{high_val}\')'
-            else:
-                low_val, high_val = self.select_filter.ranges[fltr].low, self.select_filter.ranges[fltr].high
-                query += f' and {fltr} between {low_val} and {high_val}'
+        if self.select_filter.option_type:
+            query += f' and option_type = {self.select_filter.option_type.value}'
+
+        for fltr in [f for f in filter_dict.keys() if 'range' in f]:
+            name, low_val, high_val = fltr[:-6], filter_dict[fltr]['low'], filter_dict[fltr]['high']
+            if low_val is not None and high_val is not None:
+                if name == 'expiration':
+                    query += f' and {name} between CONVERT(datetime2, \'{low_val}\') and CONVERT(datetime2, \'{high_val}\')'
+                else:
+                    query += f' and {name} between {low_val} and {high_val}'
 
         query += ' order by \'quote_datetime\', \'expiration\', \'strike\''
 

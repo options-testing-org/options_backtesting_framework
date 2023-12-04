@@ -9,6 +9,6 @@ def test_instantiate_test_manager():
     start_date = datetime.datetime(2016, 3, 1, 9, 31)
     end_date = datetime.datetime(2016, 6, 30, 16, 15)
 
-    flds = dataclasses.fields(my_filter)
+    test_manager = OptionTestManager(start_date, end_date, my_filter)
 
     pass

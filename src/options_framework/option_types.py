@@ -1,6 +1,6 @@
 from dataclasses import dataclass, field
 from enum import Enum, StrEnum, Flag, auto
-
+import datetime
 
 class OptionType(Enum):
     """
@@ -66,8 +66,8 @@ class OptionTradeType(Enum):
 
 @dataclass
 class FilterRange:
-    low: float = None
-    high: float = None
+    low: float | datetime.date = None
+    high: float | datetime.date = None
 
 @dataclass
 class SelectFilter:

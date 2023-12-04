@@ -2,8 +2,10 @@ name="BACKTRADER OPTIONS TESTING"
 
 standard_fee=0.50
 incur_fees=false
-data_loader_type = 'SQL_DATA_LOADER'
-data_files_folder = "test_data"
-data_file_format_settings = "custom_settings.toml"
-select_fields = ['symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
+#data_loader_type = 'SQL_DATA_LOADER'
+data_loader_type = 'FILE_DATA_LOADER'
+data_files_folder = "C:\\_data\\backtesting_data\\temp"
+data_format_settings = "custom_settings.toml"
+data_file_name_format = "L2_options_{year}{month}{day}.csv"
+SELECT_FIELDS = ['symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
                        'bid', 'ask', 'price']
