@@ -30,19 +30,23 @@ class Single(OptionCombination):
         self.option_combination_type = OptionCombinationType.SINGLE
 
     @property
-    def expiration(self):
+    def quantity(self):
+        return self.option.quantity
+
+    @property
+    def expiration(self) -> datetime.date:
         return self.option.expiration
 
     @property
-    def option_type(self):
+    def option_type(self) -> OptionType:
         return self.option.option_type
 
     @property
-    def strike(self):
+    def strike(self) -> int | float:
         return self.option.strike
 
-    def open_trade(self, *, quantity: int, **kwargs: dict):
+    def open_trade(self, *, quantity: int, **kwargs: dict) -> None:
         self.option.open_trade(quantity=quantity)
 
-    def close_trade(self, *, quantity: int, **kwargs: dict):
+    def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
         self.option.close_trade(quantity=quantity)

@@ -1,14 +1,25 @@
 import datetime
 
+import pytest
+
 from options_framework.data.sql_data_loader import SQLServerDataLoader
 from options_framework.option import Option
 from options_framework.option_types import OptionType
 
+from options_framework.config import settings
 
-def test_sql_load_from_database(database_settings_file_name):
+@pytest.fixture
+def set_settings():
+    original_value_1 = settings.DATA_LOADER_TYPE
+    settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
+    yield
+    settings.DATA_LOADER_TYPE = original_value_1
+
+
+def test_sql_load_from_database(set_settings):
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
     end_date = datetime.datetime.strptime("2016-03-31 16:15:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(database_settings_file_name)
+    sql_loader = SQLServerDataLoader()
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -21,9 +32,9 @@ def test_sql_load_from_database(database_settings_file_name):
     assert len(options) == 4806
 
 
-def test_sql_load_call_options_from_database(database_settings_file_name):
+def test_sql_load_call_options_from_database(set_settings):
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(database_settings_file_name)
+    sql_loader = SQLServerDataLoader()
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -36,10 +47,10 @@ def test_sql_load_call_options_from_database(database_settings_file_name):
     assert len(options) == 2403
 
 
-def test_load_with_custom_field_selection(database_settings_file_name):
+def test_load_with_custom_field_selection(set_settings):
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
     fields = SQLServerDataLoader._default_fields + ['delta', 'gamma', 'theta', 'open_interest']
-    sql_loader = SQLServerDataLoader(database_settings_file_name, fields)
+    sql_loader = SQLServerDataLoader(fields)
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -54,11 +65,11 @@ def test_load_with_custom_field_selection(database_settings_file_name):
     assert option.delta is not None
 
 
-def test_load_data_with_only_required_fields(database_settings_file_name):
+def test_load_data_with_only_required_fields(set_settings):
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
     fields = ['option_id', 'symbol', 'expiration', 'strike', 'option_type']
 
-    sql_loader = SQLServerDataLoader(settings_file=database_settings_file_name, select_fields=fields,
+    sql_loader = SQLServerDataLoader(select_fields=fields,
                                      order_by_fields=['expiration', 'strike'])
     options = []
 
@@ -75,7 +86,7 @@ def test_load_data_with_only_required_fields(database_settings_file_name):
     assert option.price is None
 
 
-def test_load_data_with_expiration_range(database_settings_file_name):
+def test_load_data_with_expiration_range(set_settings):
     low_expiration = datetime.date(2016, 4, 1)
     hi_expiration = datetime.date(2016, 4, 30)
     fltr = {
@@ -84,7 +95,7 @@ def test_load_data_with_expiration_range(database_settings_file_name):
                        'high': hi_expiration},
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(database_settings_file_name)
+    sql_loader = SQLServerDataLoader()
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -97,7 +108,7 @@ def test_load_data_with_expiration_range(database_settings_file_name):
     assert len(options) == 681
 
 
-def test_load_data_with_strike_range(database_settings_file_name):
+def test_load_data_with_strike_range(set_settings):
     low_expiration = datetime.date(2016, 4, 1)
     hi_expiration = datetime.date(2016, 4, 30)
     fltr = {
@@ -107,7 +118,7 @@ def test_load_data_with_strike_range(database_settings_file_name):
         'strike': {'low': 1940, 'high': 1950}
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(database_settings_file_name)
+    sql_loader = SQLServerDataLoader()
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -120,7 +131,7 @@ def test_load_data_with_strike_range(database_settings_file_name):
     assert len(options) == 12
 
 
-def test_load_data_with_delta_range(database_settings_file_name):
+def test_load_data_with_delta_range(set_settings):
     fields = SQLServerDataLoader._default_fields + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                                     'open_interest']
     low_expiration = datetime.date(2016, 4, 1)
@@ -133,7 +144,7 @@ def test_load_data_with_delta_range(database_settings_file_name):
         'delta': {'low': 0.60, 'high': 0.70}
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(settings_file=database_settings_file_name, select_fields=fields)
+    sql_loader = SQLServerDataLoader(select_fields=fields)
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -146,7 +157,7 @@ def test_load_data_with_delta_range(database_settings_file_name):
     assert len(options) == 15
 
 
-def test_load_data_with_gamma_range(database_settings_file_name):
+def test_load_data_with_gamma_range(set_settings):
     fields = SQLServerDataLoader._default_fields + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                                     'open_interest']
 
@@ -155,7 +166,7 @@ def test_load_data_with_gamma_range(database_settings_file_name):
         'gamma': {'low': 0.009, 'high': 0.01}
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(settings_file=database_settings_file_name, select_fields=fields)
+    sql_loader = SQLServerDataLoader(select_fields=fields)
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -167,7 +178,7 @@ def test_load_data_with_gamma_range(database_settings_file_name):
 
     assert len(options) == 4
 
-def test_load_data_with_theta_range(database_settings_file_name):
+def test_load_data_with_theta_range(set_settings):
     fields = SQLServerDataLoader._default_fields + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                                     'open_interest']
 
@@ -178,7 +189,7 @@ def test_load_data_with_theta_range(database_settings_file_name):
         'theta': {'low': -0.4, 'high': -0.3}
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(settings_file=database_settings_file_name, select_fields=fields)
+    sql_loader = SQLServerDataLoader(select_fields=fields)
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -190,7 +201,7 @@ def test_load_data_with_theta_range(database_settings_file_name):
 
     assert len(options) == 115
 
-def test_load_data_with_vega_range(database_settings_file_name):
+def test_load_data_with_vega_range(set_settings):
     fields = SQLServerDataLoader._default_fields + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                                     'open_interest']
 
@@ -199,7 +210,7 @@ def test_load_data_with_vega_range(database_settings_file_name):
         'vega': {'low': 5.0, 'high': 6.0}
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(settings_file=database_settings_file_name, select_fields=fields)
+    sql_loader = SQLServerDataLoader(select_fields=fields)
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -211,7 +222,7 @@ def test_load_data_with_vega_range(database_settings_file_name):
 
     assert len(options) == 28
 
-def test_load_data_with_rho_range(database_settings_file_name):
+def test_load_data_with_rho_range():
     fields = SQLServerDataLoader._default_fields + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                                     'open_interest']
 
@@ -221,7 +232,7 @@ def test_load_data_with_rho_range(database_settings_file_name):
         'rho': {'low': 100.0, 'high': 200.0}
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(settings_file=database_settings_file_name, select_fields=fields)
+    sql_loader = SQLServerDataLoader(select_fields=fields)
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -234,7 +245,7 @@ def test_load_data_with_rho_range(database_settings_file_name):
     assert len(options) == 116
 
 
-def test_load_data_with_open_interest_range(database_settings_file_name):
+def test_load_data_with_open_interest_range(set_settings):
     fields = SQLServerDataLoader._default_fields + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                                     'open_interest']
 
@@ -244,7 +255,7 @@ def test_load_data_with_open_interest_range(database_settings_file_name):
         'open_interest': {'low': 100, 'high': 10_000_000}
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(settings_file=database_settings_file_name, select_fields=fields)
+    sql_loader = SQLServerDataLoader(select_fields=fields)
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -256,7 +267,7 @@ def test_load_data_with_open_interest_range(database_settings_file_name):
 
     assert len(options) == 391
 
-def test_load_data_with_implied_volatility_range(database_settings_file_name):
+def test_load_data_with_implied_volatility_range(set_settings):
     fields = SQLServerDataLoader._default_fields + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                                     'open_interest']
 
@@ -266,7 +277,7 @@ def test_load_data_with_implied_volatility_range(database_settings_file_name):
         'implied_volatility': {'low': 0.5, 'high': 1.0}
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(settings_file=database_settings_file_name, select_fields=fields)
+    sql_loader = SQLServerDataLoader(select_fields=fields)
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):
@@ -278,7 +289,7 @@ def test_load_data_with_implied_volatility_range(database_settings_file_name):
 
     assert len(options) == 7
 
-def test_load_data_with_all_range_filters(database_settings_file_name):
+def test_load_data_with_all_range_filters(set_settings):
     fields = SQLServerDataLoader._default_fields + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                                     'open_interest']
     fltr = {
@@ -295,7 +306,7 @@ def test_load_data_with_all_range_filters(database_settings_file_name):
         'implied_volatility': {'low': 0.20, 'high': 0.25}
     }
     start_date = datetime.datetime.strptime("2016-03-01 09:31:00", "%Y-%m-%d %H:%M:%S")
-    sql_loader = SQLServerDataLoader(settings_file=database_settings_file_name, select_fields=fields)
+    sql_loader = SQLServerDataLoader(select_fields=fields)
     options = []
 
     def on_data_loaded(quote_datetime: datetime.datetime, option_chain: list[Option]):

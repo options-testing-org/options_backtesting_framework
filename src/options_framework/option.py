@@ -11,7 +11,7 @@ from options_framework.config import settings
 from pydispatch import Dispatcher
 
 TradeOpenInfo = namedtuple("TradeOpen", "option_id date quantity price premium fees")
-TradeCloseInfo = namedtuple("TradeClose", "option_id date quantity price profit_loss profit_loss_percent fees")
+TradeCloseInfo = namedtuple("TradeClose", "option_id date quantity price premium profit_loss profit_loss_percent fees")
 
 
 @dataclass(repr=False, kw_only=True, slots=True)
@@ -23,8 +23,7 @@ class Option(Dispatcher):
     The trade_open and trade_close methods are used to capture open/close price and dates.
     """
 
-    _events_ = ["open_transaction_completed", "close_transaction_completed", "option_expired",
-                "option_values_updated", "fees_incurred"]
+    _events_ = ["open_transaction_completed", "close_transaction_completed", "option_expired", "fees_incurred"]
 
     # immutable fields
     option_id: str = field(compare=True)
@@ -126,7 +125,7 @@ class Option(Dispatcher):
             self.status = OptionStatus.INITIALIZED
 
     def __repr__(self) -> str:
-        return f'<{self.option_type.name} {self.symbol} {self.strike} ' \
+        return f'<{self.option_type.name}({self.option_id}) {self.symbol} {self.strike} ' \
             + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}>'
 
     def _incur_fees(self, *, quantity: int | Decimal) -> float:
@@ -142,7 +141,7 @@ class Option(Dispatcher):
         self.total_fees = float(total_fees)
         fees = float(fees)
 
-        self.emit("fees_incurred", self.option_id, fees)
+        self.emit("fees_incurred", fees)
 
         return fees
 
@@ -160,7 +159,7 @@ class Option(Dispatcher):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)
 
-    def update(self, *, quote_date: datetime.datetime, spot_price: int | float, bid: float, ask: float, price: float,
+    def update(self, *, quote_datetime: datetime.datetime, spot_price: int | float, bid: float, ask: float, price: float,
                delta: float = None, gamma: float = None, theta: float = None, vega: float = None, rho: float = None,
                open_interest: float = None, implied_volatility: float = None, **kwargs: dict) -> None:
         """
@@ -174,8 +173,8 @@ class Option(Dispatcher):
         :param theta:
         :param gamma:
         :param delta:
-        :param quote_date: data date for price information
-        :type quote_date: datetime.datetime
+        :param quote_datetime: data date for price information
+        :type quote_datetime: datetime.datetime
         :param spot_price: price of underlying on quote_date
         :type spot_price: float
         :param bid: bid price
@@ -185,7 +184,7 @@ class Option(Dispatcher):
         :param price: calculated price based on mid-point between bid and ask
         :type price: float
         """
-        if quote_date is None:
+        if quote_datetime is None:
             raise ValueError("quote_date cannot be None")
         if spot_price is None:
             raise ValueError("spot_price cannot be None")
@@ -196,7 +195,7 @@ class Option(Dispatcher):
         if price is None:
             raise ValueError("price cannot be None")
 
-        self.quote_datetime = quote_date
+        self.quote_datetime = quote_datetime
         self.spot_price = spot_price
         self.bid = bid
         self.ask = ask
@@ -210,10 +209,6 @@ class Option(Dispatcher):
         self.theta = theta
         self.vega = vega
         self.rho = rho
-
-        self.emit("option_values_updated", self.option_id, [quote_date, spot_price, bid, ask, price,
-                                                            delta, gamma, theta, vega, rho, open_interest,
-                                                            implied_volatility])
 
         self._check_expired()
 
@@ -302,6 +297,7 @@ class Option(Dispatcher):
 
         close_price = decimalize_2(self.get_closing_price())
         open_price = decimalize_2(self.trade_open_info.price)
+        premium = decimalize_2(close_price) * 100 * quantity*-1
         profit_loss = (open_price * 100 * quantity) - (close_price * 100 * quantity)
         profit_loss_percent = decimalize_4((close_price - open_price) / open_price) * (quantity * -1 / abs(quantity))
 
@@ -312,6 +308,7 @@ class Option(Dispatcher):
         # date quantity price premium profit_loss fees
         trade_close_record = TradeCloseInfo(option_id=self.option_id, date=self.quote_datetime, quantity=int(quantity),
                                             price=float(close_price),
+                                            premium=float(premium),
                                             profit_loss=float(profit_loss),
                                             profit_loss_percent=float(profit_loss_percent),
                                             fees=fees)
@@ -414,16 +411,18 @@ class Option(Dispatcher):
         # date quantity price premium profit_loss fees
         records = self.trade_close_records
         date = records[-1].date
-        quantity = sum(decimalize_0(x.quantity) for x in records)
+        quantity = decimalize_0(sum(decimalize_0(x.quantity) for x in records))
         trade_open_premium = decimalize_2(self.trade_open_info.premium)
         price = decimalize_2(sum((decimalize_2(x.price) * decimalize_0(x.quantity)) / quantity for x in records))
-
+        premium = price * 100 * quantity*-1
         profit_loss = sum(decimalize_2(x.profit_loss) for x in records)
         profit_loss_percent = decimalize_4(profit_loss / trade_open_premium) * (quantity * -1 / abs(quantity))
         fees = sum(x.fees for x in records)
 
         trade_close = TradeCloseInfo(option_id=self.option_id, date=date, quantity=int(quantity), price=float(price),
-                                     profit_loss=float(profit_loss), profit_loss_percent=float(profit_loss_percent),
+                                     premium=float(premium),
+                                     profit_loss=float(profit_loss),
+                                     profit_loss_percent=float(profit_loss_percent),
                                      fees=fees)
 
         self.trade_close_info = trade_close

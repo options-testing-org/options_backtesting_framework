@@ -7,9 +7,13 @@ from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionType, OptionCombinationType, OptionStatus
 from options_framework.spreads.option_combo import OptionCombination
 from options_framework.spreads.single import Single
+from options_framework.config import settings
+
 @pytest.fixture()
-def option_chain(database_settings_file_name):
-    data_loader = SQLServerDataLoader(settings_file=database_settings_file_name)
+def option_chain():
+    original_value_1 = settings.DATA_LOADER_TYPE
+    settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
+    data_loader = SQLServerDataLoader()
     option_chain = OptionChain()
     data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
 
@@ -24,6 +28,7 @@ def option_chain(database_settings_file_name):
                                   symbol='SPXW',
                                   filters=fltr)
     yield option_chain
+    settings.DATA_LOADER_TYPE = original_value_1
 
 @pytest.fixture
 def option_values():

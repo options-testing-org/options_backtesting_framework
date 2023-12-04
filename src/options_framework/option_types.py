@@ -1,5 +1,6 @@
+from dataclasses import dataclass, field
 from enum import Enum, StrEnum, Flag, auto
-
+import datetime
 
 class OptionType(Enum):
     """
@@ -8,12 +9,14 @@ class OptionType(Enum):
     CALL = 1
     PUT = 2
 
+
 class TransactionType(Enum):
     """
     A transaction is either a buy or a sell
     """
     BUY = 1
     SELL = 2
+
 
 class OptionPositionType(Enum):
     """
@@ -22,6 +25,7 @@ class OptionPositionType(Enum):
     SHORT = 1
     LONG = 2
 
+
 class OptionStatus(Flag):
     CREATED = auto()
     INITIALIZED = auto()
@@ -29,6 +33,7 @@ class OptionStatus(Flag):
     TRADE_IS_OPEN = auto()
     TRADE_PARTIALLY_CLOSED = auto()
     TRADE_IS_CLOSED = auto()
+
 
 class OptionCombinationType(StrEnum):
     """
@@ -58,3 +63,22 @@ class OptionTradeType(Enum):
     CREDIT = 1
     DEBIT = 2
 
+
+@dataclass
+class FilterRange:
+    low: float | datetime.date = None
+    high: float | datetime.date = None
+
+@dataclass
+class SelectFilter:
+    symbol: str
+    option_type: OptionType = None
+    expiration_range: FilterRange = field(default_factory=lambda: FilterRange())
+    strike_range: FilterRange = field(default_factory=lambda: FilterRange())
+    delta_range: FilterRange = field(default_factory=lambda: FilterRange())
+    gamma_range: FilterRange = field(default_factory=lambda: FilterRange())
+    theta_range: FilterRange = field(default_factory=lambda: FilterRange())
+    vega_range: FilterRange = field(default_factory=lambda: FilterRange())
+    rho_range: FilterRange = field(default_factory=lambda: FilterRange())
+    open_interest_range: FilterRange = field(default_factory=lambda: FilterRange())
+    implied_volatility_range: FilterRange = field(default_factory=lambda: FilterRange())
