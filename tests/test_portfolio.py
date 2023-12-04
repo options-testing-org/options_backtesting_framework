@@ -55,11 +55,11 @@ def test_portfolio_updates_when_option_values_are_updated(incur_fees_false, test
     pf.open_position(option_position=test_position_2, quantity=1)
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_position_1.option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_position_1.option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert pf.portfolio_value == 100_850.0
 
     quote_date, spot_price, bid, ask, price = get_test_put_option_update_values_1
-    test_position_2.option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_position_2.option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert pf.portfolio_value == 101_700.0
 
     assert pf.cash == 99_700.0
@@ -75,7 +75,7 @@ def test_portfolio_values_when_position_is_closed(incur_fees_false, test_positio
 
     # options now worth $2,000.00. Cash remains unchanged
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_position_1.option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_position_1.option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert pf.portfolio_value == 101_700.0
     assert pf.cash == 99_700.0
 
@@ -98,12 +98,12 @@ def test_portfolio_values_with_multiple_positions(incur_fees_false, test_positio
 
     # update both positions
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_position_1.option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_position_1.option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert pf.portfolio_value == 100_850.0
     assert pf.cash == 99_700.0
 
     quote_date, spot_price, bid, ask, price = get_test_put_option_update_values_1
-    test_position_2.option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_position_2.option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert pf.portfolio_value == 101_700.0
     assert pf.cash == 99_700.0
 
@@ -121,7 +121,7 @@ def test_expired_position_closes_position(incur_fees_false, test_position_1, get
     # position expires
     quote_date = at_expiration_quote_date
     _, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_position_1.option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_position_1.option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     assert len(pf.positions) == 0
     assert len(pf.closed_positions) == 1
@@ -133,14 +133,14 @@ def test_closed_positions_do_not_update_portfolio_value_when_updated(incur_fees_
     pf.open_position(option_position=test_position_1, quantity=2)
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_position_1.option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_position_1.option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     pf.close_position(test_position_1, quantity=2)
     assert pf.cash == 101_700.0
     assert pf.portfolio_value == 101_700.0
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_2
-    test_position_1.option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_position_1.option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     # portfolio is no longer updated when option value changes
     assert pf.portfolio_value == 101_700.0

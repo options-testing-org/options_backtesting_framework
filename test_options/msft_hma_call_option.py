@@ -75,7 +75,7 @@ class HullMAOptionStrategy(bt.Strategy):
 
             self.portfolio.open_position(option_position=option, quantity=1)
 
-        self.log(f'hull {option_type.name}', self.dt)
+        self.log(f'hull {option_type.name} portfolio value: {self.portfolio.portfolio_value:.2f}  cash: {self.portfolio.cash:.2f}',  self.dt)
 
 
 if __name__ == "__main__":

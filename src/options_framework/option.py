@@ -159,7 +159,7 @@ class Option(Dispatcher):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)
 
-    def update(self, *, quote_date: datetime.datetime, spot_price: int | float, bid: float, ask: float, price: float,
+    def update(self, *, quote_datetime: datetime.datetime, spot_price: int | float, bid: float, ask: float, price: float,
                delta: float = None, gamma: float = None, theta: float = None, vega: float = None, rho: float = None,
                open_interest: float = None, implied_volatility: float = None, **kwargs: dict) -> None:
         """
@@ -173,8 +173,8 @@ class Option(Dispatcher):
         :param theta:
         :param gamma:
         :param delta:
-        :param quote_date: data date for price information
-        :type quote_date: datetime.datetime
+        :param quote_datetime: data date for price information
+        :type quote_datetime: datetime.datetime
         :param spot_price: price of underlying on quote_date
         :type spot_price: float
         :param bid: bid price
@@ -184,7 +184,7 @@ class Option(Dispatcher):
         :param price: calculated price based on mid-point between bid and ask
         :type price: float
         """
-        if quote_date is None:
+        if quote_datetime is None:
             raise ValueError("quote_date cannot be None")
         if spot_price is None:
             raise ValueError("spot_price cannot be None")
@@ -195,7 +195,7 @@ class Option(Dispatcher):
         if price is None:
             raise ValueError("price cannot be None")
 
-        self.quote_datetime = quote_date
+        self.quote_datetime = quote_datetime
         self.spot_price = spot_price
         self.bid = bid
         self.ask = ask

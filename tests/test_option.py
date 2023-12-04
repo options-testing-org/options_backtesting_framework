@@ -157,7 +157,7 @@ def test_update_sets_correct_values(option_id, test_expiration, test_quote_date,
         (95, 3.4, 3.50, 3.45, 0.4714, 0.1239, -0.0401, 0.1149, 1000, 0.279, 0.3453)
     test_value_1 = 'test value 1'
     test_value_2 = 100
-    test_option.update(quote_date=test_update_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price,
+    test_option.update(quote_datetime=test_update_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price,
                        delta=delta, gamma=gamma, theta=theta, vega=vega,
                        rho=rho, implied_volatility=iv,
                        open_interest=open_interest, user_defined1=test_value_1, user_defined2=test_value_2)
@@ -184,34 +184,34 @@ def test_update_raises_exception_if_missing_required_fields(get_test_call_option
     # quote_date
     none_quote_date = None
     with pytest.raises(ValueError, match="quote_date cannot be None"):
-        test_option.update(quote_date=none_quote_date, spot_price=90.0, bid=1.0, ask=2.0, price=1.5)
+        test_option.update(quote_datetime=none_quote_date, spot_price=90.0, bid=1.0, ask=2.0, price=1.5)
 
     # spot price
     none_spot_price = None
     with pytest.raises(ValueError, match="spot_price cannot be None"):
-        test_option.update(quote_date=test_update_quote_date, spot_price=none_spot_price, bid=1.0, ask=2.0, price=1.5)
+        test_option.update(quote_datetime=test_update_quote_date, spot_price=none_spot_price, bid=1.0, ask=2.0, price=1.5)
 
     # bid
     none_bid = None
     with pytest.raises(ValueError, match="bid cannot be None"):
-        test_option.update(quote_date=test_update_quote_date, spot_price=90.0, bid=none_bid, ask=2.0, price=1.5)
+        test_option.update(quote_datetime=test_update_quote_date, spot_price=90.0, bid=none_bid, ask=2.0, price=1.5)
 
     # ask
     none_ask = None
     with pytest.raises(ValueError, match="ask cannot be None"):
-        test_option.update(quote_date=test_update_quote_date, spot_price=90.0, bid=1.0, ask=none_ask, price=1.5)
+        test_option.update(quote_datetime=test_update_quote_date, spot_price=90.0, bid=1.0, ask=none_ask, price=1.5)
 
     # price
     none_price = None
     with pytest.raises(ValueError, match="price cannot be None"):
-        test_option.update(quote_date=test_update_quote_date, spot_price=90.0, bid=1.0, ask=2.0, price=none_price)
+        test_option.update(quote_datetime=test_update_quote_date, spot_price=90.0, bid=1.0, ask=2.0, price=none_price)
 
 
 def test_update_sets_expiration_status_if_quote_date_is_greater_than_expiration(get_test_put_option):
     bad_quote_date = datetime.datetime.strptime("2021-07-17 09:45:00.000000", "%Y-%m-%d %H:%M:%S.%f")
     test_option = get_test_put_option
     spot_price, bid, ask, price = (105, 1.0, 2.0, 1.5)
-    test_option.update(quote_date=bad_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=bad_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     assert OptionStatus.EXPIRED in test_option.status
 
@@ -381,7 +381,7 @@ def test_close_trade_values_with_one_close_trade(get_test_call_option, standard_
     test_option.fee_per_contract = standard_fee
     test_option.open_trade(quantity=open_qty)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     trade_close_info = test_option.close_trade(quantity=close_qty)
 
     assert trade_close_info.date == quote_date
@@ -412,12 +412,12 @@ def test_call_option_close_trade_values_with_multiple_close_trades(
     test_option.open_trade(quantity=open_qty)
     # first update
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=cqty1)
 
     # second update
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_2
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=cqty2)
 
     # get close info for closed trades
@@ -452,12 +452,12 @@ def test_put_option_close_trade_values_with_multiple_close_trades(test_update_qu
     test_option.open_trade(quantity=open_qty)
     # first update
     quote_date, spot_price, bid, ask, price = get_test_put_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=cqty1)
 
     # second update
     quote_date, spot_price, bid, ask, price = get_test_put_option_update_values_2
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=cqty2)
 
     # get close info for closed trades
@@ -478,7 +478,7 @@ def test_trade_close_records_returns_all_close_trades(get_test_call_option, get_
     test_option = get_test_call_option
     test_option.open_trade(quantity=10)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     test_option.close_trade(quantity=3)
 
@@ -486,7 +486,7 @@ def test_trade_close_records_returns_all_close_trades(get_test_call_option, get_
     assert len(records) == 1
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_2
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=6)
 
     records = test_option.trade_close_records
@@ -506,13 +506,13 @@ def test_total_fees_returns_all_fees_incurred(option_id, ticker, test_expiration
     assert test_option.total_fees == 5.0
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=2)
 
     assert test_option.total_fees == 6.0
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=3)
 
     assert test_option.total_fees == 7.5
@@ -522,7 +522,7 @@ def test_get_closing_price(get_test_call_option, get_test_call_option_update_val
     test_option = get_test_call_option
     test_option.open_trade(quantity=1)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     expected_close_price = 10.0
 
     close_price = test_option.get_closing_price()
@@ -534,7 +534,7 @@ def test_get_close_price_on_option_that_has_not_been_traded_raises_exception(get
                                                                              get_test_call_option_update_values_1):
     test_option = get_test_call_option
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     with pytest.raises(ValueError,
                        match="Cannot determine closing price on option that does not have an opening trade"):
@@ -549,13 +549,13 @@ def test_get_closing_price_on_call_option_when_bid_is_zero(open_qty, expected_cl
                                                            get_test_call_option_update_values_3):
     test_option = get_test_call_option
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     # open trade
     test_option.open_trade(quantity=open_qty)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_3
     assert bid == 0.0
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     assert test_option.get_closing_price() == expected_closing_price
 
@@ -568,13 +568,13 @@ def test_get_closing_price_on_put_option_when_bid_is_zero(open_qty, expected_clo
                                                           get_test_put_option_update_values_3):
     test_option = get_test_put_option
     quote_date, spot_price, bid, ask, price = get_test_put_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     # open trade
     test_option.open_trade(quantity=open_qty)
     quote_date, spot_price, bid, ask, price = get_test_put_option_update_values_3
     assert bid == 0.0
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     assert test_option.get_closing_price() == expected_closing_price
 
@@ -589,7 +589,7 @@ def test_call_option_get_close_price_is_zero_when_option_expires_otm(get_test_pu
     test_option.open_trade(quantity=1)
     _, spot_price, bid, ask, price = get_test_put_option_update_values_3 if option_type == OptionType.PUT \
         else get_test_call_option_update_values_3
-    test_option.update(quote_date=at_expiration_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=at_expiration_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     assert test_option.otm()
     assert test_option.price != 0.0
@@ -614,7 +614,7 @@ def test_dte_when_option_has_quote_data(get_test_call_option):
 def test_dte_is_updated_when_quote_date_is_updated(get_test_call_option, get_test_put_option_update_values_1):
     test_option = get_test_call_option
     quote_date, spot_price, bid, ask, price = get_test_put_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     expected_dte = 14
     assert test_option.dte() == expected_dte
@@ -627,7 +627,7 @@ def test_dte_is_updated_when_quote_date_is_updated(get_test_call_option, get_tes
 def test_dte_is_zero_on_expiration_day(get_test_call_option, get_test_put_option_update_values_1, expiration_datetime):
     test_option = get_test_call_option
     _, spot_price, bid, ask, price = get_test_put_option_update_values_1
-    test_option.update(quote_date=expiration_datetime, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=expiration_datetime, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     expected_dte = 0
     assert test_option.dte() == expected_dte
@@ -754,7 +754,7 @@ def test_get_unrealized_profit_loss_is_zero_when_trade_is_closed(get_test_call_o
     test_option = get_test_call_option
     test_option.open_trade(quantity=10)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=10)
 
     pnl = test_option.get_unrealized_profit_loss()
@@ -782,7 +782,7 @@ def test_get_unrealized_profit_loss_value(get_test_call_option, get_test_put_opt
     test_option = get_test_call_option if option_type == OptionType.CALL else get_test_put_option
     test_option.open_trade(quantity=quantity)
     quote_date, spot_price, bid, ask, _ = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     actual_profit_loss = test_option.get_unrealized_profit_loss()
     assert actual_profit_loss == expected_profit_loss
@@ -824,7 +824,7 @@ def test_get_unrealized_profit_loss_percent_value(get_test_call_option, get_test
     test_option = get_test_call_option if option_type == OptionType.CALL else get_test_put_option
     test_option.open_trade(quantity=quantity)
     quote_date, spot_price, bid, ask, _ = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     actual_profit_loss = test_option.get_unrealized_profit_loss_percent()
     assert actual_profit_loss == expected_profit_loss_pct
@@ -844,7 +844,7 @@ def test_get_days_in_trade(get_test_call_option_update_values_1, get_test_call_o
     test_option.open_trade(quantity=1)
 
     _, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     days_in_trade = test_option.get_days_in_trade()
     assert days_in_trade == expected_days_in_trade
 
@@ -870,7 +870,7 @@ def test_get_total_profit_loss_returns_unrealized_when_no_contracts_are_closed(g
     test_option.open_trade(quantity=qty)
 
     quote_date, spot_price, bid, ask, _ = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     actual_value = test_option.get_profit_loss()
     assert actual_value == expected_value
 
@@ -880,7 +880,7 @@ def test_get_profit_loss_returns_closed_pnl_when_all_contracts_are_closed(get_te
     test_option = get_test_call_option
     test_option.open_trade(quantity=10)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=10)
 
     assert test_option.get_profit_loss() == 8_500.0
@@ -892,10 +892,10 @@ def test_get_profit_loss_returns_unrealized_and_closed_pnl_when_partially_closed
     test_option = get_test_call_option
     test_option.open_trade(quantity=10)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=5)  # 4250
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_2
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)  # 1750
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)  # 1750
 
     assert test_option.get_profit_loss() == 6_000.0
 
@@ -907,13 +907,13 @@ def test_get_total_profit_loss_returns_unrealized_and_closed_pnl_when_multiple_c
     test_option = get_test_call_option
     test_option.open_trade(quantity=10)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=3)  # 2550
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_2
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=3)  # 1050
     quote_date, spot_price, bid, ask, _ = get_test_call_option_update_values_2
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=8.0)  # 2600
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=8.0)  # 2600
 
     actual_value = test_option.get_profit_loss()
     assert actual_value == 6_200.0
@@ -939,7 +939,7 @@ def test_get_profit_loss_percent_returns_unrealized_when_no_contracts_are_closed
     test_option.open_trade(quantity=qty)
 
     quote_date, spot_price, bid, ask, _ = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     actual_value = test_option.get_profit_loss_percent()
     assert actual_value == expected_value
@@ -959,7 +959,7 @@ def test_get_total_profit_loss_percent_returns_closed_pnl_when_all_contracts_are
     test_option = get_test_call_option if option_type == OptionType.CALL else get_test_put_option
     test_option.open_trade(quantity=qty)
     quote_date, spot_price, bid, ask, _ = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=qty)
 
     assert test_option.get_profit_loss_percent() == expected_value
@@ -981,13 +981,13 @@ def test_get_total_profit_loss_percent_returns_unrealized_and_closed_pnl_when_mu
     test_option = get_test_call_option
     test_option.open_trade(quantity=qty)
     quote_date, spot_price, bid, ask, _ = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price1)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price1)
     test_option.close_trade(quantity=close_qty_1)
     quote_date, spot_price, bid, ask, _ = get_test_call_option_update_values_2
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price2)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price2)
     test_option.close_trade(quantity=close_qty_2)  # 1050
     quote_date, spot_price, bid, ask, _ = get_test_call_option_update_values_2
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price3)  # 2600
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price3)  # 2600
 
     actual_value = test_option.get_profit_loss_percent()
     assert actual_value == expected_value
@@ -1049,7 +1049,7 @@ def test_close_option_emits_close_transaction_completed_event(get_test_call_opti
 
     test_option.open_trade(quantity=10)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     test_option.close_trade(quantity=5)
 
     assert test_close_info is not None
@@ -1074,7 +1074,7 @@ def test_update_to_expired_date_emits_option_expired_event(get_test_call_option,
     my_portfolio = MyPortfolio()
     test_option.bind(option_expired=my_portfolio.on_option_expired)
 
-    test_option.update(quote_date=past_expiration_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=past_expiration_quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert expired_option_id == test_option.option_id
 
 def test_fees_incurred_event_emitted_when_open_or_close_fees_are_incurred(get_test_call_option, get_test_call_option_update_values_1):
@@ -1098,7 +1098,7 @@ def test_fees_incurred_event_emitted_when_open_or_close_fees_are_incurred(get_te
     my_fees = 0
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert my_fees == 0
 
     test_option.close_trade(quantity=5)
@@ -1122,7 +1122,7 @@ def test_current_value_is_updated_when_price_changes(get_test_call_option, get_t
     test_option.open_trade(quantity=1)
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     new_premium = 1_000.0
 
@@ -1135,20 +1135,20 @@ def test_current_value_when_partially_closed_price_changes(get_test_call_option,
     test_option = get_test_call_option
     test_option.open_trade(quantity=10)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert test_option.current_value == 10_000.0
 
     test_option.close_trade(quantity=5)
     assert test_option.current_value == 5_000.0
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_2
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert test_option.current_value == 2_500.0
     test_option.close_trade(quantity=3)
     assert test_option.current_value == 1_000.0
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_3
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert test_option.current_value == 6.0
 
     test_option.close_trade(quantity=2)
@@ -1160,13 +1160,13 @@ def test_current_value_is_not_updated_after_all_contracts_closed(get_test_call_o
     test_option = get_test_call_option
     test_option.open_trade(quantity=10)
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
 
     test_option.close_trade(quantity=10)
     assert test_option.current_value == 0.0
 
     quote_date, spot_price, bid, ask, price = get_test_call_option_update_values_1
-    test_option.update(quote_date=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
+    test_option.update(quote_datetime=quote_date, spot_price=spot_price, bid=bid, ask=ask, price=price)
     assert test_option.current_value == 0.0
 
 
