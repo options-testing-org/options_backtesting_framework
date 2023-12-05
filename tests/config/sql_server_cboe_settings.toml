@@ -1,0 +1,27 @@
+[SELECT_OPTIONS_QUERY]
+select = 'select distinct '
+from = ' from options o inner join option_values ov on o.id = ov.option_id '
+where = "where symbol ='{symbol}' and quote_datetime between CONVERT(datetime2, '{start_date}') and CONVERT(datetime2, '{end_date}') "
+order_by = ' order by '
+quote_datetime_list_query = "select distinct quote_datetime, quote_datetime as col from option_values where quote_datetime between CONVERT(datetime2, '{start_date}') and CONVERT(datetime2, '{end_date}') order by quote_datetime"
+quote_datetime_field = "quote_datetime"
+
+
+[FIELD_MAPPING]
+option_id = 'o.id as option_id'
+symbol = 'symbol'
+strike = 'strike'
+expiration = 'expiration'
+option_type = 'option_type'
+quote_datetime = 'quote_datetime'
+spot_price = 'underlying_price as spot_price'
+bid = 'bid'
+ask = 'ask'
+price = 'price'
+delta = 'delta'
+gamma = 'gamma'
+theta = 'theta'
+vega = 'vega'
+rho = 'rho'
+open_interest = 'open_interest'
+implied_volatility = 'implied_volatility'

@@ -12,9 +12,9 @@ from pandas import DataFrame
 class DataLoader(ABC, Dispatcher):
     _events_ = ['option_chain_loaded']
 
-    def __init__(self, start: datetime.datetime | datetime.date, end: datetime.datetime | datetime.date,
+    def __init__(self, *, start: datetime.datetime | datetime.date, end: datetime.datetime | datetime.date,
                  select_filter: SelectFilter,
-                 fields_list: list[str] = None, *args, **kwargs):
+                 fields_list: list[str] = None):
         settings.load_file(settings.DATA_FORMAT_SETTINGS)
         self.start_datetime = start
         self.end_datetime = end
@@ -24,13 +24,6 @@ class DataLoader(ABC, Dispatcher):
         self.last_loaded_date: datetime.datetime | None = None
 
     def next_option_chain(self, quote_datetime: datetime.datetime | datetime.date):
-        # if isinstance(quote_datetime, datetime.date):
-        #     # the date must be in datetime format to compare
-        #     quote_datetime = datetime.datetime(year=quote_datetime.year, month=quote_datetime.month,
-        #                                        day=quote_datetime.day)
-
-        # if self.last_loaded_date < datetime.datetime(year=quote_datetime.year, month=quote_datetime.month,
-        #                                        day=quote_datetime.day):
         if self.last_loaded_date < quote_datetime:
             self.load_cache(quote_datetime)
         self.get_next_option_chain(quote_datetime)

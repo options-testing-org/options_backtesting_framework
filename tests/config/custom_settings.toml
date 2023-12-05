@@ -1,7 +1,10 @@
 DATA_IMPORT_NAME = "Test Flat Files Import Custom"
-DATA_FILES_ROOT_FOLDER = "C:\\_code\\options_backtesting_framework\\tests\\test_data"
+data_loader_type = 'FILE_DATA_LOADER'
 
 [DATA_IMPORT_FILE_PROPERTIES]
+data_files_folder = "test_data"
+data_file_name_format = "L2_options_{year}{month}{day}.csv"
+
 first_row_is_header = true
 put_value_in_data = 'put'
 call_value_in_data = 'call'

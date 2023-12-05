@@ -1,6 +1,7 @@
 import datetime
+import math
+import time
 import warnings
-from pprint import pprint as pp
 
 import backtrader as bt
 import pandas as pd
@@ -8,10 +9,9 @@ import pyodbc
 import sqlalchemy as sa
 from numpy import isnan
 
-from options_framework.option_types import OptionType
+from options_framework.option_types import OptionType, SelectFilter, FilterRange
 from options_framework.spreads.single import Single
 from options_framework.test_manager import OptionTestManager
-from options_framework.option_types import OptionType, SelectFilter, FilterRange
 
 warnings.filterwarnings('ignore')
 
@@ -108,7 +108,9 @@ class HullMADirectionalStrategy(bt.Strategy):
 
 
 if __name__ == "__main__":
-    pp(settings.as_dict())
+    #pp(settings.as_dict())
+    t1 = time.time()
+    print(time.ctime())
 
     server = settings.SERVER
     database = settings.DATABASE
@@ -157,3 +159,11 @@ if __name__ == "__main__":
     cerebro.adddata(data)
     cerebro.adddata(daily_data)
     cerebro.run()
+
+    t2 = time.time()
+    time_diff = t2-t1
+    hours = math.floor(time_diff/3600)
+    minutes = math.floor((time_diff - (hours*3600))/60)
+    seconds = math.floor(time_diff - hours*3600 - minutes*60)
+    print(f'Total run time: {hours} hours, {minutes} minutes, {seconds} seconds ')
+    print(datetime.datetime.now())

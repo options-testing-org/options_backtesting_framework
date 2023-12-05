@@ -12,9 +12,9 @@ from options_framework.option_types import OptionType, SelectFilter
 
 class SQLServerDataLoader(DataLoader):
 
-    def __init__(self, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
-                 fields_list: list[str], *args, **kwargs):
-        super().__init__(start, end, select_filter, fields_list, *args, **kwargs)
+    def __init__(self, *, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
+                 fields_list: list[str] = None):
+        super().__init__(start=start, end=end, select_filter=select_filter, fields_list=fields_list)
         server = settings.SERVER
         database = settings.DATABASE
         username = settings.USERNAME

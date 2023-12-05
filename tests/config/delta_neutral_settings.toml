@@ -1,5 +1,5 @@
 DATA_IMPORT_NAME = "Test Flat Files Import"
-DATA_FILES_ROOT_FOLDER = "C:\\_code\\options_backtesting_framework\\tests\\test_data"
+data_files_folder = "test_data"
 
 [DATA_IMPORT_FILE_PROPERTIES]
 first_row_is_header = true
