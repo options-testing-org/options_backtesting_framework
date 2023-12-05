@@ -51,7 +51,7 @@ class HullMAOptionStrategy(bt.Strategy):
         hull_ma_one_day_ago = self.hull[-1]
         if isnan(hull_ma_two_days_ago):
             return
-        self.p.options_manager.next(self.data.datetime.date(0))
+        self.p.options_manager.next(self.dt.to_pydatetime())
 
         option_type = OptionType.CALL if hull_ma_two_days_ago < hull_ma_one_day_ago else OptionType.PUT
         current_position = None if not self.portfolio.positions else self.portfolio.positions[next(iter(self.portfolio.positions))]
@@ -75,8 +75,16 @@ class HullMAOptionStrategy(bt.Strategy):
 
             self.portfolio.open_position(option_position=option, quantity=1)
 
-        self.log(f'hull {option_type.name} portfolio value: {self.portfolio.portfolio_value:.2f}  cash: {self.portfolio.cash:.2f}',  self.dt)
+        self.log(f'portfolio value: {self.portfolio.portfolio_value:.2f}  cash: {self.portfolio.cash:.2f}',  self.dt)
 
+    def stop(self):
+        position_ids = list(self.portfolio.positions.keys())
+        for pos_id in position_ids:
+            position = self.portfolio.positions[pos_id]
+            self.portfolio.close_position(position, position.quantity)
+        self.log(
+            f'portfolio value: {self.portfolio.portfolio_value:.2f}  cash: {self.portfolio.cash:.2f}',
+            self.dt)
 
 if __name__ == "__main__":
     pp(options_settings.as_dict())
