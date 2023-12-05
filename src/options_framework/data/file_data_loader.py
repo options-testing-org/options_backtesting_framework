@@ -25,15 +25,15 @@ class FileDataLoader(DataLoader):
     def load_cache(self, quote_datetime: datetime.datetime):
         pass # not used for file data loader. Each option chain is loaded from a file each time it is needed
 
-    def __init__(self, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
-                 fields_list: list[str] = None, *args, **kwargs):
-        super().__init__(start, end, select_filter, fields_list, *args, **kwargs)
+    def __init__(self, *, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
+                 fields_list: list[str] = None):
+        super().__init__(start=start, end=end, select_filter=select_filter, fields_list=fields_list)
         self.field_mapping = map_data_file_fields()
-        self.data_root_folder = settings.DATA_FILES_FOLDER
+        self.data_root_folder = settings.DATA_IMPORT_FILE_PROPERTIES.data_files_folder
         self.last_loaded_date = start
 
     def get_next_option_chain(self, quote_datetime: datetime.datetime):
-        filename = settings.DATA_FILE_NAME_FORMAT.replace('{year}', str(quote_datetime.year)) \
+        filename = settings.DATA_IMPORT_FILE_PROPERTIES.data_file_name_format.replace('{year}', str(quote_datetime.year)) \
             .replace('{month}', str(quote_datetime.month).zfill(2)) \
             .replace('{day}', str(quote_datetime.day).zfill(2)) \
             .replace('{hour}', str(quote_datetime.hour).zfill(2)) \
@@ -73,7 +73,7 @@ class FileDataLoader(DataLoader):
             else:
                 raise ValueError("Data import file properties option type settings do not match data")
 
-            if self.select_filter.option_type and self.select_filter.option_type != option_type_value:
+            if self.select_filter.option_type and self.select_filter.option_type != option_type:
                 line = f.readline()
                 continue
 

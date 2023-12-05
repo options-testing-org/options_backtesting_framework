@@ -2,14 +2,14 @@ name="UNIT TESTING SETTINGS"
 
 standard_fee=0.50
 incur_fees=true
+
+data_format_settings = "sql_server_cboe_settings.toml"
 data_loader_type = 'SQL_DATA_LOADER'
-#data_loader_type = 'FILE_DATA_LOADER'
-data_files_folder = "test_data"
+
 #data_format_settings = "custom_settings.toml"
-data_format_settings = "sql_server_settings.toml"
-data_file_name_format = "L2_options_{year}{day}{month}.csv"
+
 #database_secrets = '.secrets.toml'
-data_records_buffer_size = 10_000
+
 select_fields = ['symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
                        'bid', 'ask', 'price']
 order_by_fields = ['quote_datetime', 'expiration', 'strike', 'option_type']

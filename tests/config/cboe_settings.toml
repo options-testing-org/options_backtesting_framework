@@ -1,13 +1,17 @@
+
 DATA_IMPORT_NAME = "Test Flat Files Import CBOE"
-DATA_FILES_ROOT_FOLDER = "C:\\_code\\options_backtesting_framework\\tests\\test_data"
+data_loader_type = 'FILE_DATA_LOADER'
+data_records_buffer_size = 10_000
 
 [DATA_IMPORT_FILE_PROPERTIES]
+data_files_folder = "test_data"
+data_file_name_format = "spx_{month}_{day}_{year}.csv"
 first_row_is_header = true
 put_value_in_data = 'P'
 call_value_in_data = 'C'
 option_id_columns = ['root', 'strike', 'expiration', 'option_type']
 expiration_date_format = "%m/%d/%Y"
-quote_date_format = "%m/%d/%Y %h:%m"
+quote_date_format = "%m/%d/%Y %H:%M"
 column_delimiter = ','
 
 # list all the columns in the data file in order, even unused columns
