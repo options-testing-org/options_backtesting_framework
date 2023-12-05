@@ -37,6 +37,9 @@ class DataLoader(ABC, Dispatcher):
         self.emit('option_chain_loaded', quote_datetime=quote_datetime, option_chain=option_chain)
 
     @abstractmethod
-    def get_next_option_chain(self, quote_datetime):
+    def get_next_option_chain(self, quote_datetime: datetime.datetime):
         pass
 
+    @abstractmethod
+    def on_options_opened(self, options: list[Option]) -> None:
+        pass

@@ -1,5 +1,7 @@
 import datetime
 import pytest
+import pandas as pd
+from pandas import DataFrame
 from options_framework.option_types import OptionType
 from options_framework.option import Option
 
@@ -138,3 +140,13 @@ def get_test_put_option_with_extended_properties(option_id, test_expiration, tes
 def datafile_file_name():
     return "L2_options_20230301.csv"
 
+def create_update_cache(update_values: list): # quote_date, spot_price, bid, ask, price):
+    updates = []
+    for item in update_values:
+        val_dict = {'quote_datetime': item[0], 'spot_price': item[1], 'bid': item[2], 'ask': item[3], 'price': item[4]}
+        updates.append(val_dict)
+
+    df = DataFrame(updates)
+    df['quote_datetime'] = pd.to_datetime(df['quote_datetime'])
+    df.set_index("quote_datetime", inplace=True)
+    return df

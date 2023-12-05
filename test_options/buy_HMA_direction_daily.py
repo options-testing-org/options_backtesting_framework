@@ -77,6 +77,7 @@ class HullMADirectionalStrategy(bt.Strategy):
         if t.hour == 9 and t.minute == 35 and not current_position:
             if current_position:
                 self.portfolio.close_position(current_position, 1)
+            self.p.options_manager.next_option_chain(self.dt.to_pydatetime())
             exp = self.option_chain.expirations[0]
             strikes = self.option_chain.expiration_strikes[exp]
             strike = 0

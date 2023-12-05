@@ -1,11 +1,12 @@
+import datetime
 import itertools
+from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Optional
 
 from ..option import Option
-from ..option_types import OptionTradeType, OptionCombinationType
-from abc import ABC, abstractmethod, abstractproperty
-from ..utils.helpers import decimalize_2, decimalize_4
+from ..option_types import OptionCombinationType
+
 
 @dataclass(repr=False, slots=True)
 class OptionCombination(ABC):
@@ -27,6 +28,10 @@ class OptionCombination(ABC):
     def __repr__(self):
         return f'<{self.option_combination_type.name}({self.position_id}) Quantity: {len(self.options)} options>'
 
+    def next(self, quote_datetime: datetime.datetime):
+        for option in self.options:
+            option.next_update(quote_datetime=quote_datetime)
+
     @property
     def quantity(self):
         raise NotImplementedError
@@ -38,6 +43,22 @@ class OptionCombination(ABC):
     @abstractmethod
     def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
         raise NotImplementedError
+
+    def max_profit(self):
+        """
+        If there is a determinate max profit, that is returned by the parent class.
+        If there is an infinite max profit, as is the case for a naked option type, returns None
+        :return: None or the max profit of the spread
+        """
+        return None
+
+    def max_loss(self):
+        """
+        If there is a determinate max loss, that is returned by the parent class.
+        If there is an infinite max loss, as is the case for a naked option type, returns None
+        :return: None or the max loss of the spread
+        """
+        return None
 
     #
     # def premium(self):
@@ -79,21 +100,7 @@ class OptionCombination(ABC):
     #     percent_gain_loss = (total_current_value - starting_value) / starting_value
     #     return float(decimalize_4(percent_gain_loss))
 
-    # def max_profit(self):
-    #     """
-    #     If there is a determinate max profit, that is returned by the parent class.
-    #     If there is an infinite max profit, as is the case for a naked option type, returns None
-    #     :return: None or the max profit of the spread
-    #     """
-    #     return None
-    #
-    # def max_loss(self):
-    #     """
-    #     If there is a determinate max loss, that is returned by the parent class.
-    #     If there is an infinite max loss, as is the case for a naked option type, returns None
-    #     :return: None or the max loss of the spread
-    #     """
-    #     return None
+
 
     # @property
     # def option_combination_type(self):

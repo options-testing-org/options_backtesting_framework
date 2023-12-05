@@ -51,7 +51,7 @@ class HullMAOptionStrategy(bt.Strategy):
         hull_ma_one_day_ago = self.hull[-1]
         if isnan(hull_ma_two_days_ago):
             return
-        self.p.options_manager.next(self.dt.to_pydatetime())
+        self.p.options_manager.next_option_chain(self.dt.to_pydatetime())
 
         option_type = OptionType.CALL if hull_ma_two_days_ago < hull_ma_one_day_ago else OptionType.PUT
         current_position = None if not self.portfolio.positions else self.portfolio.positions[next(iter(self.portfolio.positions))]

@@ -1,7 +1,7 @@
 import datetime
 
 import pytest
-
+from conftest import create_update_cache
 from options_framework.config import settings
 from options_framework.data.file_data_loader import FileDataLoader
 from options_framework.option_types import OptionType, SelectFilter, FilterRange

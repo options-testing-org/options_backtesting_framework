@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 import datetime
-
+from pandas import DataFrame
 from options_framework.option_types import OptionPositionType, OptionType, OptionStatus
 from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 from options_framework.config import settings
@@ -26,7 +26,7 @@ class Option(Dispatcher):
     _events_ = ["open_transaction_completed", "close_transaction_completed", "option_expired", "fees_incurred"]
 
     # immutable fields
-    option_id: str = field(compare=True)
+    option_id: str | int = field(compare=True)
     """The unique id of the option"""
     symbol: str = field(compare=True)
     """The ticker symbol"""
@@ -91,6 +91,7 @@ class Option(Dispatcher):
     rho: Optional[float] = field(default=None, compare=False)
     open_interest: Optional[int] = field(default=None, compare=False)
     implied_volatility: Optional[float] = field(default=None, compare=False)
+    update_cache: DataFrame | None = field(default=None, compare=False)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
@@ -159,64 +160,93 @@ class Option(Dispatcher):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)
 
-    def update(self, *, quote_datetime: datetime.datetime, spot_price: int | float, bid: float, ask: float, price: float,
-               delta: float = None, gamma: float = None, theta: float = None, vega: float = None, rho: float = None,
-               open_interest: float = None, implied_volatility: float = None, **kwargs: dict) -> None:
-        """
-        Updates price and underlying asset information for a given data date and/or time
-
-        :param kwargs: Keyword arguments are added to the user_defined list of values
-        :param implied_volatility:
-        :param open_interest:
-        :param rho:
-        :param vega:
-        :param theta:
-        :param gamma:
-        :param delta:
-        :param quote_datetime: data date for price information
-        :type quote_datetime: datetime.datetime
-        :param spot_price: price of underlying on quote_date
-        :type spot_price: float
-        :param bid: bid price
-        :type bid: float
-        :param ask: ask price
-        :type ask: float
-        :param price: calculated price based on mid-point between bid and ask
-        :type price: float
-        """
-        if quote_datetime is None:
-            raise ValueError("quote_date cannot be None")
-        if spot_price is None:
-            raise ValueError("spot_price cannot be None")
-        if bid is None:
-            raise ValueError("bid cannot be None")
-        if ask is None:
-            raise ValueError("ask cannot be None")
-        if price is None:
-            raise ValueError("price cannot be None")
-
+    def next_update(self, quote_datetime: datetime.datetime):
+        update_values = self.update_cache.loc[quote_datetime]
         self.quote_datetime = quote_datetime
-        self.spot_price = spot_price
-        self.bid = bid
-        self.ask = ask
-        self.price = price
+        update_fields = [f for f in update_values.index if f not in ['option_id', 'symbol', 'strike', 'expiration', 'option_type']]
+        self.spot_price = update_values['spot_price']
+        self.bid = update_values['bid']
+        self.ask = update_values['ask']
+        self.price = update_values['price']
 
-        self.open_interest = open_interest
-        self.implied_volatility = implied_volatility
-
-        self.delta = delta
-        self.gamma = gamma
-        self.theta = theta
-        self.vega = vega
-        self.rho = rho
-
-        self._check_expired()
-
-        for key, value in kwargs.items():
-            self.user_defined[key] = value
-
+        if 'delta' in update_fields:
+            self.delta = update_values['delta']
+        if 'gamma' in update_fields:
+            self.gamma = update_values['gamma']
+        if 'theta' in update_fields:
+            self.theta = update_values['theta']
+        if 'vega' in update_fields:
+            self.vega = update_values['vega']
+        if 'rho' in update_fields:
+            self.rho = update_values['rho']
+        if 'open_interest' in update_fields:
+            self.open_interest = update_values['open_interest']
+        if 'implied_volatility' in update_fields:
+            self.implied_volatility = update_values['implied_volatility']
         self.status &= ~OptionStatus.CREATED
         self.status |= OptionStatus.INITIALIZED
+        self._check_expired()
+
+
+    #
+    # def update(self, *, quote_datetime: datetime.datetime, spot_price: int | float, bid: float, ask: float, price: float,
+    #            delta: float = None, gamma: float = None, theta: float = None, vega: float = None, rho: float = None,
+    #            open_interest: float = None, implied_volatility: float = None, **kwargs: dict) -> None:
+    #     """
+    #     Updates price and underlying asset information for a given data date and/or time
+    #
+    #     :param kwargs: Keyword arguments are added to the user_defined list of values
+    #     :param implied_volatility:
+    #     :param open_interest:
+    #     :param rho:
+    #     :param vega:
+    #     :param theta:
+    #     :param gamma:
+    #     :param delta:
+    #     :param quote_datetime: data date for price information
+    #     :type quote_datetime: datetime.datetime
+    #     :param spot_price: price of underlying on quote_date
+    #     :type spot_price: float
+    #     :param bid: bid price
+    #     :type bid: float
+    #     :param ask: ask price
+    #     :type ask: float
+    #     :param price: calculated price based on mid-point between bid and ask
+    #     :type price: float
+    #     """
+    #     if quote_datetime is None:
+    #         raise ValueError("quote_date cannot be None")
+    #     if spot_price is None:
+    #         raise ValueError("spot_price cannot be None")
+    #     if bid is None:
+    #         raise ValueError("bid cannot be None")
+    #     if ask is None:
+    #         raise ValueError("ask cannot be None")
+    #     if price is None:
+    #         raise ValueError("price cannot be None")
+    #
+    #     self.quote_datetime = quote_datetime
+    #     self.spot_price = spot_price
+    #     self.bid = bid
+    #     self.ask = ask
+    #     self.price = price
+    #
+    #     self.open_interest = open_interest
+    #     self.implied_volatility = implied_volatility
+    #
+    #     self.delta = delta
+    #     self.gamma = gamma
+    #     self.theta = theta
+    #     self.vega = vega
+    #     self.rho = rho
+    #
+    #     self._check_expired()
+    #
+    #     for key, value in kwargs.items():
+    #         self.user_defined[key] = value
+    #
+    #     self.status &= ~OptionStatus.CREATED
+    #     self.status |= OptionStatus.INITIALIZED
 
     def open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
         """
@@ -321,11 +351,11 @@ class Option(Dispatcher):
         if self.quantity == 0:
             self.status &= ~OptionStatus.TRADE_IS_OPEN
             self.status |= OptionStatus.TRADE_IS_CLOSED
+            self.update_cache = None
         else:
             self.status |= OptionStatus.TRADE_PARTIALLY_CLOSED
 
         self._calculate_trade_close_info()
-
         self.emit("close_transaction_completed", trade_close_record)
 
         return trade_close_record

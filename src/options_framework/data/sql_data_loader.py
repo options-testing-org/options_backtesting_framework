@@ -66,6 +66,27 @@ class SQLServerDataLoader(DataLoader):
 
         super().on_option_chain_loaded_loaded(quote_datetime=quote_datetime, option_chain=options)
 
+    def on_options_opened(self, options: list[Option]) -> None:
+        option_ids = [str(o.option_id) for o in options]
+        open_date = options[0].trade_open_info.date
+        print(f"options {'.'.join(option_ids)} were opened on {open_date}")
+        fields = ['option_id'] + self.fields_list
+        field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
+                                  if option_field in fields])
+        query = "select " + field_mapping
+        query += settings.SELECT_OPTIONS_QUERY['from']
+        query += f' where option_id in ({",".join(option_ids)})'
+        query += f' and {settings.SELECT_OPTIONS_QUERY.quote_datetime_field} >= CONVERT(datetime2, \'{open_date}\')'
+        query += f' order by {settings.SELECT_OPTIONS_QUERY.quote_datetime_field}'
+        connection = pyodbc.connect(self.connection_string)
+        df = pd.read_sql(query, connection, index_col="quote_datetime", parse_dates=True)
+        df.index = pd.to_datetime(df.index)
+        connection.close()
+
+        for option in options:
+            cache = df.loc[df['option_id'] == option.option_id]
+            option.update_cache = cache
+
     def _build_query(self, start_date: datetime.datetime, end_date: datetime.datetime):
         fields = ['option_id'] + self.fields_list
         field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
@@ -81,15 +102,27 @@ class SQLServerDataLoader(DataLoader):
         if self.select_filter.option_type:
             query += f' and option_type = {self.select_filter.option_type.value}'
 
+        if self.select_filter.expiration_dte:
+            low_val, high_val = self.select_filter.expiration_dte.low, self.select_filter.expiration_dte.high
+            if low_val and low_val > 0:
+                query += f' and expiration >= DATEADD(day, {low_val}, quote_datetime)'
+            if high_val:
+                query += f' and expiration <= DATEADD(day, {high_val}, quote_datetime)'
+
+        if self.select_filter.strike_range:
+            low_val, high_val = self.select_filter.strike_range.low, self.select_filter.strike_range.high
+            if low_val:
+                query += f' and strike >= {settings.SELECT_OPTIONS_QUERY.spot_price_field}-{low_val}'
+            if high_val:
+                query += f' and strike <= {settings.SELECT_OPTIONS_QUERY.spot_price_field}+{high_val}'
+
         for fltr in [f for f in filter_dict.keys() if 'range' in f]:
             name, low_val, high_val = fltr[:-6], filter_dict[fltr]['low'], filter_dict[fltr]['high']
+            if name == "strike": continue
             for val in [low_val, high_val]:
                 if val is not None:# and high_val is not None:
                     operator = ">=" if val is low_val else "<="
-                    if name == 'expiration':
-                        query += f' and {name} {operator} CONVERT(datetime2, \'{val}\')' # and CONVERT(datetime2, \'{high_val}\')'
-                    else:
-                        query += f' and {name} {operator} {val}'
+                    query += f' and {name} {operator} {val}'
 
         query += ' order by \'quote_datetime\', \'expiration\', \'strike\''
 
@@ -99,11 +132,7 @@ class SQLServerDataLoader(DataLoader):
         symbol = self.select_filter.symbol
         start_date = self.start_datetime
         end_date = self.end_datetime
-        #quote_field = [f[1] for f in settings.FIELD_MAPPING.items() if f[0] == 'quote_datetime'][0]
         query = settings.SELECT_OPTIONS_QUERY.quote_datetime_list_query.replace('{symbol}', symbol).replace('{start_date}', str(start_date)).replace('{end_date}', str(end_date))
-        #.replace('{start_date}', str(self.start_load_date)).replace('{end_date}', str(self.end_datetime)))
-
-            #f'select distinct {settings.SELECT_OPTIONS_QUERY.quote_datetime_field} {settings.SELECT_OPTIONS_QUERY["from"]} where symbol=\'{self.select_filter.symbol}\' order by {settings.SELECT_OPTIONS_QUERY.quote_datetime_field}'
         connection = pyodbc.connect(self.connection_string)
         df = pd.read_sql(query, connection, parse_dates=True, index_col=[settings.SELECT_OPTIONS_QUERY.quote_datetime_field])
         df.index = pd.to_datetime(df.index)
