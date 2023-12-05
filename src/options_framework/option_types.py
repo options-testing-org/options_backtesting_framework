@@ -66,14 +66,14 @@ class OptionTradeType(Enum):
 
 @dataclass
 class FilterRange:
-    low: float | datetime.date = None
-    high: float | datetime.date = None
+    low: float | int | datetime.date = None
+    high: float | int | datetime.date = None
 
 @dataclass
 class SelectFilter:
     symbol: str
     option_type: OptionType = None
-    expiration_range: FilterRange = field(default_factory=lambda: FilterRange())
+    expiration_dte: FilterRange = field(default_factory=lambda: FilterRange())
     strike_range: FilterRange = field(default_factory=lambda: FilterRange())
     delta_range: FilterRange = field(default_factory=lambda: FilterRange())
     gamma_range: FilterRange = field(default_factory=lambda: FilterRange())

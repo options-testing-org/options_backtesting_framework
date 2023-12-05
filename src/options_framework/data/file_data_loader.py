@@ -52,6 +52,9 @@ class FileDataLoader(DataLoader):
 
         super().on_option_chain_loaded_loaded(quote_datetime=quote_datetime, option_chain=options)
 
+    def on_options_opened(self, options: list[Option]) -> None:
+        pass
+
     def _load_data_generator(self, f: io.TextIOWrapper):
         line = f.readline()
 
