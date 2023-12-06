@@ -37,8 +37,11 @@ class OptionPortfolio(Dispatcher):
         [option.unbind(self) for option in option_position.options]
 
     def next(self, quote_datetime: datetime.datetime):
-        for _, position in self.positions.items():
-            position.advance_to_next(quote_datetime=quote_datetime)
+        # for _, position in self.positions.items():
+        #     position.advance_to_next(quote_datetime=quote_datetime)
+        options = [option for position in self.positions.values() for option in position.options]
+        for option in options:
+            option.next_update(quote_datetime)
 
     @property
     def portfolio_value(self):
@@ -48,11 +51,11 @@ class OptionPortfolio(Dispatcher):
 
     def on_option_open_transaction_completed(self, trade_open_info: TradeOpenInfo):
         self.cash -= trade_open_info.premium
-        print("portfolio: option position was opened")
+        #print("portfolio: option position was opened")
 
     def on_option_close_transaction_completed(self, trade_close_info: TradeCloseInfo):
         self.cash += trade_close_info.premium
-        print("portfolio: option position was closed")
+        #print("portfolio: option position was closed")
 
     def on_option_expired(self, option_id):
         ids = [position.position_id for position in self.positions.values()
@@ -61,11 +64,11 @@ class OptionPortfolio(Dispatcher):
             position = self.positions[ids[0]]
             if all([OptionStatus.EXPIRED in option.status for option in position.options]):
                 self.close_position(position, position.quantity)
-        print("portfolio: option expired")
+        #print("portfolio: option expired")
 
     def on_fees_incurred(self, fees):
         self.cash -= fees
-        print("portfolio: fees incurred")
+        #print("portfolio: fees incurred")
 
     # def on_options_updated(self, quote_datetime: datetime.datetime, option_chain: list[Option]):
     #     options = [option for position in self.positions.values() for option in position.options]

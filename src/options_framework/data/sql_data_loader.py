@@ -28,7 +28,7 @@ class SQLServerDataLoader(DataLoader):
     def load_cache(self, start: datetime.datetime):
         self.start_load_date = start
         start_loc = self.datetimes_list.index.get_loc(str(start))
-        end_loc = start_loc + 10_000
+        end_loc = start_loc + settings.SQL_DATA_LOADER_SETTINGS.buffer_size
         end_loc = end_loc if end_loc < len(self.datetimes_list) else len(self.datetimes_list)-1
         query_end_date = self.datetimes_list.iloc[end_loc].name.to_pydatetime()
         query = self._build_query(start, query_end_date)
@@ -69,7 +69,7 @@ class SQLServerDataLoader(DataLoader):
     def on_options_opened(self, options: list[Option]) -> None:
         option_ids = [str(o.option_id) for o in options]
         open_date = options[0].trade_open_info.date
-        print(f"options {'.'.join(option_ids)} were opened on {open_date}")
+        #print(f"options {','.join(option_ids)} were opened on {open_date}")
         fields = ['option_id'] + self.fields_list
         field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
                                   if option_field in fields])

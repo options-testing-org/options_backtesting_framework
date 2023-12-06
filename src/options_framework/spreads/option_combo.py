@@ -20,6 +20,7 @@ class OptionCombination(ABC):
     option_combination_type: OptionCombinationType
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
     quantity: int = field(default=1)
+    user_defined: dict = field(default_factory=lambda: {})
 
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.
@@ -28,14 +29,14 @@ class OptionCombination(ABC):
     def __repr__(self) -> str:
         return f'<{self.option_combination_type.name}({self.position_id}) Quantity: {len(self.options)} options>'
 
-    def advance_to_next(self, quote_datetime: datetime.datetime) -> None:
-        """
-        Notifies the options that the quote date has changed. They need to update their values to the current quote
-        :param quote_datetime:
-        :return: None
-        """
-        for option in self.options:
-            option.next_update(quote_datetime=quote_datetime)
+    # def advance_to_next(self, quote_datetime: datetime.datetime) -> None:
+    #     """
+    #     Notifies the options that the quote date has changed. They need to update their values to the current quote
+    #     :param quote_datetime:
+    #     :return: None
+    #     """
+    #     for option in self.options:
+    #         option.next_update(quote_datetime=quote_datetime)
 
     @property
     def current_value(self) -> float:

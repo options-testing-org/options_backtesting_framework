@@ -1,3 +1,6 @@
+[SQL_DATA_LOADER_SETTINGS]
+buffer_size = 1000
+
 [SELECT_OPTIONS_QUERY]
 select = 'select distinct '
 from = ' from options o inner join option_values ov on o.id = ov.option_id '

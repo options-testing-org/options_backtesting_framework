@@ -10,7 +10,7 @@ from options_framework.spreads.option_combo import OptionCombination
 class Butterfly(OptionCombination):
 
     @classmethod
-    def get_butterfly_position(cls, *, options: list[Option], expiration: datetime.date, option_type: OptionType,
+    def get_position(cls, *, options: list[Option], expiration: datetime.date, option_type: OptionType,
                                center_strike: int | float, wing_width: int | float, quantity: int = 1):
 
         expiration = datetime.date(expiration.year, expiration.month, expiration.day)
@@ -35,11 +35,13 @@ class Butterfly(OptionCombination):
                               quantity=quantity)
         return butterfly
 
-    lower_option: Option = field(default=None)
-    center_option: Option = field(default=None)
-    upper_option: Option = field(default=None)
-    _max_loss: float | int = field(default=None)
-    _max_profit: float | int = field(default=None)
+    lower_option: Option = field(init=False, default=None)
+    center_option: Option = field(init=False, default=None)
+    upper_option: Option = field(init=False, default=None)
+    lower_breakeven: float = field(init=False, default=None)
+    upper_breakeven: float = field(init=False, default=None)
+    _max_loss: float | int = field(init=False, default=None)
+    _max_profit: float | int = field(init=False, default=None)
 
     def __post_init__(self):
         self.lower_option = self.options[0]
@@ -63,6 +65,8 @@ class Butterfly(OptionCombination):
                         self.center_option.price * 2 * -1) + self.upper_option.price))
                             * 100)
         self._max_loss = self.current_value
+        self.lower_breakeven = self.lower_option.strike + self.price
+        self.upper_breakeven = self.upper_option.strike - self.price
 
     def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
         self.lower_option.close_trade(quantity=self.lower_option.quantity)
@@ -70,15 +74,19 @@ class Butterfly(OptionCombination):
         self.upper_option.close_trade(quantity=self.upper_option.quantity)
 
     @property
-    def max_profit(self):
+    def price(self):
         lower_price = decimalize_2(self.lower_option.price)
         center_price = decimalize_2(self.center_option.price)
         upper_price = decimalize_2(self.upper_option.price)
+        price = lower_price + (center_price * 2 * -1) + upper_price
+        return float(price)
+
+    @property
+    def max_profit(self):
         upper_strike = decimalize_0(self.upper_option.strike)
         center_strike = decimalize_0(self.center_option.strike)
-        max_profit = self._max_profit if self._max_profit else (((upper_strike - center_strike)
-                            - (lower_price + (center_price * 2 * -1) + upper_price))
-                                                                * 100)
+        price = decimalize_2(self.price)
+        max_profit = self._max_profit if self._max_profit else (((upper_strike - center_strike) - price) * 100)
         return float(max_profit)
 
     @property
