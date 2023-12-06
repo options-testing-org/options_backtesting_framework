@@ -40,7 +40,7 @@ class SQLServerDataLoader(DataLoader):
         connection.close()
         self.last_loaded_date = query_end_date # set to end of data loaded
 
-    def get_next_option_chain(self, quote_datetime):
+    def get_option_chain(self, quote_datetime):
 
         df = self.data_cache.loc[str(quote_datetime)]
 
@@ -109,8 +109,8 @@ class SQLServerDataLoader(DataLoader):
             if high_val:
                 query += f' and expiration <= DATEADD(day, {high_val}, quote_datetime)'
 
-        if self.select_filter.strike_range:
-            low_val, high_val = self.select_filter.strike_range.low, self.select_filter.strike_range.high
+        if self.select_filter.strike_offset:
+            low_val, high_val = self.select_filter.strike_offset.low, self.select_filter.strike_offset.high
             if low_val:
                 query += f' and strike >= {settings.SELECT_OPTIONS_QUERY.spot_price_field}-{low_val}'
             if high_val:
@@ -118,7 +118,6 @@ class SQLServerDataLoader(DataLoader):
 
         for fltr in [f for f in filter_dict.keys() if 'range' in f]:
             name, low_val, high_val = fltr[:-6], filter_dict[fltr]['low'], filter_dict[fltr]['high']
-            if name == "strike": continue
             for val in [low_val, high_val]:
                 if val is not None:# and high_val is not None:
                     operator = ">=" if val is low_val else "<="

@@ -51,7 +51,7 @@ class HullMAOptionStrategy(bt.Strategy):
         hull_ma_one_day_ago = self.hull[-1]
         if isnan(hull_ma_two_days_ago):
             return
-        self.p.options_manager.next_option_chain(self.dt.to_pydatetime())
+
 
         option_type = OptionType.CALL if hull_ma_two_days_ago < hull_ma_one_day_ago else OptionType.PUT
         current_position = None if not self.portfolio.positions else self.portfolio.positions[next(iter(self.portfolio.positions))]
@@ -60,6 +60,7 @@ class HullMAOptionStrategy(bt.Strategy):
             # if an option is open, close it first
             if current_position:
                 self.portfolio.close_position(current_position, 1)
+            self.p.options_manager.get_current_option_chain(self.dt.to_pydatetime())
             dt_compare = self.data.datetime.date(0) + datetime.timedelta(days=30)
             exp = [e for e in self.option_chain.expirations if e > dt_compare][0]
             strikes = self.option_chain.expiration_strikes[exp]
@@ -70,8 +71,8 @@ class HullMAOptionStrategy(bt.Strategy):
                 strikes.sort(reverse=True)
                 strike = [s for s in strikes if s < self.data.close[0]][0]
 
-            option = Single.get_single_option(options=self.option_chain.option_chain, expiration=exp,
-                                              option_type=option_type, strike=strike)
+            option = Single.get_single_position(options=self.option_chain.option_chain, expiration=exp,
+                                                option_type=option_type, strike=strike)
 
             self.portfolio.open_position(option_position=option, quantity=1)
 
@@ -104,7 +105,7 @@ if __name__ == "__main__":
     msft_data = bt.feeds.PandasData(dataname=df, name=ticker)
     options_filter = SelectFilter(symbol=ticker,
                                   expiration_range=FilterRange(None, datetime.date(2023, 9, 10)),
-                                  strike_range=FilterRange(200, 400))
+                                  strike_offset=FilterRange(200, 400))
     options_manager = OptionTestManager(startdate, enddate, options_filter, starting_cash)
     portfolio = options_manager.portfolio
 

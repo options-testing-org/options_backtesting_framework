@@ -7,7 +7,6 @@ from options_framework.data.data_loader import DataLoader
 from options_framework.option import Option
 from options_framework.option_types import OptionType, SelectFilter
 
-
 def map_data_file_fields() -> dict:
     columns_idx = settings.COLUMN_ORDER
     column_field_mapping = settings.FIELD_MAPPING
@@ -32,7 +31,7 @@ class FileDataLoader(DataLoader):
         self.data_root_folder = settings.DATA_IMPORT_FILE_PROPERTIES.data_files_folder
         self.last_loaded_date = start
 
-    def get_next_option_chain(self, quote_datetime: datetime.datetime):
+    def get_option_chain(self, quote_datetime: datetime.datetime):
         filename = settings.DATA_IMPORT_FILE_PROPERTIES.data_file_name_format.replace('{year}', str(quote_datetime.year)) \
             .replace('{month}', str(quote_datetime.month).zfill(2)) \
             .replace('{day}', str(quote_datetime.day).zfill(2)) \
@@ -83,25 +82,36 @@ class FileDataLoader(DataLoader):
             expiration = datetime.datetime.strptime(values[self.field_mapping['expiration']],
                                                     settings.DATA_IMPORT_FILE_PROPERTIES.expiration_date_format).date()
             strike = float(values[self.field_mapping['strike']])
-
-            if self.select_filter.expiration_range.low and expiration < self.select_filter.expiration_range.low:
-                line = f.readline()
-                continue
-            if self.select_filter.expiration_range.high and expiration > self.select_filter.expiration_range.high:
-                line = f.readline()
-                continue
-            if self.select_filter.strike_range.low and strike < self.select_filter.strike_range.low:
-                line = f.readline()
-                continue
-            if self.select_filter.strike_range.high and strike > self.select_filter.strike_range.high:
-                line = f.readline()
-                continue
             quotedate = datetime.datetime.strptime(values[self.field_mapping['quote_datetime']],
                                                    settings.DATA_IMPORT_FILE_PROPERTIES.quote_date_format)
             spot_price = float(values[self.field_mapping['spot_price']])
             bid = float(values[self.field_mapping['bid']])
             ask = float(values[self.field_mapping['ask']])
-            price = ((ask - bid)/2) + bid
+            price = ((ask - bid) / 2) + bid
+
+            if self.select_filter.expiration_dte:
+                if self.select_filter.expiration_dte.low:
+                    low_date = quotedate + datetime.timedelta(days=self.select_filter.expiration_dte.low)
+                    if expiration < low_date.date():
+                        line = f.readline()
+                        continue
+                if self.select_filter.expiration_dte.high:
+                    high_date = quotedate + datetime.timedelta(days=self.select_filter.expiration_dte.high)
+                    if expiration > high_date.date():
+                        line = f.readline()
+                        continue
+
+            if self.select_filter.strike_offset:
+                if self.select_filter.strike_offset.low:
+                    low_strike = spot_price - self.select_filter.strike_offset.low
+                    if strike < low_strike:
+                        line = f.readline()
+                        continue
+                    high_strike = spot_price + self.select_filter.strike_offset.high
+                    if strike > high_strike:
+                        line = f.readline()
+                        continue
+
             if 'delta' in self.fields_list:
                 delta = float(values[self.field_mapping['delta']]) if 'delta' in settings.FIELD_MAPPING else None
                 if self.select_filter.delta_range.low and self.select_filter.delta_range.high:

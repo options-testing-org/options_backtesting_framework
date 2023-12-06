@@ -26,7 +26,7 @@ class DataLoader(ABC, Dispatcher):
     def next_option_chain(self, quote_datetime: datetime.datetime | datetime.date):
         if self.last_loaded_date < quote_datetime:
             self.load_cache(quote_datetime)
-        self.get_next_option_chain(quote_datetime)
+        self.get_option_chain(quote_datetime)
 
     @abstractmethod
     def load_cache(self, quote_datetime: datetime.datetime):
@@ -37,7 +37,7 @@ class DataLoader(ABC, Dispatcher):
         self.emit('option_chain_loaded', quote_datetime=quote_datetime, option_chain=option_chain)
 
     @abstractmethod
-    def get_next_option_chain(self, quote_datetime: datetime.datetime):
+    def get_option_chain(self, quote_datetime: datetime.datetime):
         pass
 
     @abstractmethod

@@ -38,5 +38,5 @@ class OptionTestManager:
     def next(self, quote_datetime: datetime.datetime):
         self.portfolio.next(quote_datetime=quote_datetime)
 
-    def next_option_chain(self, quote_datetime: datetime.datetime):
+    def get_current_option_chain(self, quote_datetime: datetime.datetime):
         self.data_loader.next_option_chain(quote_datetime=quote_datetime)

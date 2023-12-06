@@ -10,9 +10,8 @@ from options_framework.spreads.option_combo import OptionCombination
 class Single(OptionCombination):
 
     @classmethod
-    def get_single_option(cls, *, options: list[Option], expiration: datetime.date, option_type: OptionType,
-                          strike: float | int):
-
+    def get_single_position(cls, *, options: list[Option], expiration: datetime.date, option_type: OptionType,
+                            strike: float | int) -> OptionCombination:
         candidates = [o for o in options if o.expiration == expiration
                       and o.option_type == option_type and o.strike == strike]
         if not candidates:
@@ -20,18 +19,14 @@ class Single(OptionCombination):
         if len(candidates) > 1:
             raise ValueError("Multiple options match the parameters provided.")
         option = candidates[0]
-        single = Single(options=[option])
+        single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE)
         return single
 
-    option: Optional[Option] = field(default=None)
+    option: Option = field(default=None)
 
     def __post_init__(self):
         self.option = self.options[0]
-        self.option_combination_type = OptionCombinationType.SINGLE
 
-    @property
-    def quantity(self):
-        return self.option.quantity
 
     @property
     def expiration(self) -> datetime.date:
@@ -50,3 +45,4 @@ class Single(OptionCombination):
 
     def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
         self.option.close_trade(quantity=quantity)
+

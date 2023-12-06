@@ -2,7 +2,10 @@ import datetime
 import pytest
 import pandas as pd
 from pandas import DataFrame
-from options_framework.option_types import OptionType
+
+from options_framework.data.sql_data_loader import SQLServerDataLoader
+from options_framework.option_chain import OptionChain
+from options_framework.option_types import OptionType, SelectFilter, FilterRange
 from options_framework.option import Option
 
 @pytest.fixture
@@ -140,7 +143,27 @@ def get_test_put_option_with_extended_properties(option_id, test_expiration, tes
 def datafile_file_name():
     return "L2_options_20230301.csv"
 
-def create_update_cache(update_values: list): # quote_date, spot_price, bid, ask, price):
+@pytest.fixture()
+def option_chain():
+    from options_framework.config import settings
+    original_value_1 = settings.DATA_LOADER_TYPE
+    settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
+    settings.DATA_FORMAT_SETTINGS = 'sql_server_cboe_settings.toml'
+    start_date = datetime.datetime(2016, 3, 1, 9, 31)
+    end_date = datetime.datetime(2016, 3, 1, 9, 32)
+    select_filter = SelectFilter(symbol="SPXW", option_type=OptionType.PUT,
+                                 expiration_dte=FilterRange(0, 31),
+                                 strike_offset=FilterRange(low=100, high=100))
+    data_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter)
+    data_loader.load_cache(start_date)
+    option_chain = OptionChain()
+    data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
+    quote_datetime = datetime.datetime(2016, 3, 1, 9, 31)
+    data_loader.get_option_chain(quote_datetime=quote_datetime)
+    yield option_chain, data_loader
+    settings.DATA_LOADER_TYPE = original_value_1
+
+def create_update_cache(update_values: list): # quote_date, spot_price, bid, ask, price
     updates = []
     for item in update_values:
         val_dict = {'quote_datetime': item[0], 'spot_price': item[1], 'bid': item[2], 'ask': item[3], 'price': item[4]}

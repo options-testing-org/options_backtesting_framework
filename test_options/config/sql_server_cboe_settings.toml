@@ -5,7 +5,7 @@ where = "where symbol ='{symbol}' and quote_datetime between CONVERT(datetime2, 
 order_by = ' order by '
 quote_datetime_list_query = "select distinct quote_datetime, quote_datetime as col from option_values where quote_datetime between CONVERT(datetime2, '{start_date}') and CONVERT(datetime2, '{end_date}') order by quote_datetime"
 quote_datetime_field = "quote_datetime"
-
+spot_price_field = "underlying_price"
 
 [FIELD_MAPPING]
 option_id = 'o.id as option_id'

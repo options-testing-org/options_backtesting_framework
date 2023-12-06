@@ -48,7 +48,7 @@ def test_file_data_loader_load_data_loads_options_records_from_file(set_settings
         options = option_chain
 
     file_data_loader.bind(option_chain_loaded=on_data_loaded)
-    file_data_loader.get_next_option_chain(quote_datetime=quote_datetime)
+    file_data_loader.get_option_chain(quote_datetime=quote_datetime)
     assert len(options) == 2190
 
 def test_file_data_loader_option_type_filter(set_settings, datafile_file_name):
@@ -64,7 +64,7 @@ def test_file_data_loader_option_type_filter(set_settings, datafile_file_name):
         options_data = option_chain
 
     file_data_loader.bind(option_chain_loaded=on_data_loaded)
-    file_data_loader.get_next_option_chain(quote_datetime=quote_datetime)
+    file_data_loader.get_option_chain(quote_datetime=quote_datetime)
 
     assert len(options_data) == 1095
 
@@ -77,9 +77,8 @@ def test_cboe_file_data_loader_with_range_filters():
     fields = settings.SELECT_FIELDS + ['delta']
 
     option_filter = SelectFilter(symbol="SPXW", option_type=OptionType.CALL,
-                                 expiration_range=FilterRange(low=datetime.date(2022, 11, 3),
-                                                              high=datetime.date(2022, 11, 3)),
-                                 strike_range=FilterRange(low=3830, high=3840),
+                                 expiration_dte=FilterRange(low=0, high=1),
+                                 strike_offset=FilterRange(low=30, high=30),
                                  delta_range=FilterRange(low=0.60, high=0.61))
     file_data_loader = FileDataLoader(start=start, end=end, select_filter=option_filter, fields_list=fields)
     options_data = []
@@ -90,6 +89,6 @@ def test_cboe_file_data_loader_with_range_filters():
 
     file_data_loader.bind(option_chain_loaded=on_data_loaded)
 
-    file_data_loader.get_next_option_chain(quote_datetime=start)
+    file_data_loader.get_option_chain(quote_datetime=start)
 
-    assert len(options_data) == 4
+    assert len(options_data) == 164

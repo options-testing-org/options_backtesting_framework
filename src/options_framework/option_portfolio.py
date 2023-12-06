@@ -38,7 +38,7 @@ class OptionPortfolio(Dispatcher):
 
     def next(self, quote_datetime: datetime.datetime):
         for _, position in self.positions.items():
-            position.next(quote_datetime=quote_datetime)
+            position.advance_to_next(quote_datetime=quote_datetime)
 
     @property
     def portfolio_value(self):

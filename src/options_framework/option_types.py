@@ -27,12 +27,11 @@ class OptionPositionType(Enum):
 
 
 class OptionStatus(Flag):
-    CREATED = auto()
     INITIALIZED = auto()
-    EXPIRED = auto()
     TRADE_IS_OPEN = auto()
     TRADE_PARTIALLY_CLOSED = auto()
     TRADE_IS_CLOSED = auto()
+    EXPIRED = auto()
 
 
 class OptionCombinationType(StrEnum):
@@ -66,15 +65,15 @@ class OptionTradeType(Enum):
 
 @dataclass
 class FilterRange:
-    low: float | int | datetime.date = None
-    high: float | int | datetime.date = None
+    low: float | int = None
+    high: float | int = None
 
 @dataclass
 class SelectFilter:
     symbol: str
     option_type: OptionType = None
     expiration_dte: FilterRange = field(default_factory=lambda: FilterRange())
-    strike_range: FilterRange = field(default_factory=lambda: FilterRange())
+    strike_offset: FilterRange = field(default_factory=lambda: FilterRange())
     delta_range: FilterRange = field(default_factory=lambda: FilterRange())
     gamma_range: FilterRange = field(default_factory=lambda: FilterRange())
     theta_range: FilterRange = field(default_factory=lambda: FilterRange())

@@ -2,10 +2,9 @@ import datetime
 import itertools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional
 
 from ..option import Option
-from ..option_types import OptionCombinationType
+from ..option_types import OptionCombinationType, OptionStatus
 
 
 @dataclass(repr=False, slots=True)
@@ -18,23 +17,30 @@ class OptionCombination(ABC):
     """
 
     options: list[Option]
-    option_combination_type: Optional[OptionCombinationType] = field(default=None)
+    option_combination_type: OptionCombinationType
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
+    quantity: int = field(default=1)
 
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.
         raise NotImplementedError
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<{self.option_combination_type.name}({self.position_id}) Quantity: {len(self.options)} options>'
 
-    def next(self, quote_datetime: datetime.datetime):
+    def advance_to_next(self, quote_datetime: datetime.datetime) -> None:
+        """
+        Notifies the options that the quote date has changed. They need to update their values to the current quote
+        :param quote_datetime:
+        :return: None
+        """
         for option in self.options:
             option.next_update(quote_datetime=quote_datetime)
 
     @property
-    def quantity(self):
-        raise NotImplementedError
+    def current_value(self) -> float:
+        current_value = sum([o.current_value for o in self.options])
+        return current_value
 
     @abstractmethod
     def open_trade(self, *, quantity: int, **kwargs: dict) -> None:
@@ -44,7 +50,8 @@ class OptionCombination(ABC):
     def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
         raise NotImplementedError
 
-    def max_profit(self):
+    @property
+    def max_profit(self) -> float | None:
         """
         If there is a determinate max profit, that is returned by the parent class.
         If there is an infinite max profit, as is the case for a naked option type, returns None
@@ -52,7 +59,8 @@ class OptionCombination(ABC):
         """
         return None
 
-    def max_loss(self):
+    @property
+    def max_loss(self) -> float | None:
         """
         If there is a determinate max loss, that is returned by the parent class.
         If there is an infinite max loss, as is the case for a naked option type, returns None
