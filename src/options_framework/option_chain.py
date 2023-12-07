@@ -18,7 +18,8 @@ class OptionChain:
         self.expiration_strikes = {e: list(distinct([strike for strike in [option.strike
                                                                             for option in option_chain if
                                                                             option.expiration == e]])) for e in
-                                   self.expirations}
+                                                                            self.expirations}
+        print(f'option chain loaded {quote_datetime}')
 
     def get_option_by_id(self, option_id: str) -> Option:
         option = [option for option in self.option_chain if option.option_id == option_id]

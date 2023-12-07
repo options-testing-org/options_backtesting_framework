@@ -54,6 +54,9 @@ class FileDataLoader(DataLoader):
     def on_options_opened(self, options: list[Option]) -> None:
         pass
 
+    def get_expirations(self):
+        pass
+
     def _load_data_generator(self, f: io.TextIOWrapper):
         line = f.readline()
 

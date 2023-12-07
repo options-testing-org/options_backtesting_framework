@@ -41,5 +41,9 @@ class DataLoader(ABC, Dispatcher):
         pass
 
     @abstractmethod
+    def get_expirations(self):
+        pass
+
+    @abstractmethod
     def on_options_opened(self, options: list[Option]) -> None:
         pass

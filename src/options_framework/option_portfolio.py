@@ -64,7 +64,7 @@ class OptionPortfolio(Dispatcher):
             position = self.positions[ids[0]]
             if all([OptionStatus.EXPIRED in option.status for option in position.options]):
                 self.close_position(position, position.quantity)
-        #print("portfolio: option expired")
+        print("portfolio: option expired")
 
     def on_fees_incurred(self, fees):
         self.cash -= fees
