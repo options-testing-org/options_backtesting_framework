@@ -39,7 +39,10 @@ class OptionPortfolio(Dispatcher):
     def next(self, quote_datetime: datetime.datetime):
         # for _, position in self.positions.items():
         #     position.advance_to_next(quote_datetime=quote_datetime)
-        options = [option for position in self.positions.values() for option in position.options]
+
+        # all_positions =  self.positions | self.closed_positions
+        # options = [o for p in all_positions.values() for o in p.options if o.expiration <= quote_datetime.date()]
+        options = [o for p in self.positions.values() for o in p.options]
         for option in options:
             option.next_update(quote_datetime)
 

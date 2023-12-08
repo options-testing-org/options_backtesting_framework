@@ -48,6 +48,9 @@ class Butterfly(OptionCombination):
         self.center_option = self.options[1]
         self.upper_option = self.options[2]
 
+    def __repr__(self) -> str:
+        return f'<{self.option_combination_type.name}({self.position_id}) {self.option_type.name}  {self.lower_option.strike}/{self.center_option.strike}/{self.upper_option.strike}>'
+
     @property
     def expiration(self) -> datetime.date:
         return self.center_option.expiration
@@ -73,8 +76,15 @@ class Butterfly(OptionCombination):
         self.center_option.close_trade(quantity=self.center_option.quantity)
         self.upper_option.close_trade(quantity=self.upper_option.quantity)
 
+    def get_trade_price(self) -> float | None:
+        lower_price = decimalize_2(self.lower_option.trade_open_info.price)
+        center_price = decimalize_2(self.center_option.trade_open_info.price)
+        upper_price = decimalize_2(self.upper_option.trade_open_info.price)
+        price = lower_price + (center_price * 2 * -1) + upper_price
+        return float(price)
+
     @property
-    def price(self):
+    def price(self) -> float:
         lower_price = decimalize_2(self.lower_option.price)
         center_price = decimalize_2(self.center_option.price)
         upper_price = decimalize_2(self.upper_option.price)
@@ -82,7 +92,7 @@ class Butterfly(OptionCombination):
         return float(price)
 
     @property
-    def max_profit(self):
+    def max_profit(self) -> float:
         upper_strike = decimalize_0(self.upper_option.strike)
         center_strike = decimalize_0(self.center_option.strike)
         price = decimalize_2(self.price)
@@ -90,14 +100,15 @@ class Butterfly(OptionCombination):
         return float(max_profit)
 
     @property
-    def max_loss(self):
+    def max_loss(self) -> float:
         max_loss = self._max_loss if self._max_loss else self.current_value
         return float(max_loss)
 
     @property
-    def risk_to_reward(self):
+    def risk_to_reward(self) -> float:
         max_profit = decimalize_2(self.max_profit)
         max_loss = decimalize_2(self.max_loss)
         r2r = decimalize_2(max_profit / max_loss)
 
         return float(r2r)
+

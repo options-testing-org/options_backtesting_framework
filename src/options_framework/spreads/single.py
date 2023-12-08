@@ -26,8 +26,6 @@ class Single(OptionCombination):
 
     def __post_init__(self):
         self.option = self.options[0]
-
-
     @property
     def expiration(self) -> datetime.date:
         return self.option.expiration
@@ -46,3 +44,8 @@ class Single(OptionCombination):
     def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
         self.option.close_trade(quantity=quantity)
 
+    def get_trade_price(self):
+        if self.option.trade_open_info:
+            return self.option.trade_open_info.price
+        else:
+            return None

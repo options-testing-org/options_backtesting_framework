@@ -24,9 +24,10 @@ class SQLServerDataLoader(DataLoader):
         self.last_loaded_date = start - datetime.timedelta(days=1)
         self.start_load_date = start
         self.datetimes_list = self._get_datetimes_list()
-        self.expirations = self._get_expirations_list()
-        first_date = self.datetimes_list['col'].iloc[0].to_pydatetime()
-        self.load_cache(first_date)
+        expirations = self._get_expirations_list()
+        self.expirations = [x.to_pydatetime().date() for x in list(expirations['expiration'])]
+        #first_date = self.datetimes_list['col'].iloc[0].to_pydatetime()
+        #self.load_cache(first_date)
 
     def load_cache(self, start: datetime.datetime):
         self.start_load_date = start

@@ -155,6 +155,8 @@ class Option(Dispatcher):
             self.emit("option_expired", self.option_id)
 
     def next_update(self, quote_datetime: datetime.datetime):
+        if self.expiration > quote_datetime.date():
+            return
         update_values = self.update_cache.loc[quote_datetime]
         self.quote_datetime = quote_datetime
         update_fields = [f for f in update_values.index if f not in ['option_id', 'symbol', 'strike', 'expiration', 'option_type']]
@@ -342,7 +344,6 @@ class Option(Dispatcher):
         if self.quantity == 0:
             self.status &= ~OptionStatus.TRADE_IS_OPEN
             self.status |= OptionStatus.TRADE_IS_CLOSED
-            self.update_cache = None
         else:
             self.status |= OptionStatus.TRADE_PARTIALLY_CLOSED
 

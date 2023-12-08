@@ -29,15 +29,6 @@ class OptionCombination(ABC):
     def __repr__(self) -> str:
         return f'<{self.option_combination_type.name}({self.position_id}) Quantity: {len(self.options)} options>'
 
-    # def advance_to_next(self, quote_datetime: datetime.datetime) -> None:
-    #     """
-    #     Notifies the options that the quote date has changed. They need to update their values to the current quote
-    #     :param quote_datetime:
-    #     :return: None
-    #     """
-    #     for option in self.options:
-    #         option.next_update(quote_datetime=quote_datetime)
-
     @property
     def current_value(self) -> float:
         current_value = sum([o.current_value for o in self.options])
@@ -45,11 +36,11 @@ class OptionCombination(ABC):
 
     @abstractmethod
     def open_trade(self, *, quantity: int, **kwargs: dict) -> None:
-        raise NotImplementedError
+        pass
 
     @abstractmethod
     def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
-        raise NotImplementedError
+        pass
 
     @property
     def max_profit(self) -> float | None:
@@ -68,6 +59,35 @@ class OptionCombination(ABC):
         :return: None or the max loss of the spread
         """
         return None
+
+    def get_profit_loss(self) -> float:
+        return sum(o.get_profit_loss() for o in self.options)
+
+    def get_unrealized_profit_loss(self) -> float:
+        return sum(o.get_unrealized_profit_loss() for o in self.options)
+
+    def get_trade_premium(self) -> float | None:
+        if all((OptionStatus.TRADE_IS_OPEN & OptionStatus.TRADE_IS_CLOSED) in o.status for o in self.options):
+            return sum(o.trade_open_info.premium for o in self.options)
+        else:
+            return None
+
+    @abstractmethod
+    def get_trade_price(self) -> float | None:
+        pass
+
+    def get_open_datetime(self) -> datetime.datetime | None:
+        first_option = self.options[0]
+        if (OptionStatus.TRADE_IS_OPEN & OptionStatus.TRADE_IS_CLOSED) not in first_option.status:
+            return None
+        open_date = first_option.trade_open_info.date
+        return open_date
+
+    def get_close_datetime(self):
+        first_option = self.options[0]
+        if OptionStatus.TRADE_IS_CLOSED not in first_option.status:
+            return None
+        return first_option.trade_close_info.date
 
     #
     # def premium(self):

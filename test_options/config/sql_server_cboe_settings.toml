@@ -1,5 +1,5 @@
 [SQL_DATA_LOADER_SETTINGS]
-buffer_size = 1000
+buffer_size = 10000
 
 [SELECT_OPTIONS_QUERY]
 select = 'select distinct '
