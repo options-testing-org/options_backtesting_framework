@@ -59,10 +59,10 @@ def test_portfolio_updates_when_option_values_are_updated(incur_fees_false, test
     test_position_1.option.update_cache = create_update_cache([get_test_call_option_update_values_1])
     test_position_2.option.update_cache = create_update_cache([get_test_put_option_update_values_1])
 
-    test_position_1.advance_to_next(quote_date)
+    test_position_1.option.next_update(quote_date)
     assert pf.portfolio_value == 100_850.0
 
-    test_position_2.advance_to_next(quote_date)
+    test_position_2.option.next_update(quote_date)
     assert pf.portfolio_value == 101_700.0
 
     assert pf.cash == 99_700.0
@@ -79,7 +79,7 @@ def test_portfolio_values_when_position_is_closed(incur_fees_false, test_positio
     # options now worth $2,000.00. Cash remains unchanged
     quote_date = get_test_call_option_update_values_1[0]
     test_position_1.option.update_cache = create_update_cache([get_test_call_option_update_values_1])
-    test_position_1.advance_to_next(quote_date)
+    test_position_1.option.next_update(quote_date)
 
     assert pf.portfolio_value == 101_700.0
     assert pf.cash == 99_700.0
@@ -106,11 +106,11 @@ def test_portfolio_values_with_multiple_positions(incur_fees_false, test_positio
     assert pf.portfolio_value == 100_000.0
 
     # update both positions
-    test_position_1.advance_to_next(quote_datetime=quote_date)
+    test_position_1.option.next_update(quote_datetime=quote_date)
     assert pf.portfolio_value == 100_850.0
     assert pf.cash == 99_700.0
 
-    test_position_2.advance_to_next(quote_datetime=quote_date)
+    test_position_2.option.next_update(quote_datetime=quote_date)
     assert pf.portfolio_value == 101_700.0
     assert pf.cash == 99_700.0
 
@@ -129,7 +129,7 @@ def test_expired_position_closes_position(incur_fees_false, test_position_1, get
     quote_date = at_expiration_quote_date
     _, spot_price, bid, ask, price = get_test_call_option_update_values_1
     test_position_1.option.update_cache = create_update_cache([[quote_date, spot_price, bid, ask, price]])
-    test_position_1.advance_to_next(quote_datetime=quote_date)
+    test_position_1.option.next_update(quote_datetime=quote_date)
 
     assert len(pf.positions) == 0
     assert len(pf.closed_positions) == 1

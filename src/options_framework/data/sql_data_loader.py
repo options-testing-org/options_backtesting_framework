@@ -2,13 +2,36 @@ import dataclasses
 import datetime
 
 import pandas as pd
-from pandas import DataFrame, Series
 import pyodbc
+
+from multiprocessing import Pool
 
 from options_framework.config import settings
 from options_framework.data.data_loader import DataLoader
 from options_framework.option import Option
 from options_framework.option_types import OptionType, SelectFilter
+
+def create_option(quote_datetime, row, fields_list):
+    option = Option(
+        option_id=row['option_id'],
+        symbol=row['symbol'],
+        expiration=row['expiration'].date(),
+        strike=row['strike'],
+        option_type=OptionType.CALL if row['option_type'] == 1 else OptionType.PUT,
+        quote_datetime=quote_datetime,
+        spot_price=row['spot_price'],
+        bid=row['bid'],
+        ask=row['ask'],
+        price=row['price'],
+        delta=row['delta'] if 'delta' in fields_list else None,
+        gamma=row['gamma'] if 'gamma' in fields_list else None,
+        theta=row['theta'] if 'theta' in fields_list else None,
+        vega=row['vega'] if 'vega' in fields_list else None,
+        rho=row['rho'] if 'rho' in fields_list else None,
+        open_interest=row['open_interest'] if 'open_interest' in fields_list else None,
+        implied_volatility=row['implied_volatility'] if 'implied_volatility' in fields_list else None)
+    return option
+
 
 class SQLServerDataLoader(DataLoader):
 
@@ -26,8 +49,6 @@ class SQLServerDataLoader(DataLoader):
         self.datetimes_list = self._get_datetimes_list()
         expirations = self._get_expirations_list()
         self.expirations = [x.to_pydatetime().date() for x in list(expirations['expiration'])]
-        #first_date = self.datetimes_list['col'].iloc[0].to_pydatetime()
-        #self.load_cache(first_date)
 
     def load_cache(self, start: datetime.datetime):
         self.start_load_date = start
@@ -47,6 +68,13 @@ class SQLServerDataLoader(DataLoader):
     def get_option_chain(self, quote_datetime):
 
         df = self.data_cache.loc[str(quote_datetime)]
+        #count = len(df)
+        # rows = [(i, row, self.fields_list) for i, row in df.iterrows()]
+        # pool = Pool(processes=10)
+        # options = pool.starmap_async(create_option, rows).get()
+        # pool.close()
+        # pool.join()
+
 
         options = [Option(
             option_id=row['option_id'],
@@ -70,7 +98,7 @@ class SQLServerDataLoader(DataLoader):
 
         super().on_option_chain_loaded_loaded(quote_datetime=quote_datetime, option_chain=options)
 
-    def on_options_opened(self, options: list[Option]) -> None:
+    def on_options_opened(self, portfolio, options: list[Option]) -> None:
         option_ids = [str(o.option_id) for o in options]
         open_date = options[0].trade_open_info.date
         #print(f"options {','.join(option_ids)} were opened on {open_date}")
@@ -90,6 +118,7 @@ class SQLServerDataLoader(DataLoader):
         for option in options:
             cache = df.loc[df['option_id'] == option.option_id]
             option.update_cache = cache
+            #portfolio.bind(next=option.next_update)
 
     def get_expirations(self):
         return self.expirations

@@ -70,7 +70,7 @@ class HullMADirectionalStrategy(bt.Strategy):
         hull_ma_one_day_ago = self.hull[-1]
         if isnan(hull_ma_two_days_ago):
             return
-        self.p.options_manager.next(self.dt.to_pydatetime())
+        self.portfolio.next(self.dt.to_pydatetime())
         option_type = OptionType.CALL if hull_ma_two_days_ago < hull_ma_one_day_ago else OptionType.PUT
 
         t = self.data.datetime.time(0)

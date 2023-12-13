@@ -11,7 +11,7 @@ from pydispatch import Dispatcher
 @dataclass(repr=False)
 class OptionPortfolio(Dispatcher):
 
-    _events_ = ['new_position_opened']
+    _events_ = ['new_position_opened', 'next']
 
     cash: float | int
     positions: Optional[dict] = field(init=False, default_factory=lambda: {})
@@ -28,7 +28,10 @@ class OptionPortfolio(Dispatcher):
                      option_expired=self.on_option_expired,
                      fees_incurred=self.on_fees_incurred) for option in option_position.options]
         option_position.open_trade(quantity=quantity)
-        self.emit("new_position_opened", option_position.options)
+        options = [option for position in self.positions.values() for option in position.options]
+        for o in options:
+            self.bind(next=o.next_update) # create hook for option update when next quote method is called
+        self.emit("new_position_opened", self, option_position.options)
 
     def close_position(self, option_position: OptionCombination, quantity: int):
         option_position.close_trade(quantity=quantity)
@@ -37,14 +40,7 @@ class OptionPortfolio(Dispatcher):
         [option.unbind(self) for option in option_position.options]
 
     def next(self, quote_datetime: datetime.datetime):
-        # for _, position in self.positions.items():
-        #     position.advance_to_next(quote_datetime=quote_datetime)
-
-        # all_positions =  self.positions | self.closed_positions
-        # options = [o for p in all_positions.values() for o in p.options if o.expiration <= quote_datetime.date()]
-        options = [o for p in self.positions.values() for o in p.options]
-        for option in options:
-            option.next_update(quote_datetime)
+        self.emit('next', quote_datetime)
 
     @property
     def portfolio_value(self):

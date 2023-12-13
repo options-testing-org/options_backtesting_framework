@@ -45,5 +45,5 @@ class DataLoader(ABC, Dispatcher):
         pass
 
     @abstractmethod
-    def on_options_opened(self, options: list[Option]) -> None:
+    def on_options_opened(self, portfolio, options: list[Option]) -> None:
         pass

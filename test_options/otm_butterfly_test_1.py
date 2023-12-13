@@ -120,7 +120,7 @@ class OTMButterflyStrategy(bt.Strategy):
         if t.minute % 5 != 0 or t > self.p.end_afternoon:
             return
         self.dt = pd.to_datetime(f'{dt} {t}')
-        self.log('next', self.dt)
+
         close = self.data[0]
         hull_ma_two_days_ago = self.hull[-2]
         hull_ma_one_day_ago = self.hull[-1]
@@ -129,13 +129,14 @@ class OTMButterflyStrategy(bt.Strategy):
 
         if dt not in self.p.options_manager.expirations:
             return
-
+        self.log('next', self.dt)
         hull_direction_option_type = OptionType.CALL if hull_ma_two_days_ago < hull_ma_one_day_ago else OptionType.PUT
 
         current_position = None if not self.portfolio.positions else self.portfolio.positions[
             next(iter(self.portfolio.positions))]
 
         time_slot = get_time_slot(t)
+        self.portfolio.next(self.dt)
 
         if time_slot == TimeSlot.MORNING and not current_position:
             self.p.options_manager.get_current_option_chain(self.dt.to_pydatetime())
@@ -189,7 +190,7 @@ class OTMButterflyStrategy(bt.Strategy):
                     pass
 
         if current_position:
-            self.portfolio.next(self.dt)
+
             current_profit = current_position.current_value - current_position.max_loss
             highest_profit = current_position.user_defined["highest_profit"]["profit"]
             highest_time = current_position.user_defined["highest_profit"]["time"]

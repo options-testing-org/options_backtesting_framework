@@ -10,7 +10,7 @@ from options_framework.spreads.option_combo import OptionCombination
 class Butterfly(OptionCombination):
 
     @classmethod
-    def get_position(cls, *, options: list[Option], expiration: datetime.date, option_type: OptionType,
+    def get_balanced_butterfly(cls, *, options: list[Option], expiration: datetime.date, option_type: OptionType,
                                center_strike: int | float, wing_width: int | float, quantity: int = 1):
 
         expiration = datetime.date(expiration.year, expiration.month, expiration.day)
