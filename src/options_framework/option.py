@@ -140,25 +140,28 @@ class Option(Dispatcher):
 
         return fees
 
-    def _check_expired(self):
+    def _check_expired(self) -> bool:
         """
         Assumes the option is PM settled. Add the status OptionStatus.EXPIRED flag if the
         option is expired.
         """
         if OptionStatus.EXPIRED in self.status:
-            return
+            return True
         quote_date, expiration_date = self.quote_datetime.date(), self.expiration
         quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
         if ((quote_date == expiration_date and quote_time >= exp_time)
                 or (quote_date > expiration_date)):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)
+            self.update_cache = None
+            return True
+        return False
 
     def next_update(self, quote_datetime: datetime.datetime):
-        if self.expiration > quote_datetime.date():
+        self.quote_datetime = quote_datetime
+        if self._check_expired():
             return
         update_values = self.update_cache.loc[quote_datetime]
-        self.quote_datetime = quote_datetime
         update_fields = [f for f in update_values.index if f not in ['option_id', 'symbol', 'strike', 'expiration', 'option_type']]
         self.spot_price = update_values['spot_price']
         self.bid = update_values['bid']
@@ -179,8 +182,6 @@ class Option(Dispatcher):
             self.open_interest = update_values['open_interest']
         if 'implied_volatility' in update_fields:
             self.implied_volatility = update_values['implied_volatility']
-
-        self._check_expired()
 
 
     #

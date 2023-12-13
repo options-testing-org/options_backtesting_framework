@@ -1,12 +1,7 @@
 import datetime
 
-import pandas as pd
 import pytest
-from pandas import DataFrame
 
-from options_framework.config import settings
-from options_framework.data.sql_data_loader import SQLServerDataLoader
-from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionType, OptionCombinationType, OptionStatus, SelectFilter, FilterRange
 from options_framework.spreads.single import Single
 
@@ -58,11 +53,11 @@ def test_open_single_option_loads_option_update_cache(option_chain, option_value
     from pydispatch import Dispatcher
 
     class MockPortfolio(Dispatcher):
-        _events_ = ['new_position_opened']
+        _events_ = ['new_position_opened', 'next']
 
         def open_position(self, position):
             position.open_trade(quantity=1)
-            self.emit('new_position_opened', position.options)
+            self.emit('new_position_opened', self, position.options)
 
     portfolio = MockPortfolio()
 
@@ -72,16 +67,6 @@ def test_open_single_option_loads_option_update_cache(option_chain, option_value
     assert single_option.option.update_cache is not None
 
     quote_datetime = datetime.datetime(2016, 3, 1, 9, 32)
-    single_option.advance_to_next(quote_datetime=quote_datetime)
+    single_option.option.next_update(quote_datetime=quote_datetime)
     assert single_option.option.price != price
 
-def test_it(test_update_quote_date, test_update_quote_date2):
-    quote_date, spot_price, bid, ask, price = (test_update_quote_date, 110.0, 9.50, 10.5, 10.00)
-
-    dicts = [{'quote_datetime': quote_date, 'spot_price': spot_price, 'bid': bid, 'ask': ask, 'price': price}]
-    quote_date, spot_price, bid, ask, price = (test_update_quote_date2, 105.0, 4.50, 5.5, 5.00)
-    dicts.append({'quote_datetime': quote_date, 'spot_price': spot_price, 'bid': bid, 'ask': ask, 'price': price})
-
-    df = DataFrame(dicts)
-    df['quote_datetime'] = pd.to_datetime(df['quote_datetime'])
-    df.set_index("quote_datetime", inplace=True)

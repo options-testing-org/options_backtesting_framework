@@ -1,8 +1,8 @@
 import datetime
 
 from dataclasses import dataclass, field
-from .option import Option
-from .utils.helpers import distinct
+from options_framework.option import Option
+from options_framework.utils.helpers import distinct
 
 @dataclass
 class OptionChain:
@@ -19,7 +19,7 @@ class OptionChain:
                                                                             for option in option_chain if
                                                                             option.expiration == e]])) for e in
                                                                             self.expirations}
-        print(f'option chain loaded {quote_datetime}')
+        #print(f'option chain loaded {quote_datetime}')
 
     def get_option_by_id(self, option_id: str) -> Option:
         option = [option for option in self.option_chain if option.option_id == option_id]

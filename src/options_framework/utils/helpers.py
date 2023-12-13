@@ -1,5 +1,6 @@
 from decimal import Context, Decimal, getcontext
 
+
 def decimalize_0(value: int | float | Decimal) -> Decimal:
     """
     Floating numbers can produce unexpected results in calculation.

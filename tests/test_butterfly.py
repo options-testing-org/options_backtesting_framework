@@ -7,7 +7,7 @@ def test_open_long_butterfly_position(option_chain):
     expiration = datetime.datetime(2016, 3, 2)
     center_strike = 1990
     wing_width = 20
-    position = Butterfly.get_position(options=chain.option_chain, expiration=expiration, option_type=OptionType.PUT,
+    position = Butterfly.get_balanced_butterfly(options=chain.option_chain, expiration=expiration, option_type=OptionType.PUT,
                                                 center_strike=center_strike, wing_width=wing_width)
 
     assert position.quantity == 1
@@ -23,7 +23,7 @@ def test_open_short_butterfly_position(option_chain):
     expiration = datetime.datetime(2016, 3, 2)
     center_strike = 1990
     wing_width = 20
-    position = Butterfly.get_position(options=chain.option_chain, expiration=expiration, option_type=OptionType.PUT,
+    position = Butterfly.get_balanced_butterfly(options=chain.option_chain, expiration=expiration, option_type=OptionType.PUT,
                                                 center_strike=center_strike, wing_width=wing_width, quantity=-1)
 
     assert position.quantity == -1
@@ -39,7 +39,7 @@ def test_long_butterfly_value(option_chain):
     expiration = datetime.datetime(2016, 3, 2)
     center_strike = 1990
     wing_width = 20
-    position = Butterfly.get_position(options=chain.option_chain, expiration=expiration,
+    position = Butterfly.get_balanced_butterfly(options=chain.option_chain, expiration=expiration,
                                                 option_type=OptionType.PUT,
                                                 center_strike=center_strike, wing_width=wing_width)
     assert position.current_value == 155.0
@@ -50,7 +50,7 @@ def test_short_butterfly_value(option_chain):
     expiration = datetime.datetime(2016, 3, 2)
     center_strike = 1990
     wing_width = 20
-    position = Butterfly.get_position(options=chain.option_chain, expiration=expiration,
+    position = Butterfly.get_balanced_butterfly(options=chain.option_chain, expiration=expiration,
                                                 option_type=OptionType.PUT,
                                                 center_strike=center_strike, wing_width=wing_width, quantity=-1)
     assert position.current_value == -155.0
@@ -61,7 +61,7 @@ def test_long_position_max_profit_max_loss_max_profit(option_chain):
     center_strike = 1990
     wing_width = 20
     quantity = 1
-    position = Butterfly.get_position(options=chain.option_chain, expiration=expiration,
+    position = Butterfly.get_balanced_butterfly(options=chain.option_chain, expiration=expiration,
                                                 option_type=OptionType.PUT,
                                                 center_strike=center_strike, wing_width=wing_width,
                                                 quantity=quantity)

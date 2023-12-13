@@ -18,6 +18,9 @@ class TestCombo(OptionCombination):
     def max_loss(self) -> float | None:
         return None
 
+    def get_trade_price(self) -> float | None:
+        pass
+
 def test_test():
     test_combo = TestCombo(options=[], option_combination_type=OptionCombinationType.CUSTOM)
 
