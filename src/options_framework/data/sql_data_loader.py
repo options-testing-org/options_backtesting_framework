@@ -21,14 +21,18 @@ class SQLServerDataLoader(DataLoader):
         password = settings.PASSWORD
         self.connection_string = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database \
                                  + ';UID=' + username + ';PWD=' + password
-        self.last_loaded_date = start
+        self.last_loaded_date = start - datetime.timedelta(days=1)
         self.start_load_date = start
         self.datetimes_list = self._get_datetimes_list()
+        expirations = self._get_expirations_list()
+        self.expirations = [x.to_pydatetime().date() for x in list(expirations['expiration'])]
+        #first_date = self.datetimes_list['col'].iloc[0].to_pydatetime()
+        #self.load_cache(first_date)
 
     def load_cache(self, start: datetime.datetime):
         self.start_load_date = start
         start_loc = self.datetimes_list.index.get_loc(str(start))
-        end_loc = start_loc + 10_000
+        end_loc = start_loc + settings.SQL_DATA_LOADER_SETTINGS.buffer_size
         end_loc = end_loc if end_loc < len(self.datetimes_list) else len(self.datetimes_list)-1
         query_end_date = self.datetimes_list.iloc[end_loc].name.to_pydatetime()
         query = self._build_query(start, query_end_date)
@@ -38,9 +42,9 @@ class SQLServerDataLoader(DataLoader):
         df.index = pd.to_datetime(df.index)
         self.data_cache = df
         connection.close()
-        self.last_loaded_date = query_end_date # set to end of data loaded
+        self.last_loaded_date = df.iloc[-1].name.to_pydatetime() # set to end of data loaded
 
-    def get_next_option_chain(self, quote_datetime):
+    def get_option_chain(self, quote_datetime):
 
         df = self.data_cache.loc[str(quote_datetime)]
 
@@ -69,7 +73,7 @@ class SQLServerDataLoader(DataLoader):
     def on_options_opened(self, options: list[Option]) -> None:
         option_ids = [str(o.option_id) for o in options]
         open_date = options[0].trade_open_info.date
-        print(f"options {'.'.join(option_ids)} were opened on {open_date}")
+        #print(f"options {','.join(option_ids)} were opened on {open_date}")
         fields = ['option_id'] + self.fields_list
         field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
                                   if option_field in fields])
@@ -86,6 +90,9 @@ class SQLServerDataLoader(DataLoader):
         for option in options:
             cache = df.loc[df['option_id'] == option.option_id]
             option.update_cache = cache
+
+    def get_expirations(self):
+        return self.expirations
 
     def _build_query(self, start_date: datetime.datetime, end_date: datetime.datetime):
         fields = ['option_id'] + self.fields_list
@@ -109,8 +116,8 @@ class SQLServerDataLoader(DataLoader):
             if high_val:
                 query += f' and expiration <= DATEADD(day, {high_val}, quote_datetime)'
 
-        if self.select_filter.strike_range:
-            low_val, high_val = self.select_filter.strike_range.low, self.select_filter.strike_range.high
+        if self.select_filter.strike_offset:
+            low_val, high_val = self.select_filter.strike_offset.low, self.select_filter.strike_offset.high
             if low_val:
                 query += f' and strike >= {settings.SELECT_OPTIONS_QUERY.spot_price_field}-{low_val}'
             if high_val:
@@ -118,13 +125,12 @@ class SQLServerDataLoader(DataLoader):
 
         for fltr in [f for f in filter_dict.keys() if 'range' in f]:
             name, low_val, high_val = fltr[:-6], filter_dict[fltr]['low'], filter_dict[fltr]['high']
-            if name == "strike": continue
             for val in [low_val, high_val]:
                 if val is not None:# and high_val is not None:
                     operator = ">=" if val is low_val else "<="
                     query += f' and {name} {operator} {val}'
 
-        query += ' order by \'quote_datetime\', \'expiration\', \'strike\''
+        query += ' order by quote_datetime, expiration, strike'
 
         return query
 
@@ -136,5 +142,21 @@ class SQLServerDataLoader(DataLoader):
         connection = pyodbc.connect(self.connection_string)
         df = pd.read_sql(query, connection, parse_dates=True, index_col=[settings.SELECT_OPTIONS_QUERY.quote_datetime_field])
         df.index = pd.to_datetime(df.index)
+        connection.close()
+        return df
+
+    def _get_expirations_list(self):
+        symbol = self.select_filter.symbol
+        start_date = self.start_datetime
+        end_date = self.end_datetime
+        query = "select distinct expiration "
+        query += settings.SELECT_OPTIONS_QUERY['from']
+        query += (settings.SELECT_OPTIONS_QUERY['where']
+                  .replace('{symbol}', self.select_filter.symbol)
+                  .replace('{start_date}', str(start_date))
+                  .replace('{end_date}', str(end_date)))
+        query += " order by expiration"
+        connection = pyodbc.connect(self.connection_string)
+        df = pd.read_sql(query, connection, parse_dates=True)
         connection.close()
         return df

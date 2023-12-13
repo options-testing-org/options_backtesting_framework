@@ -44,9 +44,11 @@ class HullMADirectionalStrategy(bt.Strategy):
     params = (
         ('startdate', None),
         ('enddate', None),
-        ('morning', datetime.time(9, 30)),
+        ('opening', datetime.time(9, 30)),
         ('mid_day', datetime.time(12, 00)),
         ('afternoon', datetime.time(14, 0)),
+        ('closing', datetime.time(15, 50)),
+        ('eod', datetime.time(16, 15)),
         ('hull_period', 14),
         ('options_manager', None),)
 
@@ -74,10 +76,11 @@ class HullMADirectionalStrategy(bt.Strategy):
         t = self.data.datetime.time(0)
         current_position = None if not self.portfolio.positions else self.portfolio.positions[
             next(iter(self.portfolio.positions))]
+
         if t.hour == 9 and t.minute == 35 and not current_position:
             if current_position:
                 self.portfolio.close_position(current_position, 1)
-            self.p.options_manager.next_option_chain(self.dt.to_pydatetime())
+            self.p.options_manager.get_current_option_chain(self.dt.to_pydatetime())
             exp = self.option_chain.expirations[0]
             strikes = self.option_chain.expiration_strikes[exp]
             strike = 0
@@ -87,20 +90,13 @@ class HullMADirectionalStrategy(bt.Strategy):
                 strikes.sort(reverse=True)
                 strike = [s for s in strikes if s < self.data.close[0]][0]
 
-            option = Single.get_single_option(options=self.option_chain.option_chain, expiration=exp,
+            option = Single.get_single_position(options=self.option_chain.option_chain, expiration=exp,
                                               option_type=option_type, strike=strike)
 
             self.portfolio.open_position(option_position=option, quantity=1)
 
         if current_position and t.hour == 15 and t.minute == 50:
             self.portfolio.close_position(current_position, quantity=1)
-
-        if t < self.p.mid_day:
-            tod = 'morning'
-        elif t < self.p.afternoon:
-            tod = 'mid day'
-        else:
-            tod = 'afternoon'
 
         if t.hour == 16 and t.minute == 15:
             self.log(
@@ -130,7 +126,9 @@ if __name__ == "__main__":
     df = pd.read_sql(query, connection, index_col='datetime', parse_dates=True)
     connection.close()
 
-    options_filter = SelectFilter(symbol='SPXW', option_type=OptionType.CALL, strike_range=FilterRange(2000, 4000))
+    options_filter = SelectFilter(symbol='SPXW',
+                                  expiration_dte=FilterRange(high=30),
+                                  strike_offset=FilterRange(20, 20))
 
     option_test_manager = OptionTestManager(start_datetime=startdate, end_datetime=enddate,
                                             select_filter=options_filter, starting_cash=starting_cash)
@@ -149,13 +147,9 @@ if __name__ == "__main__":
     data = bt.feeds.PandasData(dataname=df, name='SPX')
     daily_data = bt.feeds.PandasData(dataname=df_daily, name='SPX')
 
-    options_filter = SelectFilter(symbol=ticker,
-                                  expiration_range=FilterRange(None, datetime.date(2016, 4, 1)),
-                                  strike_range=FilterRange(1850, 2250))
-    options_manager = OptionTestManager(startdate, enddate, options_filter, starting_cash)
-
     cerebro = bt.Cerebro()
-    cerebro.addstrategy(HullMADirectionalStrategy, startdate=startdate, enddate=enddate, options_manager=options_manager)
+    cerebro.addstrategy(HullMADirectionalStrategy, startdate=startdate, enddate=enddate,
+                        options_manager=option_test_manager)
 
     cerebro.adddata(data)
     cerebro.adddata(daily_data)

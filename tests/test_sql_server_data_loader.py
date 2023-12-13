@@ -34,7 +34,7 @@ def test_sql_load_from_database(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date)
+    sql_loader.get_option_chain(quote_datetime=start_date)
 
     assert len(options) == 4806
 
@@ -51,7 +51,7 @@ def test_sql_load_call_options_from_database(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date)
+    sql_loader.get_option_chain(quote_datetime=start_date)
 
     assert len(options) == 2403
 
@@ -69,7 +69,7 @@ def test_load_with_custom_field_selection(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date)
+    sql_loader.get_option_chain(quote_datetime=start_date)
 
     option = options[0]
 
@@ -91,7 +91,7 @@ def test_load_data_with_expiration_range(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date)
+    sql_loader.get_option_chain(quote_datetime=start_date)
 
     assert len(options) == 681
 
@@ -100,7 +100,7 @@ def test_load_data_with_strike_range(set_settings):
     start_date, end_date, select_filter = set_settings
     select_filter.option_type = OptionType.CALL
     select_filter.expiration_dte = FilterRange(low=30, high=60)
-    select_filter.strike_range = FilterRange(low=10, high=10)
+    select_filter.strike_offset = FilterRange(low=10, high=10)
 
     sql_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter)
     sql_loader.load_cache(start_date)
@@ -111,7 +111,7 @@ def test_load_data_with_strike_range(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
+    sql_loader.get_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
 
     assert len(options) == 16
 
@@ -123,7 +123,7 @@ def test_load_data_with_delta_range(set_settings):
 
     select_filter.option_type = OptionType.CALL
     select_filter.expiration_dte = FilterRange(low=30, high=60)
-    select_filter.strike_range = FilterRange(low=50, high=50)
+    select_filter.strike_offset = FilterRange(low=50, high=50)
     select_filter.delta_range = FilterRange(low=0.60, high=0.70)
 
     sql_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter, fields_list=fields)
@@ -135,7 +135,7 @@ def test_load_data_with_delta_range(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date)
+    sql_loader.get_option_chain(quote_datetime=start_date)
 
     assert len(options) == 15
 
@@ -156,7 +156,7 @@ def test_load_data_with_gamma_range(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
+    sql_loader.get_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
 
     assert len(options) == 4
 
@@ -177,7 +177,7 @@ def test_load_data_with_theta_range(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
+    sql_loader.get_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
 
     assert len(options) == 72
 
@@ -197,7 +197,7 @@ def test_load_data_with_vega_range(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
+    sql_loader.get_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
 
     assert len(options) == 28
 
@@ -206,7 +206,7 @@ def test_load_data_with_rho_range(set_settings):
     fields = settings.SELECT_FIELDS + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                        'open_interest']
     select_filter.option_type = OptionType.CALL
-    select_filter.strike_range = FilterRange(low=50, high=50)
+    select_filter.strike_offset = FilterRange(low=50, high=50)
     select_filter.rho_range = FilterRange(low=100.0, high=200.0)
 
     sql_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter, fields_list=fields)
@@ -218,7 +218,7 @@ def test_load_data_with_rho_range(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
+    sql_loader.get_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
 
     assert len(options) == 86
 
@@ -228,7 +228,7 @@ def test_load_data_with_open_interest_range(set_settings):
     fields = settings.SELECT_FIELDS + ['delta', 'gamma', 'theta', 'vega', 'rho', 'implied_volatility',
                                        'open_interest']
     select_filter.option_type = OptionType.CALL
-    select_filter.strike_range = FilterRange(low=200, high=200)
+    select_filter.strike_offset = FilterRange(low=200, high=200)
     select_filter.open_interest_range = FilterRange(low=100)
 
     sql_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter, fields_list=fields)
@@ -240,7 +240,7 @@ def test_load_data_with_open_interest_range(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
+    sql_loader.get_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
 
     assert len(options) == 359
 
@@ -260,7 +260,7 @@ def test_load_data_with_implied_volatility_range(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
+    sql_loader.get_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
 
     assert len(options) == 45
 
@@ -270,7 +270,7 @@ def test_load_data_with_all_range_filters(set_settings):
                                        'open_interest']
     select_filter.option_type = OptionType.PUT
     select_filter.expiration_range = FilterRange(low=90, high=120)
-    select_filter.strike_range = FilterRange(low=200, high=200)
+    select_filter.strike_offset = FilterRange(low=200, high=200)
     select_filter.delta_range = FilterRange(low=-0.80, high=-0.05)
     select_filter.gamma_range = FilterRange(low=0.0, high=0.0025)
     select_filter.theta_range = FilterRange(low=-0.4, high=-0.2)
@@ -288,6 +288,6 @@ def test_load_data_with_all_range_filters(set_settings):
         options = option_chain
 
     sql_loader.bind(option_chain_loaded=on_data_loaded)
-    sql_loader.get_next_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
+    sql_loader.get_option_chain(quote_datetime=start_date) #, symbol='SPXW', filters=fltr)
 
     assert len(options) == 15

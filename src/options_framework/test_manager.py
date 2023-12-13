@@ -22,6 +22,7 @@ class OptionTestManager:
     option_chain: OptionChain = field(init=False, default_factory=lambda: OptionChain())
     data_loader: DataLoader = field(init=False, default=None)
     portfolio: OptionPortfolio = field(init=False, default=None)
+    expirations: list = field(init=False, default_factory=lambda: [])
 
     def __post_init__(self):
         self.portfolio = OptionPortfolio(self.starting_cash)
@@ -32,11 +33,11 @@ class OptionTestManager:
             self.data_loader = SQLServerDataLoader(start=self.start_datetime, end=self.end_datetime,
                                                    select_filter=self.select_filter, fields_list=self.fields_list)
         self.data_loader.bind(option_chain_loaded=self.option_chain.on_option_chain_loaded)
-        #self.data_loader.bind(option_chain_loaded=self.portfolio.on_options_updated)
         self.portfolio.bind(new_position_opened=self.data_loader.on_options_opened)
+        self.expirations = self.data_loader.get_expirations()
 
     def next(self, quote_datetime: datetime.datetime):
         self.portfolio.next(quote_datetime=quote_datetime)
 
-    def next_option_chain(self, quote_datetime: datetime.datetime):
+    def get_current_option_chain(self, quote_datetime: datetime.datetime):
         self.data_loader.next_option_chain(quote_datetime=quote_datetime)

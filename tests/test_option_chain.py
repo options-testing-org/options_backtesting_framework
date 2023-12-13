@@ -36,7 +36,7 @@ def db_data_loader():
 def test_load_option_chain_from_db(db_data_loader):
     data_loader, option_chain, quote_datetime = db_data_loader
     data_loader.load_cache(quote_datetime)
-    data_loader.get_next_option_chain(quote_datetime=quote_datetime)
+    data_loader.get_option_chain(quote_datetime=quote_datetime)
 
     assert len(option_chain.option_chain) == 2403
 
@@ -44,7 +44,7 @@ def test_load_option_chain_from_file(file_data_loader):
     data_loader, option_chain = file_data_loader
     quote_datetime = datetime.datetime(2023, 3, 1) #.strptime("03/01/2023", "%m/%d/%Y")
 
-    data_loader.get_next_option_chain(quote_datetime=quote_datetime)
+    data_loader.get_option_chain(quote_datetime=quote_datetime)
 
     assert len(option_chain.option_chain) == 2190
     assert len(option_chain.expirations) == 19

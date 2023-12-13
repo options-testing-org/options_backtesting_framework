@@ -36,19 +36,17 @@ class Option(Dispatcher):
     """The expiration date"""
     option_type: OptionType = field(compare=True)
     """Put or Call"""
-
-    # mutable fields, but must be updated with update method instead of directly
-    quote_datetime: Optional[datetime.datetime] = field(default=None, compare=False)
+    quote_datetime: datetime.datetime = field(default=None, compare=False)
     """The date of the current price information: spot_price, bid, ask, and price"""
-    spot_price: Optional[int | float] = field(default=None, compare=False)
+    spot_price: int | float = field(default=None, compare=False)
     """The current price of the underlying asset"""
-    bid: Optional[float | int] = field(default=None, compare=False)
+    bid: float | int = field(default=None, compare=False)
     """The current bid price of the option"""
-    ask: Optional[float | int] = field(default=None, compare=False)
+    ask: float | int = field(default=None, compare=False)
     """The current ask price of the option"""
-    price: Optional[float | int] = field(default=None, compare=False)
+    price: float | int = field(default=None, compare=False)
     """The price is the mid-point between the bid and ask"""
-    status: OptionStatus = field(init=False, default=None, compare=False)
+    status: OptionStatus = field(init=False, default=OptionStatus.INITIALIZED, compare=False)
     """
     The option status tracks the life cycle of an option. This is a flag enum, so there can be 
     more than one status. To find out about a status, such as if the option is currently
@@ -106,24 +104,20 @@ class Option(Dispatcher):
             raise ValueError("expiration cannot be None")
         if self.option_type is None:
             raise ValueError("option_type cannot be None")
-
-        self.status = OptionStatus.CREATED
-
-        if (any([self.quote_datetime is not None, self.spot_price is not None, self.bid is not None,
-                 self.ask is not None,
-                 self.price is not None])
-                and not all([self.quote_datetime is not None, self.spot_price is not None,
-                             self.bid is not None, self.ask is not None, self.price is not None])):
-            raise ValueError(
-                "All the required option quote values must be passed to set any quote values: "
-                + "quote date, spot price, bid, ask, price.")
+        if self.quote_datetime is None:
+            raise ValueError("quote_datetime cannot be None")
+        if self.spot_price is None:
+            raise ValueError("spot_price cannot be None")
+        if self.bid is None:
+            raise ValueError("bid cannot be None")
+        if self.ask is None:
+            raise ValueError("ask cannot be None")
+        if self.price is None:
+            raise ValueError("price cannot be None")
 
         # make sure the quote date is not past the expiration date
-        if self.quote_datetime is not None and self.quote_datetime.date() > self.expiration:
+        if self.quote_datetime.date() > self.expiration:
             raise ValueError("Cannot create an option with a quote date past its expiration date")
-
-        if self.quote_datetime:
-            self.status = OptionStatus.INITIALIZED
 
     def __repr__(self) -> str:
         return f'<{self.option_type.name}({self.option_id}) {self.symbol} {self.strike} ' \
@@ -151,7 +145,7 @@ class Option(Dispatcher):
         Assumes the option is PM settled. Add the status OptionStatus.EXPIRED flag if the
         option is expired.
         """
-        if OptionStatus.EXPIRED in self.status or OptionStatus.INITIALIZED not in self.status:
+        if OptionStatus.EXPIRED in self.status:
             return
         quote_date, expiration_date = self.quote_datetime.date(), self.expiration
         quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
@@ -161,6 +155,8 @@ class Option(Dispatcher):
             self.emit("option_expired", self.option_id)
 
     def next_update(self, quote_datetime: datetime.datetime):
+        if self.expiration > quote_datetime.date():
+            return
         update_values = self.update_cache.loc[quote_datetime]
         self.quote_datetime = quote_datetime
         update_fields = [f for f in update_values.index if f not in ['option_id', 'symbol', 'strike', 'expiration', 'option_type']]
@@ -183,8 +179,7 @@ class Option(Dispatcher):
             self.open_interest = update_values['open_interest']
         if 'implied_volatility' in update_fields:
             self.implied_volatility = update_values['implied_volatility']
-        self.status &= ~OptionStatus.CREATED
-        self.status |= OptionStatus.INITIALIZED
+
         self._check_expired()
 
 
@@ -267,8 +262,6 @@ class Option(Dispatcher):
 
         additional keyword arguments are added to the user_defined list of values
         """
-        if OptionStatus.CREATED in self.status:
-            raise ValueError("Cannot open a position that does not have price data")
         if OptionStatus.TRADE_IS_OPEN in self.status:
             raise ValueError("Cannot open position. A position is already open.")
         if (quantity is None) or not (isinstance(quantity, int)) or (quantity == 0):
@@ -351,7 +344,6 @@ class Option(Dispatcher):
         if self.quantity == 0:
             self.status &= ~OptionStatus.TRADE_IS_OPEN
             self.status |= OptionStatus.TRADE_IS_CLOSED
-            self.update_cache = None
         else:
             self.status |= OptionStatus.TRADE_PARTIALLY_CLOSED
 
@@ -457,25 +449,22 @@ class Option(Dispatcher):
 
         self.trade_close_info = trade_close
 
-    def dte(self) -> int | None:
+    def dte(self) -> int:
         """
         DTE is "days to expiration"
         :return: The number of days to the expiration for the current quote
         :rtype: int
         """
-        if OptionStatus.INITIALIZED not in self.status:
-            return None
+
         dt_date = self.quote_datetime.date()
         time_delta = self.expiration - dt_date
         return time_delta.days
 
     @property
     def current_value(self) -> float:
-        if self.quantity == 0:
-            return 0.0
         current_price = decimalize_2(self.price)
-        open_quantity = decimalize_0(self.quantity)
-        current_value = current_price * 100 * open_quantity
+        quantity = decimalize_0(self.quantity)
+        current_value = current_price * 100 * quantity
         return float(current_value)
 
     def get_unrealized_profit_loss(self) -> float:
@@ -568,7 +557,7 @@ class Option(Dispatcher):
         time_delta = dt_date - self.trade_open_info.date.date()
         return time_delta.days
 
-    def itm(self) -> bool | None:
+    def itm(self) -> bool :
         """
         In the Money
         A call option is in the money when the current price is higher than or equal to the strike price
@@ -577,15 +566,13 @@ class Option(Dispatcher):
         :return: Returns a boolean value indicating whether the option is currently in the money.
         :rtype: bool
         """
-        if OptionStatus.INITIALIZED not in self.status:
-            return None
 
         if self.option_type == OptionType.CALL:
             return True if self.spot_price >= self.strike else False
         elif self.option_type == OptionType.PUT:
             return True if self.spot_price <= self.strike else False
 
-    def otm(self) -> bool | None:
+    def otm(self) -> bool:
         """
         Out of the Money
         A call option is out of the money when the current price is lower than the spot price.
@@ -593,9 +580,6 @@ class Option(Dispatcher):
         :return: Returns a boolean value indicating whether the option is currently out of the money.
         :rtype: bool
         """
-        if OptionStatus.INITIALIZED not in self.status:
-            return None
-
         if self.option_type == OptionType.CALL:
             return True if self.spot_price < self.strike else False
         elif self.option_type == OptionType.PUT:
