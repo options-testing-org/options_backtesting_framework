@@ -22,6 +22,6 @@ class TestCombo(OptionCombination):
         pass
 
 def test_test():
-    test_combo = TestCombo(options=[], option_combination_type=OptionCombinationType.CUSTOM)
+    test_combo = TestCombo(options=[], option_combination_type=OptionCombinationType.CUSTOM, quantity=1)
 
     assert test_combo.quantity == 1

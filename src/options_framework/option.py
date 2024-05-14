@@ -10,8 +10,8 @@ from options_framework.config import settings
 
 from pydispatch import Dispatcher
 
-TradeOpenInfo = namedtuple("TradeOpen", "option_id date quantity price premium fees")
-TradeCloseInfo = namedtuple("TradeClose", "option_id date quantity price premium profit_loss profit_loss_percent fees")
+TradeOpenInfo = namedtuple("TradeOpen", "option_id date quantity price premium fees spot_price")
+TradeCloseInfo = namedtuple("TradeClose", "option_id date quantity price premium profit_loss profit_loss_percent fees spot_price")
 
 
 @dataclass(repr=False, kw_only=True, slots=True)
@@ -137,6 +137,7 @@ class Option(Dispatcher):
         fees = float(fees)
 
         self.emit("fees_incurred", fees)
+        print(f'emit fees {self.option_id}')
 
         return fees
 
@@ -153,6 +154,7 @@ class Option(Dispatcher):
                 or (quote_date > expiration_date)):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)
+            #print(f'emit expire {self.option_id}')
             self.update_cache = None
             return True
         return False
@@ -162,11 +164,12 @@ class Option(Dispatcher):
         if self._check_expired():
             return
         update_values = self.update_cache.loc[quote_datetime]
-        update_fields = [f for f in update_values.index if f not in ['option_id', 'symbol', 'strike', 'expiration', 'option_type']]
+        update_fields = [f for f in update_values.index if f not in ['option_id', 'symbol', 'strike', 'expiration',
+                                                                     'option_type']]
         self.spot_price = update_values['spot_price']
-        self.bid = update_values['bid']
-        self.ask = update_values['ask']
-        self.price = update_values['price']
+        self.bid = float(decimalize_2(update_values['bid']))
+        self.ask = float(decimalize_2(update_values['ask']))
+        self.price = float(decimalize_2(update_values['price']))
 
         if 'delta' in update_fields:
             self.delta = update_values['delta']
@@ -182,67 +185,6 @@ class Option(Dispatcher):
             self.open_interest = update_values['open_interest']
         if 'implied_volatility' in update_fields:
             self.implied_volatility = update_values['implied_volatility']
-
-
-    #
-    # def update(self, *, quote_datetime: datetime.datetime, spot_price: int | float, bid: float, ask: float, price: float,
-    #            delta: float = None, gamma: float = None, theta: float = None, vega: float = None, rho: float = None,
-    #            open_interest: float = None, implied_volatility: float = None, **kwargs: dict) -> None:
-    #     """
-    #     Updates price and underlying asset information for a given data date and/or time
-    #
-    #     :param kwargs: Keyword arguments are added to the user_defined list of values
-    #     :param implied_volatility:
-    #     :param open_interest:
-    #     :param rho:
-    #     :param vega:
-    #     :param theta:
-    #     :param gamma:
-    #     :param delta:
-    #     :param quote_datetime: data date for price information
-    #     :type quote_datetime: datetime.datetime
-    #     :param spot_price: price of underlying on quote_date
-    #     :type spot_price: float
-    #     :param bid: bid price
-    #     :type bid: float
-    #     :param ask: ask price
-    #     :type ask: float
-    #     :param price: calculated price based on mid-point between bid and ask
-    #     :type price: float
-    #     """
-    #     if quote_datetime is None:
-    #         raise ValueError("quote_date cannot be None")
-    #     if spot_price is None:
-    #         raise ValueError("spot_price cannot be None")
-    #     if bid is None:
-    #         raise ValueError("bid cannot be None")
-    #     if ask is None:
-    #         raise ValueError("ask cannot be None")
-    #     if price is None:
-    #         raise ValueError("price cannot be None")
-    #
-    #     self.quote_datetime = quote_datetime
-    #     self.spot_price = spot_price
-    #     self.bid = bid
-    #     self.ask = ask
-    #     self.price = price
-    #
-    #     self.open_interest = open_interest
-    #     self.implied_volatility = implied_volatility
-    #
-    #     self.delta = delta
-    #     self.gamma = gamma
-    #     self.theta = theta
-    #     self.vega = vega
-    #     self.rho = rho
-    #
-    #     self._check_expired()
-    #
-    #     for key, value in kwargs.items():
-    #         self.user_defined[key] = value
-    #
-    #     self.status &= ~OptionStatus.CREATED
-    #     self.status |= OptionStatus.INITIALIZED
 
     def open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
         """
@@ -280,13 +222,16 @@ class Option(Dispatcher):
             fees = self._incur_fees(quantity=quantity)
         trade_open_info = TradeOpenInfo(option_id=self.option_id, date=self.quote_datetime, quantity=quantity,
                                         price=self.price,
-                                        premium=premium, fees=fees)
+                                        premium=premium,
+                                        fees=fees,
+                                        spot_price=float(self.spot_price))
         self.trade_open_info = trade_open_info
         self.position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
         self.quantity = quantity
         self.status |= OptionStatus.TRADE_IS_OPEN
 
         self.emit("open_transaction_completed", trade_open_info)
+        #print(f'emit open {self.option_id}')
 
         return trade_open_info
 
@@ -335,7 +280,8 @@ class Option(Dispatcher):
                                             premium=float(premium),
                                             profit_loss=float(profit_loss),
                                             profit_loss_percent=float(profit_loss_percent),
-                                            fees=fees)
+                                            fees=fees,
+                                            spot_price=float(self.spot_price),)
         self.trade_close_records.append(trade_close_record)
         self.quantity = self.quantity + int(quantity)
 
@@ -350,6 +296,7 @@ class Option(Dispatcher):
 
         self._calculate_trade_close_info()
         self.emit("close_transaction_completed", trade_close_record)
+        #print(f'emit close {self.option_id}')
 
         return trade_close_record
 
@@ -411,23 +358,6 @@ class Option(Dispatcher):
                 close_price = price
         return float(close_price)
 
-    # def get_trade_open_info(self):
-    #     """
-    #     The trade_open_info returns all the values captured when a trade is opened.
-    #     This contains the following properties:
-    #     date: The trade open date
-    #     spot_price: The spot price of the underlying asset when the trade was opened
-    #     quantity: The number of contracts that were opened. A positive number is a long position,
-    #     and a negative number
-    #                 is a short position
-    #     price: The price the option was bought or sold at
-    #     open_value: The total credit or debit premium when opening the trade
-    #
-    #     :return: A named tuple with the following properties: date, spot_price, quantity, price, open_value
-    #     :rtype: A TradeOpen named tuple
-    #     """
-    #     return self._trade_open
-
     def _calculate_trade_close_info(self) -> None:
         if not self.trade_close_records:
             return None
@@ -446,7 +376,8 @@ class Option(Dispatcher):
                                      premium=float(premium),
                                      profit_loss=float(profit_loss),
                                      profit_loss_percent=float(profit_loss_percent),
-                                     fees=fees)
+                                     fees=fees,
+                                     spot_price=float(self.spot_price))
 
         self.trade_close_info = trade_close
 
@@ -467,6 +398,18 @@ class Option(Dispatcher):
         quantity = decimalize_0(self.quantity)
         current_value = current_price * 100 * quantity
         return float(current_value)
+
+    @property
+    def trade_value(self) -> float:
+        price = self.trade_open_info.price if OptionStatus.TRADE_IS_OPEN in self.status else self.price
+        trade_price = decimalize_2(price)
+        quantity = decimalize_0(self.quantity)
+        trade_value = trade_price * 100 * quantity
+        return float(trade_value)
+
+    @property
+    def trade_price(self) -> float:
+        return self.trade_open_info.price if OptionStatus.TRADE_IS_OPEN in self.status else self.price
 
     def get_unrealized_profit_loss(self) -> float:
         """

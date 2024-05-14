@@ -37,7 +37,7 @@ class SQLServerDataLoader(DataLoader):
 
     def __init__(self, *, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
                  fields_list: list[str] = None):
-        super().__init__(start=start, end=end, select_filter=select_filter, fields_list=fields_list)
+        super().__init__(start=start, end=end, select_filter=select_filter, option_attributes_list=fields_list)
         server = settings.SERVER
         database = settings.DATABASE
         username = settings.USERNAME
@@ -82,27 +82,27 @@ class SQLServerDataLoader(DataLoader):
             expiration=row['expiration'].date(),
             strike=row['strike'],
             option_type=OptionType.CALL if row['option_type'] == 1 else OptionType.PUT,
-            quote_datetime=i if 'quote_datetime' in self.fields_list else None,
-            spot_price=row['spot_price'] if 'spot_price' in self.fields_list else None,
-            bid=row['bid'] if 'bid' in self.fields_list else None,
-            ask=row['ask'] if 'ask' in self.fields_list else None,
-            price=row['price'] if 'price' in self.fields_list else None,
-            delta=row['delta'] if 'delta' in self.fields_list else None,
-            gamma=row['gamma'] if 'gamma' in self.fields_list else None,
-            theta=row['theta'] if 'theta' in self.fields_list else None,
-            vega=row['vega'] if 'vega' in self.fields_list else None,
-            rho=row['rho'] if 'rho' in self.fields_list else None,
-            open_interest=row['open_interest'] if 'open_interest' in self.fields_list else None,
-            implied_volatility=row['implied_volatility'] if 'implied_volatility' in self.fields_list else None
+            quote_datetime=i if 'quote_datetime' in self.option_attributes_list else None,
+            spot_price=row['spot_price'] if 'spot_price' in self.option_attributes_list else None,
+            bid=row['bid'] if 'bid' in self.option_attributes_list else None,
+            ask=row['ask'] if 'ask' in self.option_attributes_list else None,
+            price=row['price'] if 'price' in self.option_attributes_list else None,
+            delta=row['delta'] if 'delta' in self.option_attributes_list else None,
+            gamma=row['gamma'] if 'gamma' in self.option_attributes_list else None,
+            theta=row['theta'] if 'theta' in self.option_attributes_list else None,
+            vega=row['vega'] if 'vega' in self.option_attributes_list else None,
+            rho=row['rho'] if 'rho' in self.option_attributes_list else None,
+            open_interest=row['open_interest'] if 'open_interest' in self.option_attributes_list else None,
+            implied_volatility=row['implied_volatility'] if 'implied_volatility' in self.option_attributes_list else None
             ) for i, row in df.iterrows()]
 
-        super().on_option_chain_loaded_loaded(quote_datetime=quote_datetime, option_chain=options)
+        super().on_option_chain_loaded(quote_datetime=quote_datetime, option_chain=options)
 
     def on_options_opened(self, portfolio, options: list[Option]) -> None:
         option_ids = [str(o.option_id) for o in options]
         open_date = options[0].trade_open_info.date
         #print(f"options {','.join(option_ids)} were opened on {open_date}")
-        fields = ['option_id'] + self.fields_list
+        fields = ['option_id'] + self.option_attributes_list
         field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
                                   if option_field in fields])
         query = "select " + field_mapping
@@ -124,7 +124,7 @@ class SQLServerDataLoader(DataLoader):
         return self.expirations
 
     def _build_query(self, start_date: datetime.datetime, end_date: datetime.datetime):
-        fields = ['option_id'] + self.fields_list
+        fields = ['option_id'] + self.option_attributes_list
         field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
                                   if option_field in fields])
         filter_dict = dataclasses.asdict(self.select_filter)

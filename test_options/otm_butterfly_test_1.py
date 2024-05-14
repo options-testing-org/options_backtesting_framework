@@ -1,4 +1,5 @@
 import datetime
+import json
 import math
 import time
 import warnings
@@ -12,6 +13,7 @@ from numpy import isnan
 
 from enum import StrEnum, auto
 from pathlib import Path
+from pprint import pprint as pp
 
 from options_framework.option_types import OptionType, SelectFilter, FilterRange
 from options_framework.spreads.butterfly import Butterfly
@@ -49,12 +51,14 @@ class TimeSlot(StrEnum):
     MIDDLE = auto()
     AFTERNOON = auto()
     EOD = auto()
+    UNDEFINED = auto()
 
 
 class Zone(StrEnum):
     ZONE_1 = auto()
     ZONE_2 = auto()
     ZONE_3 = auto()
+    UNDEFINED = auto()
 
 def get_time_slot(t: datetime.time) -> TimeSlot:
     t_slot = None
@@ -66,6 +70,8 @@ def get_time_slot(t: datetime.time) -> TimeSlot:
         t_slot = TimeSlot.AFTERNOON
     elif t >= datetime.time(16, 00):
         t_slot = TimeSlot.EOD
+    else:
+        t_slot = TimeSlot.UNDEFINED
 
     return t_slot
 
@@ -73,11 +79,13 @@ def get_time_slot(t: datetime.time) -> TimeSlot:
 def get_zone(spot_price: float, lower_be: float, upper_be: float, in_profit: bool) -> Zone | None:
     zone = None
     if lower_be < spot_price < upper_be:
-        zone = Zone.ZONE_1
+        zone = Zone.ZONE_3
     elif spot_price < lower_be or spot_price > upper_be and in_profit:
         zone = Zone.ZONE_2
     elif spot_price < lower_be or spot_price > upper_be and not in_profit:
         zone = Zone.ZONE_1
+    else:
+        zone = Zone.UNDEFINED
 
     return zone
 
@@ -99,6 +107,19 @@ class OTMButterflyStrategy(bt.Strategy):
         dt = dt or self.datas[0].datetime.date(0)
         print('%s, %s' % (dt, txt))
 
+    def on_close_position(self, position):
+        time_slot = get_time_slot(self.data.datetime.time(0))
+        profit = sum(x.trade_close_info.profit_loss for x in position.options)
+        zone = get_zone(self.data[0], position.lower_breakeven, position.upper_breakeven, profit > 0)
+        highest_profit = position.user_defined["highest_profit"]["profit"]
+        percent_of_high = profit / highest_profit if highest_profit > 0 else 0
+        position.user_defined["time_slot"] = time_slot.name
+        position.user_defined["zone"] = zone.name
+        self.log(
+            f'close position {position.position_id} p/l: {profit} {percent_of_high:.2f} @ {position.user_defined["highest_profit"]["time"]} ',
+            self.dt)
+        logging.info(f'{datetime.datetime.now()} Close position({position.position_id}) @ {self.dt} pnl: {profit}')
+
     def __init__(self):
         self.hull = bt.indicators.HullMA(self.data1, period=self.p.hull_period)
         self.vix = self.datas[2]
@@ -107,8 +128,12 @@ class OTMButterflyStrategy(bt.Strategy):
         self.portfolio = self.p.options_manager.portfolio
         self.option_chain = self.p.options_manager.option_chain
         self.dt = pd.to_datetime(f'{self.data.datetime.date(1)} {self.data.datetime.time(1)}')
-        self.log('init complete', self.dt)
+        self.log(f'init complete - Starting cash: {self.p.starting_cash:.2f}', self.dt)
+        self.portfolio.bind(position_closed=self.on_close_position)
         logging.basicConfig(filename=self.p.log_file_name, encoding='utf-8', level=self.p.log_level)
+        s = settings.as_dict()
+        pp(s)
+        logging.debug(json.dumps(s, indent=4))
         logging.debug(f'{datetime.datetime.now()} init complete {self.dt}')
         logging.info(f'start date:{startdate},  end date:{enddate} Min R2R: {self.p.target_risk_to_reward}')
         logging.info(f'HullMA 14-day direction entry @ 9:35 each morning.')
@@ -117,7 +142,7 @@ class OTMButterflyStrategy(bt.Strategy):
     def next(self):
         dt = self.data.datetime.date(0)
         t = self.data.datetime.time(0)
-        if t.minute % 5 != 0 or t > self.p.end_afternoon:
+        if t.minute % 5 != 0 and t < self.p.end_afternoon:
             return
         self.dt = pd.to_datetime(f'{dt} {t}')
 
@@ -129,7 +154,11 @@ class OTMButterflyStrategy(bt.Strategy):
 
         if dt not in self.p.options_manager.expirations:
             return
-        self.log('next', self.dt)
+
+        if t > self.p.end_afternoon:
+            pass
+
+        #self.log('next', self.dt)
         hull_direction_option_type = OptionType.CALL if hull_ma_two_days_ago < hull_ma_one_day_ago else OptionType.PUT
 
         current_position = None if not self.portfolio.positions else self.portfolio.positions[
@@ -144,11 +173,12 @@ class OTMButterflyStrategy(bt.Strategy):
             vix = self.vix[0]
 
             match vix:
-                case _ if vix < 12:
-                    wing_width = 5
-                case _ if 12 <= vix < 14:
-                    wing_width = 10
-                case _ if 14 <= vix < 17:
+                # case _ if vix < 12:
+                #     wing_width = 5
+                # case _ if 12 <= vix < 14:
+                #     wing_width = 15
+                # case _ if 14 <= vix < 17:
+                case _ if vix < 17:
                     wing_width = 20
                 case _ if 17 <= vix < 22:
                     wing_width = 25
@@ -171,29 +201,30 @@ class OTMButterflyStrategy(bt.Strategy):
                 center_strike = strikes[idx]
 
                 try:
-                    butterfly = Butterfly.get_balanced_butterfly(options=self.option_chain.option_chain,
+                    butterfly = Butterfly.get_balanced_butterfly(option_chain=self.option_chain.spx_option_chain_puts,
                                                                  expiration=dt, option_type=hull_direction_option_type,
-                                                                 center_strike=center_strike, wing_width=wing_width, quantity=1)
-                    actual_r2r = butterfly.risk_to_reward
+                                                                 center_strike=center_strike, wing_width=wing_width)
+                    actual_r2r = butterfly.risk_to_reward if butterfly.max_loss > 0 else 0
                     if actual_r2r >= self.p.target_risk_to_reward:
                         self.portfolio.open_position(option_position=butterfly, quantity=1)
                         butterfly.user_defined["highest_profit"] = {"profit": 0.0, "time": t}
                         butterfly.user_defined["vix"] = vix
                         butterfly.user_defined["open_time"] = self.dt
                         butterfly.user_defined["hull_direction"] = "Up" if hull_direction_option_type == OptionType.CALL else "Down"
-                        print(f'open new position {butterfly.position_id} @ {t} {butterfly.current_value}')
+                        butterfly.user_defined["time_slot"] = TimeSlot.UNDEFINED
+                        butterfly.user_defined["zone"] = Zone.UNDEFINED
+                        self.log(f'open new position {butterfly.position_id} @ {t} {butterfly.current_value}')
                         logging.info(f'{datetime.datetime.now()} Open new position({butterfly.position_id}): date: {self.dt} debit: {butterfly.max_loss:.2f} {butterfly}')
                         return
                 except ValueError as ve:
-                    print(ve.message)
-                    logging.error(f'{datetime.datetime.now()} {ve.message} @ {self.dt} center strike: {center_strike}, wing width: {wing_width}')
-                    pass
+                    self.log("ValueError", ve.strerror)
+                    logging.error(f'{datetime.datetime.now()} {ve.strerror} @ {self.dt} center strike: {center_strike}, wing width: {wing_width}')
+            pass
 
         if current_position:
 
             current_profit = current_position.current_value - current_position.max_loss
             highest_profit = current_position.user_defined["highest_profit"]["profit"]
-            highest_time = current_position.user_defined["highest_profit"]["time"]
 
             if current_profit > highest_profit:
                 highest_profit = current_profit
@@ -230,21 +261,16 @@ class OTMButterflyStrategy(bt.Strategy):
                             close_position = current_profit >= cost / 2 and percent_of_high <= 0.5
                         case Zone.ZONE_3:
                             close_position = current_profit >= cost and percent_of_high <= 0.75
-                case TimeSlot.EOD:
-                    close_position = True
+                # case TimeSlot.EOD:
+                #     close_position = True
 
             if close_position:
-                current_position.user_defined["time_slot"] = time_slot.name
-                current_position.user_defined["zone"] = zone.name
-                self.log(
-                    f'close position {current_position.position_id} p/l: {current_profit} {percent_of_high:.2f} @ {highest_time} ',
-                    self.dt)
                 self.portfolio.close_position(current_position, quantity=current_position.quantity)
-                current_position.user_defined["close_time"] = self.dt
-                logging.info(f'{datetime.datetime.now()} Close position({current_position.position_id}) @ {self.dt} pnl: P{current_profit}')
 
         if t == self.p.end_afternoon:
             self.log(f'portfolio value: {self.portfolio.portfolio_value:.2f}  cash: {self.portfolio.cash:.2f}', self.dt)
+            if current_position:
+                self.log('current_positions')
 
     def stop(self):
         current_position = None if not self.portfolio.positions else self.portfolio.positions[
@@ -255,14 +281,14 @@ class OTMButterflyStrategy(bt.Strategy):
 
 
 if __name__ == "__main__":
-    # pp(settings.as_dict())
+
     t1 = time.time()
     print(time.ctime())
     now = datetime.datetime.today()
 
     root_folder = r'C:\_data\backtesting_data\output\otm_butterfly'
     output_folder = f'{now.year}_{now.month}_{now.day}-{now.hour}-{now.minute}'
-    log_file = Path(root_folder, output_folder, "otm_butterfly.log")
+    log_file = Path(root_folder, output_folder, f"otm_butterfly.log_{output_folder}")
     log_file.parent.mkdir(parents=True, exist_ok=True)
 
     server = settings.SERVER
@@ -271,7 +297,9 @@ if __name__ == "__main__":
     password = settings.PASSWORD
     ticker = 'SPXW'
     startdate = datetime.datetime(2016, 3, 1)
-    enddate = datetime.datetime(2016, 4, 30)
+    #startdate = datetime.datetime(2020, 2, 1)
+    #enddate = datetime.datetime(2016, 4, 29)
+    enddate = datetime.datetime(2022, 6, 15)
     starting_cash = 100_000.0
 
     connection_string = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database \
@@ -299,7 +327,7 @@ if __name__ == "__main__":
     }
     df_daily = df.resample('D').apply(ohlc)
     df_daily.dropna(inplace=True)  # get daily timeframe for hull ma
-    vix_df = pd.read_csv("C:\\_data\\backtesting_data\\deltaneutral\VIX_.csv", parse_dates=True, index_col=0)
+    vix_df = pd.read_csv("C:\\_data\\backtesting_data\\deltaneutral\\VIX_.csv", parse_dates=True, index_col=0)
     df.index = pd.to_datetime(df.index, unit='ms')
     df_vix = vix_df.loc[str(startdate.date()):str(enddate.date())]
 
@@ -319,9 +347,9 @@ if __name__ == "__main__":
     portfolio = option_test_manager.portfolio
     trades = portfolio.closed_positions
 
-    results_file = Path(root_folder, output_folder, "test_results.csv")
+    results_file = Path(root_folder, output_folder, f"test_results{output_folder}.csv")
     f = open(results_file, "w")
-    f.write("Type,Low,Center,Upper,Open Time,Close Time,Open Price,Close Price,PNL,Max Loss,R2R,Highest Level,Time Highest,VIX,Hull Direction,Close Time Slot,Close Zone\n")
+    f.write("ID,Type,Open Spot Price,Close Spot Price,Low,Center,Upper,Open Time,Close Time,Open Price,Close Price,PNL,Max Loss,R2R,Highest Level,Time Highest,VIX,Hull Direction,Close Time Slot,Close Zone\n")
 
     for trade_id, trade in trades.items():
         open_dt = trade.get_open_datetime()
@@ -332,6 +360,8 @@ if __name__ == "__main__":
         pnl = trade.get_profit_loss()
         trade_price = trade.get_trade_price()
         close_price = trade.price
+        open_spot_price = trade.center_option.trade_open_info.spot_price
+        close_spot_price = trade.center_option.trade_close_records[-1].spot_price
         open_time = datetime.datetime.strptime(str(open_dt), "%Y-%m-%d %H:%M:%S")
         close_time = datetime.datetime.strptime(str(close_dt), "%Y-%m-%d %H:%M:%S")
         highest_level = trade.user_defined["highest_profit"]["profit"]
@@ -343,8 +373,9 @@ if __name__ == "__main__":
         hull = trade.user_defined["hull_direction"]
         time_slot = trade.user_defined["time_slot"]
         zone = trade.user_defined["zone"]
-        line = f'{option_type},{lower},{center},{upper},{open_time},{close_time},{trade_price},{close_price},{pnl},{cost},'
-        line += f'{r2r},{highest_level},{str(time_highest)},{vix},{hull},{time_slot},{zone}\n'
+        line = f'{trade_id},{option_type},{open_spot_price},{close_spot_price},{lower},{center},{upper},{open_time},'
+        line += f'{close_time},{trade_price},{close_price},{pnl},{cost},{r2r},{highest_level},{str(time_highest)},'
+        line += f'{vix},{hull},{time_slot},{zone}\n'
         f.write(line)
 
     f.close()

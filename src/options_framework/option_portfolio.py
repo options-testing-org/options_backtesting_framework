@@ -11,7 +11,7 @@ from pydispatch import Dispatcher
 @dataclass(repr=False)
 class OptionPortfolio(Dispatcher):
 
-    _events_ = ['new_position_opened', 'next']
+    _events_ = ['new_position_opened', 'position_closed', 'next']
 
     cash: float | int
     positions: Optional[dict] = field(init=False, default_factory=lambda: {})
@@ -37,6 +37,7 @@ class OptionPortfolio(Dispatcher):
         option_position.close_trade(quantity=quantity)
         self.closed_positions[option_position.position_id] = option_position
         del self.positions[option_position.position_id]
+        self.emit("position_closed", option_position)
         [option.unbind(self) for option in option_position.options]
 
     def next(self, quote_datetime: datetime.datetime):
@@ -50,24 +51,24 @@ class OptionPortfolio(Dispatcher):
 
     def on_option_open_transaction_completed(self, trade_open_info: TradeOpenInfo):
         self.cash -= trade_open_info.premium
-        #print("portfolio: option position was opened")
+        #print(f"portfolio: option position was opened {trade_open_info.option_id}")
 
     def on_option_close_transaction_completed(self, trade_close_info: TradeCloseInfo):
         self.cash += trade_close_info.premium
-        #print("portfolio: option position was closed")
+        #print(f"portfolio: option position was closed {trade_close_info.option_id}")
 
     def on_option_expired(self, option_id):
+        #print(f"portfolio: option expired {option_id}")
         ids = [position.position_id for position in self.positions.values()
                for option in position.options if option.option_id == option_id]
         if ids:
             position = self.positions[ids[0]]
             if all([OptionStatus.EXPIRED in option.status for option in position.options]):
                 self.close_position(position, position.quantity)
-        print("portfolio: option expired")
 
     def on_fees_incurred(self, fees):
         self.cash -= fees
-        #print("portfolio: fees incurred")
+        print("portfolio: fees incurred")
 
     # def on_options_updated(self, quote_datetime: datetime.datetime, option_chain: list[Option]):
     #     options = [option for position in self.positions.values() for option in position.options]

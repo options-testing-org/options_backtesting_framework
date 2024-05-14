@@ -42,7 +42,7 @@ class HullMAOptionStrategy(bt.Strategy):
         self.hull = bt.indicators.HullMA(self.data, period=self.p.hull_period)
         self.dt = pd.to_datetime(f'{self.data.datetime.date(0)} {self.data.datetime.time(0)}')
         self.portfolio = self.p.options_manager.portfolio
-        self.option_chain = self.p.options_manager.option_chain
+        self.option_chain = self.p.options_manager.spx_option_chain_puts
 
     def next(self):
         self.dt = pd.to_datetime(f'{self.data.datetime.date(0)} {self.data.datetime.time(0)}')
@@ -71,7 +71,7 @@ class HullMAOptionStrategy(bt.Strategy):
                 strikes.sort(reverse=True)
                 strike = [s for s in strikes if s < self.data.close[0]][0]
 
-            option = Single.get_single_position(options=self.option_chain.option_chain, expiration=exp,
+            option = Single.get_single_position(options=self.option_chain.spx_option_chain_puts, expiration=exp,
                                                 option_type=option_type, strike=strike)
 
             self.portfolio.open_position(option_position=option, quantity=1)

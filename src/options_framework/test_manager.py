@@ -5,12 +5,10 @@ from options_framework.data.data_loader import DataLoader
 
 from options_framework.data.sql_data_loader import SQLServerDataLoader
 from options_framework.option_chain import OptionChain
-from options_framework.config import settings
 from options_framework.option_portfolio import OptionPortfolio
-import pandas as pd
-from pandas import DataFrame, Series
 
 from options_framework.option_types import SelectFilter
+
 
 @dataclass(repr=False)
 class OptionTestManager:
@@ -31,7 +29,7 @@ class OptionTestManager:
         #                                       select_filter=self.select_filter, fields_list=self.fields_list)
         # elif settings.DATA_LOADER_TYPE == "SQL_DATA_LOADER":
         self.data_loader = SQLServerDataLoader(start=self.start_datetime, end=self.end_datetime,
-                                                   select_filter=self.select_filter, fields_list=self.fields_list)
+                                               select_filter=self.select_filter, fields_list=self.fields_list)
         self.data_loader.bind(option_chain_loaded=self.option_chain.on_option_chain_loaded)
         self.portfolio.bind(new_position_opened=self.data_loader.on_options_opened)
         self.expirations = self.data_loader.get_expirations()

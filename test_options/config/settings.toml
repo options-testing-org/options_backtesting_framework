@@ -5,5 +5,5 @@ incur_fees=false
 data_loader_type = 'SQL_DATA_LOADER'
 data_format_settings = "sql_server_cboe_settings.toml"
 
-SELECT_FIELDS = ['symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
+SELECT_OPTION_ATTRIBUTES = ['symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
                        'bid', 'ask', 'price']

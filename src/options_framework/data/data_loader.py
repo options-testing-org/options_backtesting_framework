@@ -13,15 +13,15 @@ class DataLoader(ABC, Dispatcher):
     _events_ = ['option_chain_loaded']
 
     def __init__(self, *, start: datetime.datetime | datetime.date, end: datetime.datetime | datetime.date,
-                 select_filter: SelectFilter,
-                 fields_list: list[str] = None):
+                 select_filter: SelectFilter, option_attributes_list: list[str] = None):
         settings.load_file(settings.DATA_FORMAT_SETTINGS)
         self.start_datetime = start
         self.end_datetime = end
         self.select_filter = select_filter
-        self.fields_list = settings.SELECT_FIELDS if not fields_list else fields_list
+        self.option_attributes_list = settings.SELECT_OPTION_ATTRIBUTES if not option_attributes_list else option_attributes_list
         self.data_cache: DataFrame | None = None
         self.last_loaded_date: datetime.datetime | None = None
+        super().__init__()
 
     def next_option_chain(self, quote_datetime: datetime.datetime | datetime.date):
         if self.last_loaded_date < quote_datetime:
@@ -32,8 +32,8 @@ class DataLoader(ABC, Dispatcher):
     def load_cache(self, quote_datetime: datetime.datetime):
         pass
 
-    def on_option_chain_loaded_loaded(self, quote_datetime: datetime.datetime | datetime.date,
-                                      option_chain: list[Option]):
+    def on_option_chain_loaded(self, quote_datetime: datetime.datetime | datetime.date,
+                               option_chain: list[Option]):
         self.emit('option_chain_loaded', quote_datetime=quote_datetime, option_chain=option_chain)
 
     @abstractmethod

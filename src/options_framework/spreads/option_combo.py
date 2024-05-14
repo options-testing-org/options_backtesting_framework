@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 
 from ..option import Option
-from ..option_types import OptionCombinationType, OptionStatus
+from ..option_types import OptionCombinationType, OptionStatus, OptionPositionType
 
 
 @dataclass(repr=False, slots=True)
@@ -17,9 +17,10 @@ class OptionCombination(ABC):
     """
 
     options: list[Option]
-    option_combination_type: OptionCombinationType
+    option_combination_type: OptionCombinationType = field(default=None)
+    option_position_type: OptionPositionType = field(default=None)
+    quantity: int = field(default=None)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
-    quantity: int = field(default=1)
     user_defined: dict = field(default_factory=lambda: {})
 
     def __post_init__(self):
@@ -33,6 +34,11 @@ class OptionCombination(ABC):
     def current_value(self) -> float:
         current_value = sum([o.current_value for o in self.options])
         return current_value
+
+    @property
+    def trade_value(self):
+        opening_value = sum([o.trade_value for o in self.options])
+        return opening_value
 
     @abstractmethod
     def open_trade(self, *, quantity: int, **kwargs: dict) -> None:
@@ -89,63 +95,3 @@ class OptionCombination(ABC):
             return None
         return first_option.trade_close_info.date
 
-    #
-    # def premium(self):
-    #     """
-    #
-    #     :return:
-    #     """
-    #     if not all(o.trade_open_date is not None for o in self._options):
-    #         raise ValueError("Premium cannot be calculated unless a trade has been opened for all options")
-    #     premium = sum(decimalize_2(o.price) * (decimalize_2(o.quantity)/abs(decimalize_2(o.quantity)))
-    #                   for o in self._options)
-    #     return float(premium)
-    #
-    # def trade_cost(self):
-    #     """
-    #     The net premium to open the trade
-    #     :return: A positive number indicates a debit, and a negative number indicates a credit
-    #     """
-    #     if not all(o.trade_open_date is not None for o in self._options):
-    #         raise ValueError("Trade cost cannot be calculated unless a trade has been opened for all options")
-    #     return sum(o.total_premium() for o in self._options)
-    #
-    # def current_gain_loss(self):
-    #     """
-    #     The current gain or loss. This is the unrealized gain or loss unless the trade is closed.
-    #     :return: sum of the current value of all options in the trade
-    #     """
-    #     if not all(o.trade_open_date is not None for o in self._options):
-    #         raise ValueError("Current value cannot be calculated unless a trade has been opened for all options")
-    #     return sum(o.current_gain_loss() for o in self._options)
-    #
-    # def profit_loss_percent(self):
-    #     """
-    #     The current gain or loss percentage. This is the unrealized gain or loss unless the trade is closed.
-    #     :return:
-    #     """
-    #     starting_value = decimalize_2(self.trade_cost())
-    #     total_current_value = starting_value + decimalize_2(self.current_gain_loss())
-    #     percent_gain_loss = (total_current_value - starting_value) / starting_value
-    #     return float(decimalize_4(percent_gain_loss))
-
-
-
-    # @property
-    # def option_combination_type(self):
-    #     """
-    #     Returns the type of spread of the parent class.
-    #     The different types of spreads are defined in the OptionCombinationType enum.
-    #     :return: The option combination type of the parent class
-    #     """
-    #     return self._option_combination_type
-    #
-    # @property
-    # def option_trade_type(self):
-    #     """
-    #     Determines whether the premium is positive or negative.
-    #     If net positive, the trader paid to purchase the options, and the spread is a debit
-    #     If net negative, the trader received premium, and the spread is a credit
-    #     :return: OptionTradeType.CREDIT or OptionTradeType.DEBIT
-    #     """
-    #     return OptionTradeType.CREDIT if self.premium() < 0 else OptionTradeType.DEBIT
