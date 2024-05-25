@@ -19,7 +19,7 @@ class OptionChain:
                                                                             for option in option_chain if
                                                                             option.expiration == e]])) for e in
                                                                             self.expirations}
-        print(f'option chain loaded {quote_datetime}')
+        #print(f'option chain loaded {quote_datetime}')
 
     def get_option_by_id(self, option_id: str) -> Option:
         options = [option for option in self.option_chain if option.option_id == option_id]

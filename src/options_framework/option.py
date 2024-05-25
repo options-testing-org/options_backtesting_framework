@@ -54,10 +54,7 @@ class Option(Dispatcher):
     
     Example: OptionStatus.TRADE_IS_OPEN in option.status
     
-    OptionStatus.CREATED: Option has contract information, but no price data. It cannot be traded until
-    price data has been updated using the "update" method.
-    OptionStatus.INITIALIZED: Option has price data. This replaces the CREATED status when the option is
-    either initialized with price data or has been updated using the "update" method.
+    OptionStatus.INITIALIZED: Option has been creatd, but has not been opened and added to a portfolio
     OptionStatus.TRADE_IS_OPEN: A trade is currently open.
     OptionStatus.TRADE_PARTIALLY_CLOSED: Some of the contracts were closed, but the trade is still open.
     In this state, the status will have both TRADE_IS_OPEN and TRADE_PARTIALLY_CLOSED statuses
@@ -137,7 +134,7 @@ class Option(Dispatcher):
         fees = float(fees)
 
         self.emit("fees_incurred", fees)
-        print(f'emit fees {self.option_id}')
+        #print(f'emit fees {self.option_id}')
 
         return fees
 
@@ -212,7 +209,16 @@ class Option(Dispatcher):
 
         # calculate premium debit or credit. If this is a long position, the premium is a positive number.
         # If it is a short position, the premium is a negative number.
-        premium = float(decimalize_2(self.price) * 100 * decimalize_0(quantity))
+        price = decimalize_2(self.price)
+        quantity = decimalize_0(quantity)
+        if settings.apply_slippage_entry:
+            if quantity > 0:
+                price -= self.slippage
+            else:
+                price += self.slippage
+        premium = float(price * 100 * quantity)
+        price = float(price)
+        quantity = int(quantity)
 
         for key, value in kwargs.items():
             self.user_defined[key] = value
@@ -221,7 +227,7 @@ class Option(Dispatcher):
         if settings.incur_fees:
             fees = self._incur_fees(quantity=quantity)
         trade_open_info = TradeOpenInfo(option_id=self.option_id, date=self.quote_datetime, quantity=quantity,
-                                        price=self.price,
+                                        price=price,
                                         premium=premium,
                                         fees=fees,
                                         spot_price=float(self.spot_price))
@@ -265,6 +271,14 @@ class Option(Dispatcher):
             quantity = decimalize_0(quantity) * -1
 
         close_price = decimalize_2(self.get_closing_price())
+        if settings.apply_slippage_exit:
+            if not OptionStatus.EXPIRED in self.status:
+                slippage = settings.slippage
+                if self.trade_open_info.quantity > 0:
+                    close_price += close_price * decimalize_2(slippage)
+                elif self.trade_open_info.quantity < 0:
+                    close_price -= close_price * decimalize_2(slippage)
+
         open_price = decimalize_2(self.trade_open_info.price)
         premium = decimalize_2(close_price) * 100 * quantity*-1
         profit_loss = (open_price * 100 * quantity) - (close_price * 100 * quantity)
@@ -316,6 +330,7 @@ class Option(Dispatcher):
             raise ValueError("Cannot determine closing price on option that does not have an opening trade")
         price = decimalize_2(self.price)
         spot_price = decimalize_2(self.spot_price)
+        strike = decimalize_2(self.strike)
         close_price = None
         # check if option is expired (assume PM settled)
         # If an option is expired, the price in the data may not match what the actual
@@ -325,15 +340,15 @@ class Option(Dispatcher):
         # If an option expires in the money, its value is equal to its intrinsic value.
         # Just calculate the intrinsic value and return that price.
         if OptionStatus.EXPIRED in self.status:
-            if self.otm:  # OTM options have no value at expiration
+            if self.otm():  # OTM options have no value at expiration
                 close_price = 0
 
             # ITM options value is the difference between the spot price and the strike price
-            elif self.itm:  # ITM options only have intrinsic value at expiration
+            elif self.itm():  # ITM options only have intrinsic value at expiration
                 if self.option_type == OptionType.CALL:
-                    close_price = spot_price - self.strike
+                    close_price = spot_price - strike
                 elif self.option_type == OptionType.PUT:
-                    close_price = self.strike - spot_price
+                    close_price = strike - spot_price
 
         # Normally, the option price is assumed to be halfway between the bid and ask
         # When the bid is zero, it implies that there are no buyers, and only sellers at the ask price
@@ -401,15 +416,16 @@ class Option(Dispatcher):
 
     @property
     def trade_value(self) -> float:
-        price = self.trade_open_info.price if OptionStatus.TRADE_IS_OPEN in self.status else self.price
+        price = self.trade_price
         trade_price = decimalize_2(price)
-        quantity = decimalize_0(self.quantity)
+        quantity = self.quantity if self.status == OptionStatus.INITIALIZED else self.trade_open_info.quantity
+        quantity = decimalize_0(quantity)
         trade_value = trade_price * 100 * quantity
         return float(trade_value)
 
     @property
     def trade_price(self) -> float:
-        return self.trade_open_info.price if OptionStatus.TRADE_IS_OPEN in self.status else self.price
+        return self.price if self.status == OptionStatus.INITIALIZED else self.trade_open_info.price
 
     def get_unrealized_profit_loss(self) -> float:
         """
@@ -528,6 +544,17 @@ class Option(Dispatcher):
             return True if self.spot_price < self.strike else False
         elif self.option_type == OptionType.PUT:
             return True if self.spot_price > self.strike else False
+
+    def get_fees(self):
+        if self.status == OptionStatus.INITIALIZED:
+            return 0
+        open_fees = self.trade_open_info.fees
+        if OptionStatus.TRADE_PARTIALLY_CLOSED in self.status or OptionStatus.TRADE_IS_CLOSED in self.status:
+            close_fees = self.trade_close_info.fees
+        else:
+            close_fees = 0
+
+        return open_fees + close_fees
 
     #
     # @property

@@ -23,7 +23,7 @@ def map_data_file_fields() -> dict:
 class FileDataLoader(DataLoader):
 
     def __init__(self, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
-                 fields_list: list[str] = None, *args, **kwargs):
+                 extended_option_attributes: list[str] = None, *args, **kwargs):
         super().__init__(**kwargs)
         self.field_mapping = map_data_file_fields()
         self.data_root_folder = settings.DATA_FILES_FOLDER

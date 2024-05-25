@@ -41,12 +41,18 @@ class OptionCombination(ABC):
         return opening_value
 
     @abstractmethod
-    def open_trade(self, *, quantity: int, **kwargs: dict) -> None:
+    def update_quantity(self, quantity: int):
         pass
 
     @abstractmethod
-    def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
-        pass
+    def open_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
+        for arg, val in kwargs.items():
+            self.user_defined[arg] = val
+
+    @abstractmethod
+    def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
+        for arg, val in kwargs.items():
+            self.user_defined[arg] = val
 
     @property
     def max_profit(self) -> float | None:
@@ -66,11 +72,20 @@ class OptionCombination(ABC):
         """
         return None
 
+    @property
+    @abstractmethod
+    def required_margin(self) -> float:
+        pass
+
     def get_profit_loss(self) -> float:
-        return sum(o.get_profit_loss() for o in self.options)
+        pnl = sum(o.get_profit_loss() for o in self.options)
+        fees = self.get_fees()
+        return pnl - fees
 
     def get_unrealized_profit_loss(self) -> float:
-        return sum(o.get_unrealized_profit_loss() for o in self.options)
+        pnl = sum(o.get_unrealized_profit_loss() for o in self.options)
+        fees = self.get_fees()
+        return pnl - fees
 
     def get_trade_premium(self) -> float | None:
         if all((OptionStatus.TRADE_IS_OPEN & OptionStatus.TRADE_IS_CLOSED) in o.status for o in self.options):
@@ -95,3 +110,16 @@ class OptionCombination(ABC):
             return None
         return first_option.trade_close_info.date
 
+    def get_fees(self):
+        fees = 0
+
+        for o in self.options:
+            if OptionStatus.TRADE_IS_OPEN in o.status:
+                fees += o.trade_open_info.fees
+            if OptionStatus.TRADE_PARTIALLY_CLOSED in o.status:
+                fees += o.trade_close_info.fees
+            if OptionStatus.TRADE_IS_CLOSED in o.status:
+                fees += o.trade_open_info.fees
+                fees += o.trade_close_info.fees
+
+        return fees

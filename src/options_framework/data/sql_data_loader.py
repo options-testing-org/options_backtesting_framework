@@ -2,7 +2,10 @@ import dataclasses
 import datetime
 
 import pandas as pd
-import pyodbc
+#import pyodbc
+from sqlalchemy.engine import URL
+from sqlalchemy import create_engine
+from sqlalchemy.sql import text
 
 from multiprocessing import Pool
 
@@ -36,14 +39,17 @@ def create_option(quote_datetime, row, fields_list):
 class SQLServerDataLoader(DataLoader):
 
     def __init__(self, *, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
-                 fields_list: list[str] = None):
-        super().__init__(start=start, end=end, select_filter=select_filter, option_attributes_list=fields_list)
+                 extended_option_attributes: list[str] = None):
+        super().__init__(start=start, end=end, select_filter=select_filter, extended_option_attributes=extended_option_attributes)
         server = settings.SERVER
         database = settings.DATABASE
         username = settings.USERNAME
         password = settings.PASSWORD
-        self.connection_string = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database \
+        connection_string = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database \
                                  + ';UID=' + username + ';PWD=' + password
+        connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
+
+        self.sql_alchemy_engine = create_engine(connection_url)
         self.last_loaded_date = start - datetime.timedelta(days=1)
         self.start_load_date = start
         self.datetimes_list = self._get_datetimes_list()
@@ -57,12 +63,11 @@ class SQLServerDataLoader(DataLoader):
         end_loc = end_loc if end_loc < len(self.datetimes_list) else len(self.datetimes_list)-1
         query_end_date = self.datetimes_list.iloc[end_loc].name.to_pydatetime()
         query = self._build_query(start, query_end_date)
+        with self.sql_alchemy_engine.connect() as conn:
+            df = pd.read_sql(query, conn, index_col="quote_datetime", parse_dates=True)
 
-        connection = pyodbc.connect(self.connection_string)
-        df = pd.read_sql(query, connection, index_col="quote_datetime", parse_dates=True)
         df.index = pd.to_datetime(df.index)
         self.data_cache = df
-        connection.close()
         self.last_loaded_date = df.iloc[-1].name.to_pydatetime() # set to end of data loaded
 
     def get_option_chain(self, quote_datetime):
@@ -82,18 +87,18 @@ class SQLServerDataLoader(DataLoader):
             expiration=row['expiration'].date(),
             strike=row['strike'],
             option_type=OptionType.CALL if row['option_type'] == 1 else OptionType.PUT,
-            quote_datetime=i if 'quote_datetime' in self.option_attributes_list else None,
-            spot_price=row['spot_price'] if 'spot_price' in self.option_attributes_list else None,
-            bid=row['bid'] if 'bid' in self.option_attributes_list else None,
-            ask=row['ask'] if 'ask' in self.option_attributes_list else None,
-            price=row['price'] if 'price' in self.option_attributes_list else None,
-            delta=row['delta'] if 'delta' in self.option_attributes_list else None,
-            gamma=row['gamma'] if 'gamma' in self.option_attributes_list else None,
-            theta=row['theta'] if 'theta' in self.option_attributes_list else None,
-            vega=row['vega'] if 'vega' in self.option_attributes_list else None,
-            rho=row['rho'] if 'rho' in self.option_attributes_list else None,
-            open_interest=row['open_interest'] if 'open_interest' in self.option_attributes_list else None,
-            implied_volatility=row['implied_volatility'] if 'implied_volatility' in self.option_attributes_list else None
+            quote_datetime=i,
+            spot_price=row['spot_price'],
+            bid=row['bid'],
+            ask=row['ask'],
+            price=row['price'],
+            delta=row['delta'] if 'delta' in self.extended_option_attributes else None,
+            gamma=row['gamma'] if 'gamma' in self.extended_option_attributes else None,
+            theta=row['theta'] if 'theta' in self.extended_option_attributes else None,
+            vega=row['vega'] if 'vega' in self.extended_option_attributes else None,
+            rho=row['rho'] if 'rho' in self.extended_option_attributes else None,
+            open_interest=row['open_interest'] if 'open_interest' in self.extended_option_attributes else None,
+            implied_volatility=row['implied_volatility'] if 'implied_volatility' in self.extended_option_attributes else None
             ) for i, row in df.iterrows()]
 
         super().on_option_chain_loaded(quote_datetime=quote_datetime, option_chain=options)
@@ -102,7 +107,8 @@ class SQLServerDataLoader(DataLoader):
         option_ids = [str(o.option_id) for o in options]
         open_date = options[0].trade_open_info.date
         #print(f"options {','.join(option_ids)} were opened on {open_date}")
-        fields = ['option_id'] + self.option_attributes_list
+        fields = ['option_id', 'symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
+                  'bid', 'ask', 'price'] + self.extended_option_attributes
         field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
                                   if option_field in fields])
         query = "select " + field_mapping
@@ -110,21 +116,20 @@ class SQLServerDataLoader(DataLoader):
         query += f' where option_id in ({",".join(option_ids)})'
         query += f' and {settings.SELECT_OPTIONS_QUERY.quote_datetime_field} >= CONVERT(datetime2, \'{open_date}\')'
         query += f' order by {settings.SELECT_OPTIONS_QUERY.quote_datetime_field}'
-        connection = pyodbc.connect(self.connection_string)
-        df = pd.read_sql(query, connection, index_col="quote_datetime", parse_dates=True)
+        with self.sql_alchemy_engine.connect() as conn:
+            df = pd.read_sql(query, conn, index_col="quote_datetime", parse_dates=True)
         df.index = pd.to_datetime(df.index)
-        connection.close()
 
         for option in options:
             cache = df.loc[df['option_id'] == option.option_id]
             option.update_cache = cache
-            #portfolio.bind(next=option.next_update)
 
     def get_expirations(self):
         return self.expirations
 
     def _build_query(self, start_date: datetime.datetime, end_date: datetime.datetime):
-        fields = ['option_id'] + self.option_attributes_list
+        fields = ['option_id', 'symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
+                       'bid', 'ask', 'price'] + self.extended_option_attributes
         field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
                                   if option_field in fields])
         filter_dict = dataclasses.asdict(self.select_filter)
@@ -168,10 +173,9 @@ class SQLServerDataLoader(DataLoader):
         start_date = self.start_datetime
         end_date = self.end_datetime
         query = settings.SELECT_OPTIONS_QUERY.quote_datetime_list_query.replace('{symbol}', symbol).replace('{start_date}', str(start_date)).replace('{end_date}', str(end_date))
-        connection = pyodbc.connect(self.connection_string)
-        df = pd.read_sql(query, connection, parse_dates=True, index_col=[settings.SELECT_OPTIONS_QUERY.quote_datetime_field])
+        with self.sql_alchemy_engine.connect() as conn:
+            df = pd.read_sql(query, conn, parse_dates=True, index_col=[settings.SELECT_OPTIONS_QUERY.quote_datetime_field])
         df.index = pd.to_datetime(df.index)
-        connection.close()
         return df
 
     def _get_expirations_list(self):
@@ -185,7 +189,6 @@ class SQLServerDataLoader(DataLoader):
                   .replace('{start_date}', str(start_date))
                   .replace('{end_date}', str(end_date)))
         query += " order by expiration"
-        connection = pyodbc.connect(self.connection_string)
-        df = pd.read_sql(query, connection, parse_dates=True)
-        connection.close()
+        with self.sql_alchemy_engine.connect() as conn:
+            df = pd.read_sql(query, conn, parse_dates=True)
         return df

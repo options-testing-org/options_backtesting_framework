@@ -24,5 +24,5 @@ class MongoDbDataLoader(DataLoader):
         pass
 
     def __init__(self, *, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
-                 fields_list: list[str] = None):
+                 extended_option_attributes: list[str] = None):
         pass

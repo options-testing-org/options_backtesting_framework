@@ -17,9 +17,7 @@ class Butterfly(OptionCombination):
         candidates = [o for o in option_chain if o.expiration == expiration and o.option_type == option_type]
         center_option_candidates = [o for o in candidates if o.strike >= center_strike]
         if not center_option_candidates:
-            ex = ValueError()
-            ex.strerror = "Butterfly position cannot be created with these values - no center wing options found"
-            raise ex
+            raise ValueError("Butterfly position cannot be created with these values - no center wing options found")
         center_option = center_option_candidates[0]
         lower_wing_candidates = [o for o in candidates if o.strike <= (center_option.strike - wing_width)]
         if not lower_wing_candidates:
@@ -45,9 +43,7 @@ class Butterfly(OptionCombination):
                                  quantity: int = 1):
 
         if center_quantity_multiple + lower_quantity_multiple + upper_quantity_multiple != 0:
-            ex = ValueError
-            ex.message = "Option quantity multiples are unbalanced. This configuration will open naked options."
-            raise ValueError
+            raise ValueError("Option quantity multiples are unbalanced. This configuration will open naked options.")
 
         expiration = datetime.date(expiration.year, expiration.month, expiration.day)
         candidates = [o for o in option_chain if o.expiration == expiration and o.option_type == option_type]
@@ -207,3 +203,7 @@ class Butterfly(OptionCombination):
         r2r = decimalize_2(max_profit / max_loss)
 
         return float(r2r)
+
+    @property
+    def required_margin(self) -> float:
+        return 0

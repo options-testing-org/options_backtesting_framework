@@ -16,7 +16,7 @@ class OptionTestManager:
     end_datetime: datetime.datetime
     select_filter: SelectFilter
     starting_cash: float
-    fields_list: list = field(default_factory=lambda: [])
+    extended_option_attributes: list = field(default_factory=lambda: [])
     option_chain: OptionChain = field(init=False, default_factory=lambda: OptionChain())
     data_loader: DataLoader = field(init=False, default=None)
     portfolio: OptionPortfolio = field(init=False, default=None)
@@ -29,7 +29,8 @@ class OptionTestManager:
         #                                       select_filter=self.select_filter, fields_list=self.fields_list)
         # elif settings.DATA_LOADER_TYPE == "SQL_DATA_LOADER":
         self.data_loader = SQLServerDataLoader(start=self.start_datetime, end=self.end_datetime,
-                                               select_filter=self.select_filter, fields_list=self.fields_list)
+                                               select_filter=self.select_filter,
+                                               extended_option_attributes=self.extended_option_attributes)
         self.data_loader.bind(option_chain_loaded=self.option_chain.on_option_chain_loaded)
         self.portfolio.bind(new_position_opened=self.data_loader.on_options_opened)
         self.expirations = self.data_loader.get_expirations()
