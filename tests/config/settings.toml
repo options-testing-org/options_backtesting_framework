@@ -2,9 +2,11 @@ name="UNIT TESTING SETTINGS"
 
 standard_fee=0.50
 incur_fees=true
+slippage=0.05
+apply_slippage_entry=false
+apply_slippage_exit=false
 
 data_format_settings = "sql_server_cboe_settings.toml"
 data_loader_type = 'SQL_DATA_LOADER'
 
-SELECT_OPTION_ATTRIBUTES = ['symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
-                       'bid', 'ask', 'price']
+

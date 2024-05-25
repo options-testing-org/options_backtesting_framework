@@ -16,7 +16,7 @@ from options_framework.test_manager import OptionTestManager
 warnings.filterwarnings('ignore')
 
 from options_framework.config import settings
-
+from pprint import pprint as pp
 
 def get_connection():
     eng = sa.create_engine("mssql+pyodbc://sa:msdevshow@MYTOWER/options_db?driver=ODBC+Driver+17+for+SQL+Server")
@@ -62,7 +62,7 @@ class HullMADirectionalStrategy(bt.Strategy):
         self.hull = bt.indicators.HullMA(self.data1, period=self.p.hull_period)
         self.dt = pd.to_datetime(f'{self.data.datetime.date(0)} {self.data.datetime.time(0)}')
         self.portfolio = self.p.options_manager.portfolio
-        self.option_chain = self.p.options_manager.spx_option_chain_puts
+        self.option_chain = self.p.options_manager.option_chain
 
     def next(self):
         self.dt = pd.to_datetime(f'{self.data.datetime.date(0)} {self.data.datetime.time(0)}')
@@ -90,7 +90,7 @@ class HullMADirectionalStrategy(bt.Strategy):
                 strikes.sort(reverse=True)
                 strike = [s for s in strikes if s < self.data.close[0]][0]
 
-            option = Single.get_single_position(options=self.option_chain.spx_option_chain_puts, expiration=exp,
+            option = Single.get_single_position(option_chain=self.option_chain.option_chain, expiration=exp,
                                                 option_type=option_type, strike=strike)
 
             self.portfolio.open_position(option_position=option, quantity=1)
@@ -105,7 +105,7 @@ class HullMADirectionalStrategy(bt.Strategy):
 
 
 if __name__ == "__main__":
-    #pp(settings.as_dict())
+    pp(settings.as_dict())
     t1 = time.time()
     print(time.ctime())
 

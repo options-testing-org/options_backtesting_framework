@@ -4,14 +4,15 @@ from dataclasses import dataclass, field
 from typing import Optional
 
 from options_framework.option import Option, TradeOpenInfo, TradeCloseInfo
-from options_framework.option_types import OptionStatus
+from options_framework.option_types import OptionStatus, OptionPositionType
 from options_framework.spreads.option_combo import OptionCombination
+from options_framework.utils.helpers import decimalize_2
 from pydispatch import Dispatcher
 
 @dataclass(repr=False)
 class OptionPortfolio(Dispatcher):
 
-    _events_ = ['new_position_opened', 'position_closed', 'next']
+    _events_ = ['new_position_opened', 'position_closed', 'next', 'position_expired']
 
     cash: float | int
     positions: Optional[dict] = field(init=False, default_factory=lambda: {})
@@ -21,20 +22,27 @@ class OptionPortfolio(Dispatcher):
     def __repr__(self) -> str:
         return f'OptionPortfolio(cash={self.cash: .2f}, portfolio_value={self.portfolio_value:.2f} open positions: {len(self.positions)}'
 
-    def open_position(self, option_position: OptionCombination, quantity: int):
+    def open_position(self, option_position: OptionCombination, quantity: int, **kwargs: dict):
+        if option_position.option_position_type == OptionPositionType.SHORT:
+            # check to see if we have enough margin to open this position
+            new_margin = option_position.required_margin + self.portfolio_margin_allocation
+            if new_margin > self.cash:
+                raise ValueError(f'Insufficient margin available to open this position.')
         self.positions[option_position.position_id] = option_position
         [option.bind(open_transaction_completed=self.on_option_open_transaction_completed,
                      close_transaction_completed=self.on_option_close_transaction_completed,
                      option_expired=self.on_option_expired,
                      fees_incurred=self.on_fees_incurred) for option in option_position.options]
-        option_position.open_trade(quantity=quantity)
+        option_position.open_trade(quantity=quantity, **kwargs)
+
         options = [option for position in self.positions.values() for option in position.options]
         for o in options:
             self.bind(next=o.next_update) # create hook for option update when next quote method is called
         self.emit("new_position_opened", self, option_position.options)
 
-    def close_position(self, option_position: OptionCombination, quantity: int):
-        option_position.close_trade(quantity=quantity)
+    def close_position(self, option_position: OptionCombination, quantity: int = None, **kwargs: dict):
+        quantity = quantity if quantity is not None else option_position.quantity
+        option_position.close_trade(quantity=quantity, **kwargs)
         self.closed_positions[option_position.position_id] = option_position
         del self.positions[option_position.position_id]
         self.emit("position_closed", option_position)
@@ -47,7 +55,13 @@ class OptionPortfolio(Dispatcher):
     def portfolio_value(self):
         current_value = sum(option.current_value for option in [option for position in self.positions.values()
                                                                 for option in position.options])
-        return self.cash + current_value
+        portfolio_value = decimalize_2(current_value) + decimalize_2(self.cash)
+        return float(portfolio_value)
+
+    @property
+    def portfolio_margin_allocation(self):
+        margin = sum(position.required_margin for position in self.positions.values())
+        return margin
 
     def on_option_open_transaction_completed(self, trade_open_info: TradeOpenInfo):
         self.cash -= trade_open_info.premium
@@ -65,15 +79,9 @@ class OptionPortfolio(Dispatcher):
             position = self.positions[ids[0]]
             if all([OptionStatus.EXPIRED in option.status for option in position.options]):
                 self.close_position(position, position.quantity)
+                self.emit('position_expired', position)
 
     def on_fees_incurred(self, fees):
         self.cash -= fees
-        print("portfolio: fees incurred")
+        #print("portfolio: fees incurred")
 
-    # def on_options_updated(self, quote_datetime: datetime.datetime, option_chain: list[Option]):
-    #     options = [option for position in self.positions.values() for option in position.options]
-    #     for my_option in options:
-    #         opt = [option for option in option_chain if option.option_id == my_option.option_id][0]
-    #         my_option.update(quote_datetime=opt.quote_datetime, spot_price=opt.spot_price, bid=opt.bid, ask=opt.ask,
-    #                          price=opt.price, delta=opt.delta, gamma=opt.gamma, theta=opt.theta, vega=opt.vega,
-    #                          rho=opt.rho, open_interest=opt.open_interest, implied_volatility=opt.implied_volatility)

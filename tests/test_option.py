@@ -24,6 +24,13 @@ def incur_fees_false():
     yield
     settings.INCUR_FEES = original_setting
 
+@pytest.fixture
+def allow_slippage():
+    settings.apply_slippage_entry=True
+    settings.apply_slippage_exit=True
+    yield
+    settings.apply_slippage_entry = False
+    settings.apply_slippage_exit = False
 
 def test_option_init_with_quote_data(option_id, ticker, test_expiration, test_quote_date):
     strike = 100
@@ -1139,3 +1146,13 @@ def test_current_value_when_partially_closed_price_changes(get_test_call_option,
 
     test_option.close_trade(quantity=2)
     assert test_option.current_value == 0.0
+
+def test_get_closing_price_for_expiring_itm():
+    pass
+
+def test_open_option_with_slippage():
+    pass
+
+def test_close_option_with_slippage():
+    pass
+
