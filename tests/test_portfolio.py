@@ -2,7 +2,7 @@ import pytest
 
 from conftest import create_update_cache
 from options_framework.option_portfolio import OptionPortfolio
-from options_framework.option_types import OptionCombinationType
+from options_framework.option_types import OptionCombinationType, OptionPositionType
 from options_framework.spreads.single import Single
 from options_framework.config import settings
 
@@ -22,11 +22,11 @@ def incur_fees_false():
 
 @pytest.fixture
 def test_position_1(get_test_call_option):
-    return Single([get_test_call_option], OptionCombinationType.SINGLE)
+    return Single([get_test_call_option],  OptionCombinationType.SINGLE, OptionPositionType.LONG)
 
 @pytest.fixture
 def test_position_2(get_test_put_option):
-    return Single([get_test_put_option], OptionCombinationType.SINGLE)
+    return Single([get_test_put_option], OptionCombinationType.SINGLE, OptionPositionType.LONG)
 
 def test_new_portfolio_cash_balance():
     pf = OptionPortfolio(100_000.0)

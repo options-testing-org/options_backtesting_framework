@@ -25,33 +25,26 @@ class Vertical(OptionCombination):
         else:
             raise ValueError("Long and short strikes cannot be the same")
 
-        # Find nearest matching expiration
-        expirations = [e for e in option_chain.expirations if e >= expiration]
+            # Find nearest matching expiration
+            try:
+                expiration = next(e for e in option_chain.expirations if e >= expiration)
+            except StopIteration:
+                message = "No matching expiration was found in the option chain. Consider changing the selection filter."
+                raise ValueError(message)
 
-        if not expirations:
-            message = "No matching expiration was found in the option chain. Consider changing the selection filter."
+        try:
+            # Find nearest strikes
+            long_strike = next(s for s in option_chain.expiration_strikes[expiration] if s >= long_strike)
+            # Find nearest short strike
+            short_strike = next(s for s in option_chain.expiration_strikes[expiration] if s >= short_strike)
+        except StopIteration as ex:
+            message = "No matching strike was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
-        expiration = expirations[0]
 
-        # Find nearest long strike
-        strikes = [s for s in option_chain.expiration_strikes[expiration] if s >= long_strike]
-        if not strikes:
-            message = "No matching strike was found for the long strike. Consider changing the selection filter."
-            raise ValueError(message)
-        long_strike = strikes[0]
-
-        # Find nearest short strike
-        strikes = [s for s in option_chain.expiration_strikes[expiration] if s >= short_strike]
-        if not strikes:
-            message = "No matching strike was found for the short strike. Consider changing the selection filter."
-            raise ValueError(message)
-        short_strike = strikes[0]
-
-        long_option = [o for o in option_chain.option_chain if o.expiration == expiration
-                       and o.strike == long_strike][0]
+        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
+        long_option = next(o for o in options if o.strike == long_strike)
         long_option.quantity = quantity
-        short_option = [o for o in option_chain.option_chain if o.expiration == expiration
-                        and o.strike == short_strike][0]
+        short_option = next(o for o in options if o.strike == short_strike)
         short_option.quantity = quantity * -1
 
         vertical = Vertical(options=[long_option, short_option],
@@ -75,43 +68,33 @@ class Vertical(OptionCombination):
             raise ValueError("Long and short strikes cannot be the same")
 
         # Find nearest matching expiration
-        expirations = [e for e in option_chain.expirations if e >= expiration]
-
-        if not expirations:
+        try:
+            expiration = next(e for e in option_chain.expirations if e >= expiration)
+        except StopIteration:
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
-        expiration = expirations[0]
 
         options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
-        if option_type == OptionType.CALL :
-            options.sort(key=lambda x: x.delta, reverse=True)
-            select_options = [o for o in options if o.option_type == OptionType.CALL
-                              and o.delta <= long_delta]
-        else:
-            options.sort(key=lambda x: x.delta, reverse=False)
-            select_options = [o for o in options if o.option_type == OptionType.PUT
-                              and o.delta >= -long_delta]
-
-        if not select_options:
-            message = "No option was found for the long delta value. Consider changing the selection filter."
+        try:
+            if option_type == OptionType.CALL:
+                #options.sort(key=lambda x: x.delta, reverse=True)
+                long_option = next(o for o in options if o.delta <= long_delta)
+                short_option = next(o for o in options if o.delta <= short_delta)
+            else:
+                options.sort(key=lambda x: x.delta, reverse=False)
+                long_option = next(o for o in options if o.delta >= -long_delta)
+                short_option = next(o for o in options if o.delta >= -short_delta)
+        except StopIteration:
+            message = "No matching delta value was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        long_option = select_options[0]
+        # Set quantities
         long_option.quantity = abs(quantity)
-
-        if option_type == OptionType.CALL:
-            select_options = [o for o in options if o.option_type == OptionType.CALL
-                              and o.delta <= short_delta]
-        else:
-            select_options = [o for o in options if o.option_type == OptionType.PUT
-                              and o.delta >= -short_delta]
-
-        if not select_options:
-            message = "No option was found for the short delta value. Consider changing the selection filter."
-            raise ValueError(message)
-
-        short_option = select_options[0]
         short_option.quantity = abs(quantity) * -1
+        quantity = abs(quantity) if option_position_type == OptionPositionType.LONG else abs(quantity)*-1
+
+        long_option.position_type = OptionPositionType.LONG
+        short_option.position_type = OptionPositionType.SHORT
 
         if long_option.strike < short_option.strike:
             option_position_type = OptionPositionType.LONG if option_type == OptionType.CALL \
@@ -136,45 +119,47 @@ class Vertical(OptionCombination):
                                                quantity: int = 1) -> OptionCombination:
 
         # Find nearest matching expiration
-        expirations = [e for e in option_chain.expirations if e >= expiration]
-
-        if not expirations:
+        try:
+            expiration = next(e for e in option_chain.expirations if e >= expiration)
+        except StopIteration:
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
-        expiration = expirations[0]
 
         options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
-        if option_type == OptionType.CALL:
-            options.sort(key=lambda x: x.delta, reverse=True)
-            select_options = [o for o in options if o.option_type == OptionType.CALL
-                              and o.delta <= delta]
-        else:
-            options.sort(key=lambda x: x.delta, reverse=False)
-            select_options = [o for o in options if o.option_type == OptionType.PUT
-                              and o.delta >= -delta]
+        strikes = [s for s in option_chain.expiration_strikes[expiration]]
+        try:
+            if option_type == OptionType.CALL:
+                option = next(o for o in options if o.delta <= delta)
+                target_strike = option.strike + spread_width
+                strike = next(s for s in strikes if s >= target_strike)
 
-        if not select_options:
-            message = "No option was found for the long delta value. Consider changing the selection filter."
+            else:
+                options.sort(key=lambda x: x.delta, reverse=False)
+                option = next(o for o in options if o.delta >= -delta)
+                target_strike = option.strike - spread_width
+                strikes.sort(reverse=True)
+                strike = next(s for s in strikes if s <= target_strike)
+
+            next_option = next(o for o in options if o.strike == strike)
+
+        except StopIteration:
+            message = "Vertical could not be created with the delta value. Consider changing the selection filter."
             raise ValueError(message)
 
-        option = options[0]
-        option.option_position_type = option_position_type
-        option.quantity = abs(quantity) if option_position_type == OptionPositionType.LONG else abs(quantity)*-1
+        long_option = option if option_position_type == OptionPositionType.LONG else next_option
+        short_option = option if option_position_type == OptionPositionType.SHORT else next_option
 
-        strikes = [s for s in option_chain.expiration_strikes[expiration]]
-        if option_type == OptionType.CALL and option_position_type == OptionPositionType.LONG:
-            strike = next(s for s in strikes if s >= option.strike + spread_width)
-            next_option = [o for o in options if o.strike == strike]
-        elif option_type == OptionType.CALL and option_position_type == OptionPositionType.SHORT:
-            strikes.sort(reverse=True)
-            strikes = [s for s in strikes if s <= option.strike - spread_width]
-            strike = strikes[0]
-        elif option_type == OptionType.PUT and option_position_type == OptionPositionType.LONG:
-            strike = option.strike - spread_width
-        elif option.option_type == OptionType.PUT and option_position_type == OptionPositionType.SHORT:
-            strike = option.strike + spread_width
+        long_option.quantity = abs(quantity)
+        long_option.option_position_type = OptionPositionType.LONG
+        short_option.quantity = abs(quantity)*-1
+        short_option.option_position_type = OptionPositionType.SHORT
 
-        pass
+        quantity = abs(quantity) if option_position_type == OptionPositionType.LONG else abs(quantity)*-1
+
+        vertical = Vertical(options=[long_option, short_option],
+                            option_combination_type=OptionCombinationType.VERTICAL,
+                            option_position_type=option_position_type, quantity=quantity)
+        return vertical
 
 
     short_option: Option = field(init=False, default=None)
@@ -197,6 +182,16 @@ class Vertical(OptionCombination):
         self.short_option = self.options[0] if self.options[0].quantity < 0 else self.options[1]
         self.option_combination_type = OptionCombinationType.VERTICAL
 
+    def __repr__(self) -> str:
+        strikes = [self.long_option.strike, self.short_option.strike]
+        if self.option_type == OptionType.CALL:
+            strikes.sort()
+        else:
+            strikes.sort(reverse=True)
+        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option_type.name} {self.option_position_type.name} ' \
+                + f'{strikes[0]}/{strikes[1]} ' \
+                + f'Expiring {self.expiration}'
+        return s
     def update_quantity(self, quantity: int):
         self.quantity = quantity
         self.long_option.quantity = abs(quantity)
@@ -206,14 +201,14 @@ class Vertical(OptionCombination):
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
-        super().open_trade(quantity=quantity, **kwargs)
+        super(Vertical, self).open_trade(quantity=quantity, **kwargs)
 
     def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else quantity == self.long_option.quantity
         self.long_option.close_trade(quantity=quantity)
         self.short_option.close_trade(quantity=quantity * -1)
         self.quantity -= quantity
-        super().close_trade(quantity=quantity, **kwargs)
+        super(Vertical, self).close_trade(quantity=quantity, **kwargs)
 
     @property
     def max_profit(self) -> float | None:

@@ -21,11 +21,11 @@ class Single(OptionCombination):
         options = [o for o in option_chain.option_chain if o.option_type == option_type]
 
         # Find nearest matching expiration
-        expirations = [e for e in option_chain.expirations if e >= expiration]
-
-        if not expirations:
-            raise ValueError("No matching expiration was found in the option chain. Consider changing the selection filter.")
-        expiration = expirations[0]
+        try:
+            expiration = next(e for e in option_chain.expirations if e >= expiration)
+        except StopIteration:
+            message = "No matching expiration was found in the option chain. Consider changing the selection filter."
+            raise ValueError(message)
 
         # Find nearest matching strike for this expiration
         strikes = [s for s in option_chain.expiration_strikes[expiration] if s >= strike]
@@ -52,12 +52,11 @@ class Single(OptionCombination):
                                      quantity: int = 1) -> OptionCombination:
 
         # Find nearest matching expiration
-        expirations = [e for e in option_chain.expirations if e >= expiration]
-
-        if not expirations:
-            raise ValueError(
-                "No matching expiration was found in the option chain. Consider changing the selection filter.")
-        expiration = expirations[0]
+        try:
+            expiration = next(e for e in option_chain.expirations if e >= expiration)
+        except StopIteration:
+            message = "No matching expiration was found in the option chain. Consider changing the selection filter."
+            raise ValueError(message)
 
         # Find option with the nearest delta
         options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
@@ -141,13 +140,13 @@ class Single(OptionCombination):
         self.option_position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
         self.option.open_trade(quantity=quantity)
         self.quantity = quantity
-        super().open_trade(quantity=quantity, **kwargs)
+        super(Single, self).open_trade(quantity=quantity, **kwargs)
 
     def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else self.option.quantity
         self.option.close_trade(quantity=quantity)
         self.quantity -= quantity
-        super().close_trade(quantity=quantity, **kwargs)
+        super(Single, self).close_trade(quantity=quantity, **kwargs)
 
     def get_trade_price(self):
         if OptionStatus.INITIALIZED ==  self.option.status:

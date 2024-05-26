@@ -1,6 +1,6 @@
 import datetime
 
-from options_framework.option_types import SelectFilter, OptionType, FilterRange
+from options_framework.option_types import SelectFilter, OptionType, FilterRange, OptionPositionType
 from options_framework.spreads.single import Single
 from options_framework.test_manager import OptionTestManager
 from options_framework.data.data_loader import DataLoader
@@ -31,7 +31,8 @@ def test_manager_portfolio_open_triggers_option_updates_load():
 
     option_chain = option_test_manager.option_chain
     expiration = datetime.date(2016, 3, 2)
-    single = Single.get_single_position(option_chain=option_chain, expiration=expiration, option_type=OptionType.CALL, strike=1910)
+    single = Single.get_single_position(option_chain=option_chain, expiration=expiration, option_type=OptionType.CALL,
+                                        option_position_type= OptionPositionType.LONG, strike=1910)
     assert single.option.update_cache is None
     portfolio.open_position(option_position=single, quantity=1)
     assert len(single.option.update_cache) > 0

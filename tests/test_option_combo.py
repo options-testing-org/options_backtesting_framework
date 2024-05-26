@@ -6,10 +6,10 @@ class TestCombo(OptionCombination):
     def __post_init__(self):
         print('init test class')
 
-    def open_trade(self, *, quantity: int, **kwargs: dict) -> None:
+    def open_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
         pass
 
-    def close_trade(self, *, quantity: int, **kwargs: dict) -> None:
+    def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
         pass
 
     def max_profit(self) -> float | None:
@@ -24,6 +24,8 @@ class TestCombo(OptionCombination):
     def required_margin(self) -> float:
         pass
 
+    def update_quantity(self, quantity: int):
+        pass
 def test_test():
     test_combo = TestCombo(options=[], option_combination_type=OptionCombinationType.CUSTOM, quantity=1)
 
