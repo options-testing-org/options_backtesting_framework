@@ -12,13 +12,11 @@ from options_framework.utils.helpers import decimalize_0, decimalize_2
 class Single(OptionCombination):
 
     @classmethod
-    def get_single_position(cls, *, option_chain: OptionChain, expiration: datetime.date,
-                                      option_type: OptionType,
-                                      option_position_type: OptionPositionType,
-                                      strike: float | int,
-                                      quantity: int = 1) -> OptionCombination:
-
-        options = [o for o in option_chain.option_chain if o.option_type == option_type]
+    def get_single(cls, *, option_chain: OptionChain, expiration: datetime.date,
+                   option_type: OptionType,
+                   option_position_type: OptionPositionType,
+                   strike: float | int,
+                   quantity: int = 1) -> OptionCombination:
 
         # Find nearest matching expiration
         try:
@@ -28,13 +26,18 @@ class Single(OptionCombination):
             raise ValueError(message)
 
         # Find nearest matching strike for this expiration
-        strikes = [s for s in option_chain.expiration_strikes[expiration] if s >= strike]
+        strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
+        try:
+            if option_type == OptionType.CALL:
+                strike = next(s for s in strikes if s >= strike)
+            else:
+                strikes.sort(reverse=True)
+                strike = next(s for s in strikes if s <= strike)
 
-        if not strikes:
+            option = next(o for o in option_chain.option_chain if o.option_type == option_type
+                          and o.expiration == expiration and o.strike == strike)
+        except StopIteration:
             raise ValueError("No matching strike was found in the option chain. Consider changing the selection filter.")
-        strike = strikes[0]
-
-        option = [o for o in options if o.expiration == expiration and o.strike == strike][0]
 
         if option.price == 0:
             raise Exception("Option price is zero. Cannot open this option.")
@@ -45,11 +48,11 @@ class Single(OptionCombination):
         return single
 
     @classmethod
-    def get_single_position_by_delta(cls, *, option_chain: OptionChain, expiration: datetime.date,
-                                     option_type: OptionType,
-                                     option_position_type: OptionPositionType,
-                                     delta: float,
-                                     quantity: int = 1) -> OptionCombination:
+    def get_single_by_delta(cls, *, option_chain: OptionChain, expiration: datetime.date,
+                            option_type: OptionType,
+                            option_position_type: OptionPositionType,
+                            delta: float,
+                            quantity: int = 1) -> OptionCombination:
 
         # Find nearest matching expiration
         try:
@@ -59,22 +62,16 @@ class Single(OptionCombination):
             raise ValueError(message)
 
         # Find option with the nearest delta
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
-        if option_type == OptionType.CALL:
-            options.sort(key=lambda x: x.delta, reverse=True)
-            select_options = [o for o in options if o.option_type == OptionType.CALL
-                              and o.delta <= delta]
-        else:
-            options.sort(key=lambda x: x.delta, reverse=False)
-            options.sort(key=lambda x: x.delta)
-            # Find nearest long put matching delta
-            select_options = [o for o in options if o.option_type == OptionType.PUT
-                              and o.delta >= delta]
-
-        if not select_options:
+        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
+        try:
+            if option_type == OptionType.CALL:
+                options.sort(key=lambda x: x.delta, reverse=True)
+                option = next(o for o in options if o.delta <= delta)
+            else:
+                options.sort(key=lambda x: x.delta, reverse=False)
+                option = next(o for o in options if o.delta >= delta)
+        except StopIteration:
             raise ValueError("No matching options were found for the delta value. Consider changing the selection filter.")
-
-        option = select_options[0]
 
         if option.price == 0:
             raise Exception("Option price is zero. Cannot open this option.")

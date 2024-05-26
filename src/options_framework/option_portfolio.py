@@ -18,6 +18,10 @@ class OptionPortfolio(Dispatcher):
     positions: Optional[dict] = field(init=False, default_factory=lambda: {})
     closed_positions: Optional[dict] = field(init=False, default_factory=lambda: {})
     portfolio_risk: float = field(init=False, default=0.0)
+    close_values: list = field(init=False, default_factory=lambda: [])
+
+    def __post_init__(self):
+        pass
 
     def __repr__(self) -> str:
         return f'OptionPortfolio(cash={self.cash: .2f}, portfolio_value={self.portfolio_value:.2f} open positions: {len(self.positions)}'
@@ -50,6 +54,7 @@ class OptionPortfolio(Dispatcher):
 
     def next(self, quote_datetime: datetime.datetime):
         self.emit('next', quote_datetime)
+        self.close_values.append((quote_datetime, self.portfolio_value))
 
     @property
     def portfolio_value(self):

@@ -66,46 +66,26 @@ class IronCondor(OptionCombination):
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        exp_strikes = option_chain.expiration_strikes[expiration]
+        exp_strikes = option_chain.expiration_strikes[expiration].copy()
+        options = [o for o in option_chain.option_chain if o.expiration == expiration].copy()
+        # Find strikes
+        try:
+            long_call_strike = next(s for s in exp_strikes if s >= long_call_strike)
+            short_call_strike = next(s for s in exp_strikes if s >= short_call_strike)
 
-        # Find nearest long call matching strike
-        strikes = [s for s in exp_strikes if s >= long_call_strike]
-        if not strikes:
-            raise ValueError(
-                "No matching strike was found in the option chain. Consider changing the selection filter.")
-        long_call_strike = strikes[0]
+            exp_strikes.sort(reverse=True)
+            long_put_strike = next(s for s in exp_strikes if s <= long_put_strike)
+            short_put_strike = next(s for s in exp_strikes if s <= short_put_strike)
+        except StopIteration:
+            raise ValueError("No matching strike was found in the option chain. Consider changing the selection filter.")
 
-        strikes = [s for s in exp_strikes if s >= short_call_strike]
-        if not strikes:
-            raise ValueError(
-                "No matching strike was found in the option chain. Consider changing the selection filter.")
-        short_call_strike = strikes[0]
-
-        exp_strikes.sort(reverse=True)
-        strikes = [s for s in exp_strikes if s <= long_put_strike]
-        if not strikes:
-            raise ValueError(
-                "No matching strike was found in the option chain. Consider changing the selection filter.")
-        long_put_strike = strikes[0]
-
-        strikes = [s for s in exp_strikes if s <= short_put_strike]
-        if not strikes:
-            raise ValueError(
-                "No matching strike was found in the option chain. Consider changing the selection filter.")
-        short_put_strike = strikes[0]
-
-        long_call_option = [o for o in option_chain.option_chain if o.option_type == OptionType.CALL
-                            and o.expiration == expiration
-                            and o.strike == long_call_strike][0]
-        short_call_option = [o for o in option_chain.option_chain if o.option_type == OptionType.CALL
-                             and o.expiration == expiration
-                             and o.strike == short_call_strike][0]
-        long_put_option = [o for o in option_chain.option_chain if o.option_type == OptionType.PUT
-                           and o.expiration == expiration
-                           and o.strike == long_put_strike][0]
-        short_put_option = [o for o in option_chain.option_chain if o.option_type == OptionType.PUT
-                            and o.expiration == expiration
-                            and o.strike == short_put_strike][0]
+        try:
+            long_call_option = next(o for o in options if o.option_type == OptionType.CALL and o.strike == long_call_strike)
+            short_call_option = next(o for o in options if o.option_type == OptionType.CALL and o.strike == short_call_strike)
+            long_put_option = next(o for o in options if o.option_type == OptionType.PUT and o.strike == long_put_strike)
+            short_put_option = next(o for o in option_chain.option_chain if o.option_type == OptionType.PUT and o.strike == short_put_strike)
+        except StopIteration:
+            raise ValueError("No options matching the requirements were found in the option chain. Consider changing the selection filter.")
 
         long_call_option.quantity, long_call_option.position_type = quantity, OptionPositionType.LONG
         short_call_option.quantity, short_call_option.position_type = quantity * -1, OptionPositionType.SHORT
@@ -148,7 +128,8 @@ class IronCondor(OptionCombination):
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        exp_strikes = option_chain.expiration_strikes[expiration]
+        exp_strikes = option_chain.expiration_strikes[expiration].copy()
+        options = [o for o in option_chain.option_chain if o.expiration == expiration].copy()
 
         # Define strike targest
         long_call_strike, short_call_strike = (inner_call_strike, inner_call_strike + spread_width) \
@@ -158,47 +139,31 @@ class IronCondor(OptionCombination):
             if option_position_type == OptionPositionType.LONG \
             else (inner_put_strike - spread_width, inner_put_strike)
 
-        # Find long call strike
-        strikes = [s for s in exp_strikes if s >= long_call_strike]
-        if not strikes:
-            raise ValueError(
-                "No matching strike was found in the option chain. Consider changing the selection filter.")
-        long_call_strike = strikes[0]
+        try:
+            # Find call strikes
+            long_call_strike = next(s for s in exp_strikes if s >= long_call_strike)
+            short_call_strike = next(s for s in exp_strikes if s >= short_call_strike)
 
-        # Find short call strike
-        strikes = [s for s in exp_strikes if s >= short_call_strike]
-        if not strikes:
-            raise ValueError(
-                "No matching strike was found in the option chain. Consider changing the selection filter.")
-        short_call_strike = strikes[0]
+            # Find put strikes
+            exp_strikes.sort(reverse=True)
+            long_put_strike = next(s for s in exp_strikes if s <= long_put_strike)
+            short_put_strike = next(s for s in exp_strikes if s <= short_put_strike)
+        except StopIteration:
+            message = "No strikes matching the requirements were found in the option chain. Consider changing the selection filter."
+            raise ValueError(message)
 
-        # Find long put strike
-        exp_strikes.sort(reverse=True)
-        strikes = [s for s in exp_strikes if s <= long_put_strike]
-        if not strikes:
+        try:
+            long_call_option = next(
+                o for o in options if o.option_type == OptionType.CALL and o.strike == long_call_strike)
+            short_call_option = next(
+                o for o in options if o.option_type == OptionType.CALL and o.strike == short_call_strike)
+            long_put_option = next(
+                o for o in options if o.option_type == OptionType.PUT and o.strike == long_put_strike)
+            short_put_option = next(o for o in options if
+                                    o.option_type == OptionType.PUT and o.strike == short_put_strike)
+        except StopIteration:
             raise ValueError(
-                "No matching strike was found in the option chain. Consider changing the selection filter.")
-        long_put_strike = strikes[0]
-
-        # Find short put strike
-        strikes = [s for s in exp_strikes if s <= short_put_strike]
-        if not strikes:
-            raise ValueError(
-                "No matching strike was found in the option chain. Consider changing the selection filter.")
-        short_put_strike = strikes[0]
-
-        long_call_option = [o for o in option_chain.option_chain if o.option_type == OptionType.CALL
-                            and o.expiration == expiration
-                            and o.strike == long_call_strike][0]
-        short_call_option = [o for o in option_chain.option_chain if o.option_type == OptionType.CALL
-                             and o.expiration == expiration
-                             and o.strike == short_call_strike][0]
-        long_put_option = [o for o in option_chain.option_chain if o.option_type == OptionType.PUT
-                           and o.expiration == expiration
-                           and o.strike == long_put_strike][0]
-        short_put_option = [o for o in option_chain.option_chain if o.option_type == OptionType.PUT
-                            and o.expiration == expiration
-                            and o.strike == short_put_strike][0]
+                "No options matching the requirements were found in the option chain. Consider changing the selection filter.")
 
         long_call_option.quantity, long_call_option.position_type = quantity, OptionPositionType.LONG
         short_call_option.quantity, short_call_option.position_type = quantity * -1, OptionPositionType.SHORT
@@ -303,7 +268,7 @@ class IronCondor(OptionCombination):
                 short_put_option.strike < long_put_option.strike) or
                 (short_call_option.strike < long_call_option.strike) and (
                         short_put_option.strike > long_put_option.strike)):
-            raise ValueError("These strike selections do not form an iron condor. A long iron condor has " \
+            raise ValueError(f"{long_call_option.strike}/{short_call_option.strike}/{long_put_option.strike}/{short_put_option.strike} These strike selections do not form an iron condor. A long iron condor has " \
                              + "the long call strike less than the short call strike, and the long put strike " \
                              + "is greater than the short put strike. A short iron " \
                              + "condor has the short call strike less than the long call strike, and the short put " \

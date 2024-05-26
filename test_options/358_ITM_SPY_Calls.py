@@ -134,8 +134,8 @@ class SPX14DayPutCredit(bt.Strategy):
             self.p.test_manager.get_current_option_chain(self.dt.to_pydatetime())
 
             try:
-                call_option = Single.get_single_position(self.p.test_manager.option_chain, expiration=self.target_expiration,
-                                                     option_type=OptionType.CALL, strike=strike)
+                call_option = Single.get_single(self.p.test_manager.option_chain, expiration=self.target_expiration,
+                                                option_type=OptionType.CALL, strike=strike)
             except Exception as e:
                 self.log(e)
                 return

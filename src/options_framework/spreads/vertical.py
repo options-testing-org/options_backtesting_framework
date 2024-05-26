@@ -32,16 +32,21 @@ class Vertical(OptionCombination):
                 message = "No matching expiration was found in the option chain. Consider changing the selection filter."
                 raise ValueError(message)
 
+        expiration_strikes = option_chain.expiration_strikes[expiration].copy()
+        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
         try:
             # Find nearest strikes
-            long_strike = next(s for s in option_chain.expiration_strikes[expiration] if s >= long_strike)
-            # Find nearest short strike
-            short_strike = next(s for s in option_chain.expiration_strikes[expiration] if s >= short_strike)
+            if option_type == OptionType.CALL:
+                long_strike = next(s for s in expiration_strikes if s >= long_strike)
+                short_strike = next(s for s in expiration_strikes if s >= short_strike)
+            else:
+                expiration_strikes.sort(reverse=True)
+                long_strike = next(s for s in expiration_strikes if s <= long_strike)
+                short_strike = next(s for s in expiration_strikes if s <= short_strike)
         except StopIteration as ex:
             message = "No matching strike was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
         long_option = next(o for o in options if o.strike == long_strike)
         long_option.quantity = quantity
         short_option = next(o for o in options if o.strike == short_strike)
@@ -74,10 +79,9 @@ class Vertical(OptionCombination):
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
+        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
         try:
             if option_type == OptionType.CALL:
-                #options.sort(key=lambda x: x.delta, reverse=True)
                 long_option = next(o for o in options if o.delta <= long_delta)
                 short_option = next(o for o in options if o.delta <= short_delta)
             else:
@@ -125,8 +129,8 @@ class Vertical(OptionCombination):
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
-        strikes = [s for s in option_chain.expiration_strikes[expiration]]
+        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
+        strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
         try:
             if option_type == OptionType.CALL:
                 option = next(o for o in options if o.delta <= delta)
