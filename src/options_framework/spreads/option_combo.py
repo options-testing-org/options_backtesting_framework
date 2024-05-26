@@ -19,7 +19,7 @@ class OptionCombination(ABC):
     options: list[Option]
     option_combination_type: OptionCombinationType = field(default=None)
     option_position_type: OptionPositionType = field(default=None)
-    quantity: int = field(default=None)
+    quantity: int = field(default=1)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
     user_defined: dict = field(default_factory=lambda: {})
 

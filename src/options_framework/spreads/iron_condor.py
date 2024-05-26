@@ -60,12 +60,12 @@ class IronCondor(OptionCombination):
             raise ValueError(message)
 
         # Find nearest matching expiration
-        expirations = [e for e in option_chain.expirations if e >= expiration]
+        try:
+            expiration = next(e for e in option_chain.expirations if e >= expiration)
+        except StopIteration:
+            message = "No matching expiration was found in the option chain. Consider changing the selection filter."
+            raise ValueError(message)
 
-        if not expirations:
-            raise ValueError(
-                "No matching expiration was found in the option chain. Consider changing the selection filter.")
-        expiration = expirations[0]
         exp_strikes = option_chain.expiration_strikes[expiration]
 
         # Find nearest long call matching strike
@@ -142,12 +142,12 @@ class IronCondor(OptionCombination):
         """
 
         # Find nearest matching expiration
-        expirations = [e for e in option_chain.expirations if e >= expiration]
+        try:
+            expiration = next(e for e in option_chain.expirations if e >= expiration)
+        except StopIteration:
+            message = "No matching expiration was found in the option chain. Consider changing the selection filter."
+            raise ValueError(message)
 
-        if not expirations:
-            raise ValueError(
-                "No matching expiration was found in the option chain. Consider changing the selection filter.")
-        expiration = expirations[0]
         exp_strikes = option_chain.expiration_strikes[expiration]
 
         # Define strike targest
@@ -236,12 +236,11 @@ class IronCondor(OptionCombination):
                 """
 
         # Find nearest matching expiration
-        expirations = [e for e in option_chain.expirations if e >= expiration]
-
-        if not expirations:
-            raise ValueError(
-                "No matching expiration was found in the option chain. Consider changing the selection filter.")
-        expiration = expirations[0]
+        try:
+            expiration = next(e for e in option_chain.expirations if e >= expiration)
+        except StopIteration:
+            message = "No matching expiration was found in the option chain. Consider changing the selection filter."
+            raise ValueError(message)
 
         options = [o for o in option_chain.option_chain if o.expiration == expiration]
         options.sort(key=lambda x: x.delta, reverse=True)
@@ -351,7 +350,7 @@ class IronCondor(OptionCombination):
         quantity = quantity * -1 if quantity is not None else None
         self.short_call_option.open_trade(quantity=quantity if quantity else self.short_call_option.quantity)
         self.short_put_option.open_trade(quantity=quantity if quantity else self.short_put_option.quantity)
-        super().open_trade(quantity=quantity, **kwargs)
+        super(IronCondor, self).open_trade(quantity=quantity, **kwargs)
 
     def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = abs(quantity) if quantity else None
@@ -365,7 +364,7 @@ class IronCondor(OptionCombination):
         self.short_put_option.close_trade(
             quantity=quantity if quantity is not None else self.short_put_option.quantity)
         self.quantity -= quantity
-        super().close_trade(quantity=quantity, **kwargs)
+        super(IronCondor, self).close_trade(quantity=quantity, **kwargs)
 
     @property
     def max_profit(self) -> float | None:
