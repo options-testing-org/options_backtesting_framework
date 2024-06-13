@@ -32,13 +32,21 @@ class OptionCombination(ABC):
 
     @property
     def current_value(self) -> float:
-        current_value = sum([o.current_value for o in self.options])
+        current_value = sum(o.current_value for o in self.options)
         return current_value
 
     @property
-    def trade_value(self):
+    def trade_value(self) -> float:
         opening_value = sum([o.trade_value for o in self.options])
         return opening_value
+
+    @property
+    def closed_value(self) -> float | None:
+        if all(o for o in self.options if o.trade_close_info is not None):
+            closed_value = sum(o.trade_close_info.premium for o in self.options)
+            return closed_value
+        else:
+            return None
 
     @abstractmethod
     def update_quantity(self, quantity: int):
@@ -96,6 +104,10 @@ class OptionCombination(ABC):
     @abstractmethod
     def get_trade_price(self) -> float | None:
         pass
+
+    # @abstractmethod
+    # def get_closing_price(self) -> float | None:
+    #     pass
 
     def get_open_datetime(self) -> datetime.datetime | None:
         first_option = self.options[0]

@@ -165,7 +165,6 @@ class Vertical(OptionCombination):
                             option_position_type=option_position_type, quantity=quantity)
         return vertical
 
-
     short_option: Option = field(init=False, default=None)
     long_option: Option = field(init=False, default=None)
 
@@ -196,6 +195,7 @@ class Vertical(OptionCombination):
                 + f'{strikes[0]}/{strikes[1]} ' \
                 + f'Expiring {self.expiration}'
         return s
+
     def update_quantity(self, quantity: int):
         self.quantity = quantity
         self.long_option.quantity = abs(quantity)
@@ -275,3 +275,24 @@ class Vertical(OptionCombination):
             short_price = decimalize_2(self.short_option.trade_open_info.price)
             trade_price = long_price - short_price
             return float(trade_price)
+
+    @property
+    def closed_value(self) -> float | None:
+        closed_value = super(Vertical, self).closed_value
+        if all(OptionStatus.TRADE_IS_CLOSED in o.status for o in self.options):
+            if closed_value > self.max_profit:
+                closed_value = self.max_profit
+            elif closed_value < self.max_loss * -1:
+                closed_value = self.max_loss * -1
+
+        return closed_value
+
+    def get_profit_loss(self) -> float:
+        profit_loss = super(Vertical, self).get_profit_loss()
+        if all(OptionStatus.TRADE_IS_CLOSED in o.status for o in self.options):
+            closed_value = self.closed_value
+            if closed_value > self.max_profit or closed_value < self.max_loss:
+                fees = self.get_fees()
+                profit_loss = closed_value + fees
+
+        return profit_loss

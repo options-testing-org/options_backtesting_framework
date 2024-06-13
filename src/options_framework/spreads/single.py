@@ -110,6 +110,10 @@ class Single(OptionCombination):
         return self.option.strike
 
     @property
+    def price(self) -> float:
+        return self.option.price
+
+    @property
     def required_margin(self) -> float:
         if not OptionStatus.TRADE_IS_OPEN in self.option.status:
             return None
@@ -150,3 +154,4 @@ class Single(OptionCombination):
             return None
         else:
             return self.option.trade_open_info.price
+

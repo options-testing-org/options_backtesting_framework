@@ -305,6 +305,7 @@ class Option(Dispatcher):
         if self.quantity == 0:
             self.status &= ~OptionStatus.TRADE_IS_OPEN
             self.status |= OptionStatus.TRADE_IS_CLOSED
+            self.price = float(close_price)
         else:
             self.status |= OptionStatus.TRADE_PARTIALLY_CLOSED
 
