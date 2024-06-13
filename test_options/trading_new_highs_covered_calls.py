@@ -16,7 +16,13 @@ from options_framework.config import settings
 from options_framework.option_types import OptionType, SelectFilter, FilterRange
 from options_framework.test_manager import OptionTestManager
 
-from helpers import PandasData_CalculatedFields
+class PandasData_CalculatedFields(bt.feeds.PandasData):
+
+    lines = ('open', 'high', 'low', 'close', 'volume', 'crsi', 'atr')
+    params = (('open', -1), ('high', -1), ('low', -1), ('close', -1), ('volume', -1), ('crsi', -1), ('atr', -1))
+
+    datafields = bt.feeds.PandasData.datafields + (['open', 'high', 'low', 'close', 'volume', 'crsi', 'atr'])
+
 
 def get_connection(database):
     """
@@ -37,11 +43,11 @@ def get_liquid_options_query(startdate: datetime.date, enddate: datetime.date):
     return query
 
 def get_data_query(symbol_id, startdate: datetime.date, enddate: datetime.date):
-    query = 'select quotedate, symbol, adjustedopen as [open], adjustedhigh as [high], ' \
+    query = 'select quote_date, symbol, adjustedopen as [open], adjustedhigh as [high], ' \
             + 'adjustedlow as [low], adjustedclose as [close], volume, crsi, atr ' \
             + 'from stock_prices sp inner join symbols s on sp.symbol_id = s.id ' \
-            + f'where symbol_id={symbol_id} and quotedate >= CONVERT(datetime2, \'{startdate}\') ' \
-            + f' and quotedate <= CONVERT(datetime2, \'{enddate}\') order by quotedate'
+            + f'where symbol_id={symbol_id} and quote_date >= CONVERT(datetime2, \'{startdate}\') ' \
+            + f' and quote_date <= CONVERT(datetime2, \'{enddate}\') order by quote_date'
     return query
 
 def get_symbol_dfs(df, startdate: datetime.date, enddate: datetime.date):
@@ -49,9 +55,12 @@ def get_symbol_dfs(df, startdate: datetime.date, enddate: datetime.date):
     all_symbols.sort()
     dfs = []
     options_db_connection = get_connection(settings.database)
+    ### remove after testing
+    all_symbols = [309, 7283]
+    ###
     for symbol_id in all_symbols:
         symbol_df = pd.read_sql(get_data_query(symbol_id, startdate, enddate), options_db_connection,
-                                parse_dates='quotedate', index_col='quotedate')
+                                parse_dates='quote_date', index_col='quote_date')
         symbol_df['volume'].ffill(axis=0, inplace=True)
         symbol_df.dropna(inplace=True)
         if len(symbol_df) >= 252:
@@ -162,7 +171,7 @@ class TradingNewHighsStrategy(bt.Strategy):
 
 if __name__ == "__main__":
     settings.database = 'options_db'
-    settings.data_format_settings = 'daily_options_db_settings.toml'
+    settings.data_format_settings = 'sql_server_dn_settings.toml'
     settings.incur_fees = True
     pp(settings.as_dict())
     t1 = time.time()
@@ -180,6 +189,12 @@ if __name__ == "__main__":
 
     liquid_df = pd.read_sql(get_liquid_options_query(startdate, enddate), cnx, parse_dates='quote_date', index_col=['quote_date'])
     data_dfs = get_symbol_dfs(liquid_df, startdate, enddate)
+    options_select_filter = SelectFilter(
+        option_type=OptionType.CALL,
+        expiration_dte=FilterRange(low=25, high=35),
+        strike_offset=FilterRange(low=100, high=100))
+    test_manager = OptionTestManager(start_datetime=startdate, end_datetime=enddate, select_filter=options_select_filter,
+                                     starting_cash=starting_cash)
 
     cerebro = bt.Cerebro()
     cerebro.broker.setcash(starting_cash)

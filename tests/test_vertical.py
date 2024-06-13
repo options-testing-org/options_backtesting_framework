@@ -76,7 +76,7 @@ def test_vertical_spread_updates():
     option_chain = MockSPXOptionChain()
     data_loader = MockSPXDataLoader(start=datetime.datetime(2016, 3, 1, 9, 31),
                                     end=datetime.datetime(2016, 3, 2, 16, 15),
-                                    select_filter=SelectFilter(symbol='SPXW'),
+                                    select_filter=SelectFilter(),
                                     extended_option_attributes=[])
     spread_width = 30
     vertical_spread = Vertical.get_vertical(option_chain=option_chain, expiration=expiration,

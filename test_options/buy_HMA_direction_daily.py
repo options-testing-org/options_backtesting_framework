@@ -123,7 +123,7 @@ if __name__ == "__main__":
     connection = pyodbc.connect(connection_string)
 
     query = get_price_data_query(startdate, enddate)
-    df = pd.read_sql(query, connection, index_col='datetime', parse_dates=True)
+    df = pd.read_sql(query, connection, index_col='datetime', parse_dates='datetime')
     connection.close()
 
     options_filter = SelectFilter(symbol='SPXW',

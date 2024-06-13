@@ -1,17 +1,23 @@
 import datetime
 
+from pandas import DataFrame
 from dataclasses import dataclass, field
 from options_framework.option import Option
 from options_framework.utils.helpers import distinct
 
 @dataclass
 class OptionChain:
+    symbol: str
     quote_datetime: datetime.datetime = field(init=False)
     option_chain: list = field(init=False, default_factory=list, repr=False)
     expirations: list = field(init=False, default_factory=list, repr=False)
     expiration_strikes: dict = field(init=False, default_factory=lambda: {}, repr=False)
+    data_cache: DataFrame | None = None
+    last_loaded_date: datetime.datetime | None = None
 
-    def on_option_chain_loaded(self, quote_datetime: datetime.datetime, option_chain: list[Option]):
+    def get_option_chain(self, ):
+
+    def on_option_chain_loaded(self, quote_datetime: datetime.datetime, options: list[Option]):
         self.quote_datetime = quote_datetime
         self.option_chain = option_chain
         self.expirations = list(distinct([option.expiration for option in option_chain]))

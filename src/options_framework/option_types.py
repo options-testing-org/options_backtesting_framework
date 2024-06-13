@@ -70,7 +70,6 @@ class FilterRange:
 
 @dataclass
 class SelectFilter:
-    symbol: str
     option_type: OptionType = None
     expiration_dte: FilterRange = field(default_factory=lambda: FilterRange())
     strike_offset: FilterRange = field(default_factory=lambda: FilterRange())
@@ -81,3 +80,4 @@ class SelectFilter:
     rho_range: FilterRange = field(default_factory=lambda: FilterRange())
     open_interest_range: FilterRange = field(default_factory=lambda: FilterRange())
     implied_volatility_range: FilterRange = field(default_factory=lambda: FilterRange())
+    extended_option_fields: list = field(default_factory=lambda: [])

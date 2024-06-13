@@ -44,7 +44,7 @@ def test_open_single_option_loads_option_update_cache():
     option_chain = MockSPXOptionChain()
     data_loader = MockSPXDataLoader(start=datetime.datetime(2016, 3, 1, 9, 31),
                                     end=datetime.datetime(2016, 3, 2, 16, 15),
-                                    select_filter=SelectFilter(symbol='SPXW'),
+                                    select_filter=SelectFilter(),
                                     extended_option_attributes=[])
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
                                       option_type=OptionType.PUT,

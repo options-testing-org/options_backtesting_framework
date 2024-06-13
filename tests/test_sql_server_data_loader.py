@@ -10,16 +10,12 @@ from options_framework.config import settings
 
 @pytest.fixture
 def set_settings():
-    original_value_1 = settings.DATA_FORMAT_SETTINGS
-    original_value_2 = settings.DATA_LOADER_TYPE
     settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
     settings.DATA_FORMAT_SETTINGS = 'sql_server_cboe_settings.toml'
     start_date = datetime.datetime(2016, 3, 1, 9, 31)
     end_date = datetime.datetime(2016, 3, 1, 9, 32)
-    select_filter = SelectFilter(symbol='SPXW')
-    yield start_date, end_date, select_filter
-    settings.DATA_LOADER_TYPE = original_value_1
-    settings.DATA_FORMAT_SETTINGS = original_value_2
+    select_filter = SelectFilter()
+    return start_date, end_date, select_filter
 
 
 def test_sql_load_from_database(set_settings):

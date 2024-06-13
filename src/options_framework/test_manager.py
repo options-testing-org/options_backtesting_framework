@@ -17,10 +17,10 @@ class OptionTestManager:
     select_filter: SelectFilter
     starting_cash: float
     extended_option_attributes: list = field(default_factory=lambda: [])
-    option_chain: OptionChain = field(init=False, default_factory=lambda: OptionChain())
+    #option_chain: OptionChain = field(init=False, default_factory=lambda: OptionChain())
+    option_chains: dict = field(default_factory=lambda: {})
     data_loader: DataLoader = field(init=False, default=None)
     portfolio: OptionPortfolio = field(init=False, default=None)
-    expirations: list = field(init=False, default_factory=lambda: [])
 
     def __post_init__(self):
         self.portfolio = OptionPortfolio(self.starting_cash)
@@ -31,9 +31,13 @@ class OptionTestManager:
         self.data_loader = SQLServerDataLoader(start=self.start_datetime, end=self.end_datetime,
                                                select_filter=self.select_filter,
                                                extended_option_attributes=self.extended_option_attributes)
-        self.data_loader.bind(option_chain_loaded=self.option_chain.on_option_chain_loaded)
+        #self.data_loader.bind(option_chain_loaded=self.option_chain.on_option_chain_loaded)
         self.portfolio.bind(new_position_opened=self.data_loader.on_options_opened)
-        self.expirations = self.data_loader.get_expirations()
 
-    def get_current_option_chain(self, quote_datetime: datetime.datetime):
+    def get_option_chain(self, symbol: str, quote_datetime: datetime.datetime):
+        if symbol in self.option_chains.keys():
+            option_chain = self.option_chains[symbol]
+        else:
+            option_chain = OptionChain(symbol=symbol)
+            self.option_chains[symbol] = option_chain
         self.data_loader.next_option_chain(quote_datetime=quote_datetime)
