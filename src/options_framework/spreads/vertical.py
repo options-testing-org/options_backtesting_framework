@@ -32,16 +32,21 @@ class Vertical(OptionCombination):
                 message = "No matching expiration was found in the option chain. Consider changing the selection filter."
                 raise ValueError(message)
 
+        expiration_strikes = option_chain.expiration_strikes[expiration].copy()
+        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
         try:
             # Find nearest strikes
-            long_strike = next(s for s in option_chain.expiration_strikes[expiration] if s >= long_strike)
-            # Find nearest short strike
-            short_strike = next(s for s in option_chain.expiration_strikes[expiration] if s >= short_strike)
+            if option_type == OptionType.CALL:
+                long_strike = next(s for s in expiration_strikes if s >= long_strike)
+                short_strike = next(s for s in expiration_strikes if s >= short_strike)
+            else:
+                expiration_strikes.sort(reverse=True)
+                long_strike = next(s for s in expiration_strikes if s <= long_strike)
+                short_strike = next(s for s in expiration_strikes if s <= short_strike)
         except StopIteration as ex:
             message = "No matching strike was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
         long_option = next(o for o in options if o.strike == long_strike)
         long_option.quantity = quantity
         short_option = next(o for o in options if o.strike == short_strike)
@@ -74,10 +79,9 @@ class Vertical(OptionCombination):
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
+        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
         try:
             if option_type == OptionType.CALL:
-                #options.sort(key=lambda x: x.delta, reverse=True)
                 long_option = next(o for o in options if o.delta <= long_delta)
                 short_option = next(o for o in options if o.delta <= short_delta)
             else:
@@ -125,8 +129,8 @@ class Vertical(OptionCombination):
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration]
-        strikes = [s for s in option_chain.expiration_strikes[expiration]]
+        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
+        strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
         try:
             if option_type == OptionType.CALL:
                 option = next(o for o in options if o.delta <= delta)
@@ -161,7 +165,6 @@ class Vertical(OptionCombination):
                             option_position_type=option_position_type, quantity=quantity)
         return vertical
 
-
     short_option: Option = field(init=False, default=None)
     long_option: Option = field(init=False, default=None)
 
@@ -192,6 +195,7 @@ class Vertical(OptionCombination):
                 + f'{strikes[0]}/{strikes[1]} ' \
                 + f'Expiring {self.expiration}'
         return s
+
     def update_quantity(self, quantity: int):
         self.quantity = quantity
         self.long_option.quantity = abs(quantity)
@@ -271,3 +275,24 @@ class Vertical(OptionCombination):
             short_price = decimalize_2(self.short_option.trade_open_info.price)
             trade_price = long_price - short_price
             return float(trade_price)
+
+    @property
+    def closed_value(self) -> float | None:
+        closed_value = super(Vertical, self).closed_value
+        if all(OptionStatus.TRADE_IS_CLOSED in o.status for o in self.options):
+            if closed_value > self.max_profit:
+                closed_value = self.max_profit
+            elif closed_value < self.max_loss * -1:
+                closed_value = self.max_loss * -1
+
+        return closed_value
+
+    def get_profit_loss(self) -> float:
+        profit_loss = super(Vertical, self).get_profit_loss()
+        if all(OptionStatus.TRADE_IS_CLOSED in o.status for o in self.options):
+            closed_value = self.closed_value
+            if closed_value > self.max_profit or closed_value < self.max_loss:
+                fees = self.get_fees()
+                profit_loss = closed_value + fees
+
+        return profit_loss

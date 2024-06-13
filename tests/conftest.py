@@ -4,10 +4,9 @@ import pandas as pd
 from pandas import DataFrame
 from pprint import pprint as pp
 
-from options_framework.data.sql_data_loader import SQLServerDataLoader
-from options_framework.option_chain import OptionChain
-from options_framework.option_types import OptionType, SelectFilter, FilterRange
+from options_framework.option_types import OptionType
 from options_framework.option import Option
+
 
 @pytest.fixture
 def test_expiration():
@@ -155,70 +154,68 @@ def dump(o):
     op_inst += f'vega={o.vega}, rho={o.rho}, open_interest={o.open_interest}, implied_volatility={o.implied_volatility}),'
     print('    ', op_inst)
 
-@pytest.fixture()
-def spx_option_chain():
-    from options_framework.config import settings
-    original_value_1 = settings.DATA_LOADER_TYPE
-    settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
-    settings.DATA_FORMAT_SETTINGS = 'sql_server_cboe_settings.toml'
-    start_date = datetime.datetime(2016, 3, 1, 9, 31)
-    end_date = datetime.datetime(2016, 3, 2, 16, 15)
-    select_filter = SelectFilter(symbol="SPXW",
-                                 expiration_dte=FilterRange(high=3),
-                                 strike_offset=FilterRange(low=50, high=50))
-    data_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter,
-                                      extended_option_attributes=['delta','gamma','theta','vega','rho','open_interest','implied_volatility'])
-    data_loader.load_cache(start_date)
-    option_chain = OptionChain()
-    data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
-    quote_datetime = datetime.datetime(2016, 3, 1, 9, 31)
-    data_loader.get_option_chain(quote_datetime=quote_datetime)
-    yield option_chain, data_loader
-    settings.DATA_LOADER_TYPE = original_value_1
+#@pytest.fixture()
+# def spx_option_chain():
+#     from options_framework.config import settings
+#     original_value_1 = settings.DATA_LOADER_TYPE
+#     settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
+#     settings.DATA_FORMAT_SETTINGS = 'sql_server_cboe_settings.toml'
+#     start_date = datetime.datetime(2016, 3, 1, 9, 31)
+#     end_date = datetime.datetime(2016, 3, 2, 16, 15)
+#     select_filter = SelectFilter(symbol="SPXW",
+#                                  expiration_dte=FilterRange(high=3),
+#                                  strike_offset=FilterRange(low=50, high=50))
+#     data_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter,
+#                                       extended_option_attributes=['delta','gamma','theta','vega','rho','open_interest','implied_volatility'])
+#     data_loader.load_cache(start_date)
+#     option_chain = OptionChain()
+#     data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
+#     quote_datetime = datetime.datetime(2016, 3, 1, 9, 31)
+#     data_loader.get_option_chain(quote_datetime=quote_datetime)
+#     yield option_chain, data_loader
+#     settings.DATA_LOADER_TYPE = original_value_1
 
-@pytest.fixture()
-def spx_option_chain_():
-    pass
-
-@pytest.fixture()
-def spx_option_chain_puts():
-    from options_framework.config import settings
-    original_value_1 = settings.DATA_LOADER_TYPE
-    settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
-    settings.DATA_FORMAT_SETTINGS = 'sql_server_cboe_settings.toml'
-    start_date = datetime.datetime(2016, 3, 1, 9, 31)
-    end_date = datetime.datetime(2016, 3, 1, 9, 32)
-    select_filter = SelectFilter(symbol="SPXW", option_type=OptionType.PUT,
-                                 expiration_dte=FilterRange(0, 31),
-                                 strike_offset=FilterRange(low=100, high=100))
-    data_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter)
-    data_loader.load_cache(start_date)
-    option_chain = OptionChain()
-    data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
-    quote_datetime = datetime.datetime(2016, 3, 1, 9, 31)
-    data_loader.get_option_chain(quote_datetime=quote_datetime)
-    yield option_chain, data_loader
-    settings.DATA_LOADER_TYPE = original_value_1
-
-@pytest.fixture()
-def spx_option_chain_calls():
-    from options_framework.config import settings
-    original_value_1 = settings.DATA_LOADER_TYPE
-    settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
-    settings.DATA_FORMAT_SETTINGS = 'sql_server_cboe_settings.toml'
-    start_date = datetime.datetime(2016, 3, 1, 9, 31)
-    end_date = datetime.datetime(2016, 3, 1, 9, 35)
-    select_filter = SelectFilter(symbol="SPXW", option_type=OptionType.CALL,
-                                 expiration_dte=FilterRange(0, 31),
-                                 strike_offset=FilterRange(low=100, high=100))
-    data_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter)
-    data_loader.load_cache(start_date)
-    option_chain = OptionChain()
-    data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
-    quote_datetime = datetime.datetime(2016, 3, 1, 9, 31)
-    data_loader.get_option_chain(quote_datetime=quote_datetime)
-    yield option_chain, data_loader
-    settings.DATA_LOADER_TYPE = original_value_1
+#
+#
+# @pytest.fixture()
+# def spx_option_chain_puts():
+#     from options_framework.config import settings
+#     original_value_1 = settings.DATA_LOADER_TYPE
+#     settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
+#     settings.DATA_FORMAT_SETTINGS = 'sql_server_cboe_settings.toml'
+#     start_date = datetime.datetime(2016, 3, 1, 9, 31)
+#     end_date = datetime.datetime(2016, 3, 1, 9, 32)
+#     select_filter = SelectFilter(symbol="SPXW", option_type=OptionType.PUT,
+#                                  expiration_dte=FilterRange(0, 31),
+#                                  strike_offset=FilterRange(low=100, high=100))
+#     data_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter)
+#     data_loader.load_cache(start_date)
+#     option_chain = OptionChain()
+#     data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
+#     quote_datetime = datetime.datetime(2016, 3, 1, 9, 31)
+#     data_loader.get_option_chain(quote_datetime=quote_datetime)
+#     yield option_chain, data_loader
+#     settings.DATA_LOADER_TYPE = original_value_1
+#
+# @pytest.fixture()
+# def spx_option_chain_calls():
+#     from options_framework.config import settings
+#     original_value_1 = settings.DATA_LOADER_TYPE
+#     settings.DATA_LOADER_TYPE = "SQL_DATA_LOADER"
+#     settings.DATA_FORMAT_SETTINGS = 'sql_server_cboe_settings.toml'
+#     start_date = datetime.datetime(2016, 3, 1, 9, 31)
+#     end_date = datetime.datetime(2016, 3, 1, 9, 35)
+#     select_filter = SelectFilter(symbol="SPXW", option_type=OptionType.CALL,
+#                                  expiration_dte=FilterRange(0, 31),
+#                                  strike_offset=FilterRange(low=100, high=100))
+#     data_loader = SQLServerDataLoader(start=start_date, end=end_date, select_filter=select_filter)
+#     data_loader.load_cache(start_date)
+#     option_chain = OptionChain()
+#     data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
+#     quote_datetime = datetime.datetime(2016, 3, 1, 9, 31)
+#     data_loader.get_option_chain(quote_datetime=quote_datetime)
+#     yield option_chain, data_loader
+#     settings.DATA_LOADER_TYPE = original_value_1
 
 def create_update_cache(update_values: list): # quote_date, spot_price, bid, ask, price
     updates = []

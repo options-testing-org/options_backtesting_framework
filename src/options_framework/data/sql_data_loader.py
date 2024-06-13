@@ -12,7 +12,7 @@ from multiprocessing import Pool
 from options_framework.config import settings
 from options_framework.data.data_loader import DataLoader
 from options_framework.option import Option
-from options_framework.option_types import OptionType, SelectFilter
+from options_framework.option_types import OptionType, SelectFilter, FilterRange
 
 def create_option(quote_datetime, row, fields_list):
     option = Option(
@@ -56,7 +56,7 @@ class SQLServerDataLoader(DataLoader):
         expirations = self._get_expirations_list()
         self.expirations = [x.to_pydatetime().date() for x in list(expirations['expiration'])]
 
-    def load_cache(self, start: datetime.datetime):
+    def load_cache(self, start: datetime.datetime) -> None:
         self.start_load_date = start
         start_loc = self.datetimes_list.index.get_loc(str(start))
         end_loc = start_loc + settings.SQL_DATA_LOADER_SETTINGS.buffer_size
@@ -182,13 +182,21 @@ class SQLServerDataLoader(DataLoader):
         symbol = self.select_filter.symbol
         start_date = self.start_datetime
         end_date = self.end_datetime
-        query = "select distinct expiration "
-        query += settings.SELECT_OPTIONS_QUERY['from']
-        query += (settings.SELECT_OPTIONS_QUERY['where']
-                  .replace('{symbol}', self.select_filter.symbol)
-                  .replace('{start_date}', str(start_date))
-                  .replace('{end_date}', str(end_date)))
-        query += " order by expiration"
+        exp_start = self.select_filter.expiration_dte.low
+        exp_end = self.select_filter.expiration_dte.high
+        start_date += datetime.timedelta(days=exp_start)
+        end_date += datetime.timedelta(days=exp_end)
+        query = settings.SELECT_OPTIONS_QUERY['select_expirations_list_query'] \
+                .replace('{symbol}', symbol) \
+                .replace('{start_date}', str(start_date)) \
+                .replace('{end_date}', str(end_date))
+        # query = "select distinct expiration "
+        # query += settings.SELECT_OPTIONS_QUERY['from']
+        # query += (settings.SELECT_OPTIONS_QUERY['where']
+        #           .replace('{symbol}', self.select_filter.symbol)
+        #           .replace('{start_date}', str(start_date))
+        #           .replace('{end_date}', str(end_date)))
+        # query += " order by expiration"
         with self.sql_alchemy_engine.connect() as conn:
             df = pd.read_sql(query, conn, parse_dates=True)
         return df

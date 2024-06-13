@@ -18,6 +18,10 @@ class OptionPortfolio(Dispatcher):
     positions: Optional[dict] = field(init=False, default_factory=lambda: {})
     closed_positions: Optional[dict] = field(init=False, default_factory=lambda: {})
     portfolio_risk: float = field(init=False, default=0.0)
+    close_values: list = field(init=False, default_factory=lambda: [])
+
+    def __post_init__(self):
+        pass
 
     def __repr__(self) -> str:
         return f'OptionPortfolio(cash={self.cash: .2f}, portfolio_value={self.portfolio_value:.2f} open positions: {len(self.positions)}'
@@ -43,13 +47,28 @@ class OptionPortfolio(Dispatcher):
     def close_position(self, option_position: OptionCombination, quantity: int = None, **kwargs: dict):
         quantity = quantity if quantity is not None else option_position.quantity
         option_position.close_trade(quantity=quantity, **kwargs)
+        closing_value = sum(o.trade_close_records[-1].premium for o in option_position.options)
+
+        # Adjust portfolio cash if the closing value is greater than the max profit for this position
+        if option_position.max_profit:
+            if closing_value > option_position.max_profit:
+                self.cash -= (closing_value - option_position.max_profit)
+
+        # Adjust portfolio cash if the closing value is less than the max loss for this position
+        if option_position.max_loss:
+            max_loss = option_position.max_loss * -1
+            if closing_value < max_loss:
+                self.cash -= closing_value - max_loss
+
         self.closed_positions[option_position.position_id] = option_position
         del self.positions[option_position.position_id]
         self.emit("position_closed", option_position)
         [option.unbind(self) for option in option_position.options]
 
-    def next(self, quote_datetime: datetime.datetime):
+    def next(self, quote_datetime: datetime.datetime, *args):
         self.emit('next', quote_datetime)
+        values = [quote_datetime, self.portfolio_value] + list(args)
+        self.close_values.append(values)
 
     @property
     def portfolio_value(self):

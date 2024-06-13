@@ -9,4 +9,4 @@ apply_slippage_exit=false
 data_format_settings = "sql_server_cboe_settings.toml"
 data_loader_type = 'SQL_DATA_LOADER'
 
-
+TEST_DATA_DIR = "C:\\_code\\options_backtesting_framework\\tests\\test_data"

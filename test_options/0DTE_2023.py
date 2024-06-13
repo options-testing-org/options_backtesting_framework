@@ -118,16 +118,16 @@ class SPX0DTE(bt.Strategy):
                 # self.log('sell call credit spread')
                 self.p.test_manager.get_current_option_chain(self.dt.to_pydatetime())
 
-                short_option = Single.get_single_position_by_delta(option_chain=self.option_chain,
-                                                                   expiration=self.current_date,
-                                                                   option_type=OptionType.CALL,
-                                                                   option_position_type=OptionPositionType.SHORT,
-                                                                   delta=self.p.delta)
-                long_option = Single.get_single_position(option_chain=self.option_chain,
-                                                         expiration=self.current_date,
-                                                         option_type=OptionType.CALL,
-                                                         option_position_type=OptionPositionType.LONG,
-                                                         strike=short_option.strike + self.p.spread_width)
+                short_option = Single.get_single_by_delta(option_chain=self.option_chain,
+                                                          expiration=self.current_date,
+                                                          option_type=OptionType.CALL,
+                                                          option_position_type=OptionPositionType.SHORT,
+                                                          delta=self.p.delta)
+                long_option = Single.get_single(option_chain=self.option_chain,
+                                                expiration=self.current_date,
+                                                option_type=OptionType.CALL,
+                                                option_position_type=OptionPositionType.LONG,
+                                                strike=short_option.strike + self.p.spread_width)
                 credit_spread = Vertical(options=[long_option.option, short_option.option],
                                          option_combination_type=OptionCombinationType.VERTICAL,
                                          option_position_type=OptionPositionType.SHORT, quantity=-1)
@@ -148,16 +148,16 @@ class SPX0DTE(bt.Strategy):
                 # self.log('sell put credit spread')
                 self.p.test_manager.get_current_option_chain(self.dt.to_pydatetime())
                 put_delta = self.p.delta * -1
-                short_option = Single.get_single_position_by_delta(option_chain=self.option_chain,
-                                                                   expiration=self.current_date,
-                                                                   option_type=OptionType.PUT,
-                                                                   option_position_type=OptionPositionType.SHORT,
-                                                                   delta=put_delta)
-                long_option = Single.get_single_position(option_chain=self.option_chain,
-                                                         expiration=self.current_date,
-                                                         option_type=OptionType.PUT,
-                                                         option_position_type=OptionPositionType.LONG,
-                                                         strike=short_option.strike - self.p.spread_width)
+                short_option = Single.get_single_by_delta(option_chain=self.option_chain,
+                                                          expiration=self.current_date,
+                                                          option_type=OptionType.PUT,
+                                                          option_position_type=OptionPositionType.SHORT,
+                                                          delta=put_delta)
+                long_option = Single.get_single(option_chain=self.option_chain,
+                                                expiration=self.current_date,
+                                                option_type=OptionType.PUT,
+                                                option_position_type=OptionPositionType.LONG,
+                                                strike=short_option.strike - self.p.spread_width)
                 credit_spread = Vertical(options=[long_option.option, short_option.option],
                                          option_combination_type=OptionCombinationType.VERTICAL,
                                          option_position_type=OptionPositionType.SHORT, quantity=-1)
