@@ -11,7 +11,7 @@ from pydispatch import Dispatcher
 from pandas import DataFrame
 
 class DataLoader(ABC, Dispatcher):
-    _events_ = ['option_chain_loaded', 'expirations_loaded']
+    _events_ = ['option_chain_loaded']
 
     def __init__(self, *, start: datetime.datetime | datetime.date, end: datetime.datetime | datetime.date,
                  select_filter: SelectFilter, extended_option_attributes: list[str] = None):
@@ -24,26 +24,18 @@ class DataLoader(ABC, Dispatcher):
 
         super().__init__()
 
-    def next_option_chain(self, option_chain: OptionChain, quote_datetime: datetime.datetime | datetime.date):
-        if option_chain.last_loaded_date < quote_datetime:
-            self.load_cache(quote_datetime)
-        self.get_option_chain(quote_datetime)
 
     @abstractmethod
-    def load_cache(self, quote_datetime: datetime.datetime):
+    def load_option_chain_data(self, symbol: str, start: datetime.datetime) -> DataFrame:
         pass
 
-    def on_option_chain_loaded(self, quote_datetime: datetime.datetime | datetime.date,
-                               option_chain: list[Option]):
-        self.emit('option_chain_loaded', quote_datetime=quote_datetime, option_chain=option_chain)
+    def on_option_chain_loaded(self, symbol: str, quote_datetime: datetime.datetime | datetime.date,
+                               options_data : DataFrame):
+        self.emit('option_chain_loaded', symbol=symbol, quote_datetime=quote_datetime, options_data=options_data)
 
-    # @abstractmethod
-    # def get_option_chain(self, quote_datetime: datetime.datetime, symbol: str) -> None:
-    #     pass
-
-    # @abstractmethod
-    # def get_expirations(self):
-    #     pass
+    @abstractmethod
+    def get_expirations(self, symbol: str) -> list:
+        pass
 
     @abstractmethod
     def on_options_opened(self, portfolio, options: list[Option]) -> None:

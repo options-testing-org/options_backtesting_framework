@@ -5,6 +5,8 @@ from pathlib import Path
 from options_framework.data.data_loader import DataLoader
 from options_framework.config import settings
 from pydispatch import Dispatcher
+
+from options_framework.option_types import SelectFilter
 from test_data.spx_test_options import *
 
 
@@ -17,36 +19,29 @@ class MockPortfolio(Dispatcher):
             self.bind(next=o.next_update)
         self.emit('new_position_opened', self, position.options)
 
-    def next(self, quote_datetime: datetime.datetime):
+    def next(self, quote_datetime: datetime.datetime, *args):
         self.emit('next', quote_datetime)
 
 
-#@dataclass
 class MockSPXOptionChain:
     quote_datetime: datetime.datetime = datetime.datetime(2016, 3, 1, 9, 31)
     option_chain: list = t1_options
     expirations: list = expirations
     expiration_strikes: dict = expiration_strikes
 
+
 class MockSPXDataLoader(DataLoader):
 
-    @property
-    def datetimes_list(self) -> list:
-        return datettimes
-
-    def load_cache(self, quote_datetime: datetime.datetime):
-        pass
-
-    def get_option_chain(self, quote_datetime: datetime.datetime):
-        if quote_datetime == datetime.datetime(2016, 3, 1, 9, 31):
+    def load_option_chain_data(self, symbol: str, start: datetime.datetime):
+        if start == datetime.datetime(2016, 3, 1, 9, 31):
             return t1_options
-        elif quote_datetime == datetime.datetime(2016, 3, 1, 9, 32):
+        elif start == datetime.datetime(2016, 3, 1, 9, 32):
             return t2_options
         else:
             return None
 
-    def get_expirations(self):
-        pass
+    def get_expirations(self, symbol: str) -> list:
+        return expirations
 
     def on_options_opened(self, portfolio, options: list[Option]) -> None:
         for option in options:

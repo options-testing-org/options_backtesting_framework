@@ -5,8 +5,8 @@ import pytest
 from options_framework.option_types import OptionType, OptionCombinationType, OptionStatus, SelectFilter, FilterRange, \
     OptionPositionType
 from options_framework.spreads.single import Single
-from tests.mocks import MockPortfolio, MockSPXOptionChain, MockSPXDataLoader
-
+from tests.mocks import *
+from test_data.spx_test_options import *
 
 def test_get_single_option():
     expiration = datetime.date(2016, 3, 2)
@@ -26,6 +26,7 @@ def test_get_single_option():
 def test_open_single_option():
     expiration = datetime.date(2016, 3, 2)
     strike = 1995
+
     option_chain = MockSPXOptionChain()
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
                                       option_type=OptionType.PUT,
@@ -41,6 +42,8 @@ def test_open_single_option():
 def test_open_single_option_loads_option_update_cache():
     expiration = datetime.date(2016, 3, 2)
     strike = 1950
+    update_date1 = df_index[-3]
+    update_date2 = df_index[-1]
     option_chain = MockSPXOptionChain()
     data_loader = MockSPXDataLoader(start=datetime.datetime(2016, 3, 1, 9, 31),
                                     end=datetime.datetime(2016, 3, 2, 16, 15),
@@ -56,10 +59,10 @@ def test_open_single_option_loads_option_update_cache():
     portfolio.open_position(single_option)
 
     assert single_option.current_value == 1050.0
-    portfolio.next(data_loader.datetimes_list[1])
+    portfolio.next(update_date1)
     assert single_option.current_value == 1100.0
-    portfolio.next(data_loader.datetimes_list[2])
-    assert single_option.current_value == 1060.0
+    portfolio.next(update_date2)
+    assert single_option.current_value == 1100.0
 
 def test_naked_put_margin_requirement():
     expiration = datetime.date(2016, 3, 2)

@@ -14,11 +14,11 @@ def test_expiration():
 
 @pytest.fixture
 def test_quote_date():
-    return (datetime.datetime(2021, 7, 1, 9, 45))
+    return datetime.datetime(2021, 7, 1, 9, 45)
 
 @pytest.fixture
 def test_update_quote_date():
-    return (datetime.datetime(2021, 7, 2, 9, 45))
+    return datetime.datetime(2021, 7, 2, 9, 45)
 
 @pytest.fixture
 def test_update_quote_date2():

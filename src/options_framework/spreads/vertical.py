@@ -11,7 +11,7 @@ import datetime
 class Vertical(OptionCombination):
 
     @classmethod
-    def get_vertical(cls, *, option_chain: OptionChain, expiration: datetime.date, option_type: OptionType,
+    def get_vertical(cls, option_chain: OptionChain, expiration: datetime.date, option_type: OptionType,
                      long_strike: int | float,
                      short_strike: int | float,
                      quantity: int = 1) -> OptionCombination:
@@ -58,19 +58,23 @@ class Vertical(OptionCombination):
         return vertical
 
     @classmethod
-    def get_vertical_by_delta(cls, *, option_chain: OptionChain, expiration: datetime.date, option_type: OptionType,
+    def get_vertical_by_delta(cls, option_chain: OptionChain, expiration: datetime.date, option_type: OptionType,
                      long_delta: float,
                      short_delta: float,
                      quantity: int = 1) -> OptionCombination:
 
-        if long_delta > short_delta:
+        long_delta, short_delta = abs(long_delta), abs(short_delta)
+        if abs(long_delta) > abs(short_delta):
             option_position_type = OptionPositionType.LONG if option_type == OptionType.CALL \
                 else OptionPositionType.SHORT
-        elif long_delta < short_delta:
+        elif abs(long_delta) < abs(short_delta):
             option_position_type = OptionPositionType.SHORT if option_type == OptionType.CALL \
                 else OptionPositionType.LONG
         else:
             raise ValueError("Long and short strikes cannot be the same")
+
+        # if option_type == OptionType.PUT:
+        #     long_delta, short_delta = abs(long_delta)*-1, abs(short_delta)*-1
 
         # Find nearest matching expiration
         try:
@@ -80,6 +84,9 @@ class Vertical(OptionCombination):
             raise ValueError(message)
 
         options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
+        if not options:
+            message = "No matching expiration was found in the option chain. Consider changing the selection filter."
+            raise ValueError(message)
         try:
             if option_type == OptionType.CALL:
                 long_option = next(o for o in options if o.delta <= long_delta)
@@ -115,7 +122,7 @@ class Vertical(OptionCombination):
         return vertical
 
     @classmethod
-    def get_vertical_by_delta_and_spread_width(cls, *, option_chain: OptionChain, expiration: datetime.date,
+    def get_vertical_by_delta_and_spread_width(cls, option_chain: OptionChain, expiration: datetime.date,
                                                option_type: OptionType,
                                                option_position_type: OptionPositionType,
                                                delta: float,
@@ -169,20 +176,26 @@ class Vertical(OptionCombination):
     long_option: Option = field(init=False, default=None)
 
     def __post_init__(self):
+        message = None
+        if any(o for o in self.options if o.quantity == 0):
+            message = "Quantity must be set for each option. Short options should have a negative quantity, and long options should have a positive quantity."
         if not sum(o.quantity for o in self.options) == 0:
             message = "Invalid quantities. A Vertical Spread must have an equal number of long and short options."
-            raise ValueError(message)
         if self.options[0].option_type != self.options[1].option_type:
             message = "Invalid option type. Both legs must be either calls or puts."
-            raise ValueError(message)
         if self.options[0].expiration != self.options[0].expiration:
             message = "Invalid option expirations. Both legs must have the same expiration."
+        # if self.option_position_type is None:
+        #     message = "The parameter option_position_type: OptionPositionType must not be None"
+        if self.options[0].strike == self.options[1].strike:
+            message = "Long and short option strikes must not be the same option."
+        if message is not None:
             raise ValueError(message)
-        if self.option_position_type is None:
-            raise ValueError("The parameter option_position_type: OptionPositionType must not be None")
 
         self.long_option = self.options[0] if self.options[0].quantity > 0 else self.options[1]
+        self.long_option.position_type = OptionPositionType.LONG
         self.short_option = self.options[0] if self.options[0].quantity < 0 else self.options[1]
+        self.short_option.position_type = OptionPositionType.SHORT
         self.option_combination_type = OptionCombinationType.VERTICAL
 
     def __repr__(self) -> str:
@@ -192,8 +205,8 @@ class Vertical(OptionCombination):
         else:
             strikes.sort(reverse=True)
         s = f'<{self.option_combination_type.name}({self.position_id}) {self.option_type.name} {self.option_position_type.name} ' \
-                + f'{strikes[0]}/{strikes[1]} ' \
-                + f'Expiring {self.expiration}'
+                + f'{self.symbol} {strikes[0]}/{strikes[1]} ' \
+                + f'Expiring {self.expiration}>'
         return s
 
     def update_quantity(self, quantity: int):
@@ -205,6 +218,7 @@ class Vertical(OptionCombination):
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
+        self.quote_datetime = self.long_option.quote_datetime
         super(Vertical, self).open_trade(quantity=quantity, **kwargs)
 
     def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
@@ -267,6 +281,14 @@ class Vertical(OptionCombination):
     def option_type(self) -> OptionType:
         return self.long_option.option_type
 
+    @property
+    def symbol(self):
+        return self.long_option.symbol
+
+    @property
+    def status(self) -> OptionStatus:
+        return self.long_option.status
+
     def get_trade_price(self) -> float | None:
         if OptionStatus.INITIALIZED ==  self.long_option.status:
             return None
@@ -291,7 +313,7 @@ class Vertical(OptionCombination):
         profit_loss = super(Vertical, self).get_profit_loss()
         if all(OptionStatus.TRADE_IS_CLOSED in o.status for o in self.options):
             closed_value = self.closed_value
-            if closed_value > self.max_profit or closed_value < self.max_loss:
+            if closed_value > self.max_profit or closed_value < self.max_loss * -1:
                 fees = self.get_fees()
                 profit_loss = closed_value + fees
 

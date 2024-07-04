@@ -14,22 +14,22 @@ def test_get_sql_data_loader_test_manager():
 
     option_test_manager = OptionTestManager(start_datetime=start_date, end_datetime=end_date,
                                             select_filter=select_filter, starting_cash=starting_cash)
-    assert option_test_manager is not None
+    assert isinstance(option_test_manager.data_loader, DataLoader)
+    assert isinstance(option_test_manager.option_chains, dict)
 
 def test_manager_portfolio_open_triggers_option_updates_load():
     start_date = datetime.datetime(2016, 3, 1, 9, 31)
-    end_date = datetime.datetime(2016, 3, 1, 16, 15)
+    end_date = datetime.datetime(2016, 3, 2, 16, 15)
     starting_cash = 100_000.0
-    select_filter = SelectFilter(symbol='SPXW', option_type=OptionType.CALL, strike_offset=FilterRange(low=50, high=50))
+    select_filter = SelectFilter(option_type=OptionType.CALL, strike_offset=FilterRange(low=50, high=50))
 
     option_test_manager = OptionTestManager(start_datetime=start_date, end_datetime=end_date,
                                             select_filter=select_filter, starting_cash=starting_cash)
-    option_test_manager.get_current_option_chain(start_date)
+    option_test_manager.get_option_chain('SPXW', start_date)
 
     portfolio = option_test_manager.portfolio
-    loader = option_test_manager.data_loader
 
-    option_chain = option_test_manager.option_chain
+    option_chain = option_test_manager.option_chains['SPXW']
     expiration = datetime.date(2016, 3, 2)
     single = Single.get_single(option_chain=option_chain, expiration=expiration, option_type=OptionType.CALL,
                                option_position_type= OptionPositionType.LONG, strike=1910)
@@ -42,8 +42,4 @@ def test_manager_portfolio_open_triggers_option_updates_load():
     # advance to the next quote
     portfolio.next(next_quote)
     assert single.option.quote_datetime == next_quote
-
-
-
-
 

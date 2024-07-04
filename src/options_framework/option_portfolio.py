@@ -15,6 +15,8 @@ class OptionPortfolio(Dispatcher):
     _events_ = ['new_position_opened', 'position_closed', 'next', 'position_expired']
 
     cash: float | int
+    start_date: datetime.datetime
+    end_date: datetime.datetime
     positions: Optional[dict] = field(init=False, default_factory=lambda: {})
     closed_positions: Optional[dict] = field(init=False, default_factory=lambda: {})
     portfolio_risk: float = field(init=False, default=0.0)
@@ -27,38 +29,52 @@ class OptionPortfolio(Dispatcher):
         return f'OptionPortfolio(cash={self.cash: .2f}, portfolio_value={self.portfolio_value:.2f} open positions: {len(self.positions)}'
 
     def open_position(self, option_position: OptionCombination, quantity: int, **kwargs: dict):
+        option_position.update_quantity(quantity)
         if option_position.option_position_type == OptionPositionType.SHORT:
             # check to see if we have enough margin to open this position
             new_margin = option_position.required_margin + self.portfolio_margin_allocation
             if new_margin > self.cash:
                 raise ValueError(f'Insufficient margin available to open this position.')
-        self.positions[option_position.position_id] = option_position
+
         [option.bind(open_transaction_completed=self.on_option_open_transaction_completed,
                      close_transaction_completed=self.on_option_close_transaction_completed,
                      option_expired=self.on_option_expired,
                      fees_incurred=self.on_fees_incurred) for option in option_position.options]
         option_position.open_trade(quantity=quantity, **kwargs)
-
-        options = [option for position in self.positions.values() for option in position.options]
-        for o in options:
-            self.bind(next=o.next_update) # create hook for option update when next quote method is called
+        self.positions[option_position.position_id] = option_position
         self.emit("new_position_opened", self, option_position.options)
+        # for o in list(option_position.options):
+        #     last_data_date = o.update_cache.iloc[-1].name.to_pydatetime()
+        #     if last_data_date < self.end_date:
+        #         last_data_date = last_data_date.date()
+        #         if last_data_date < o.expiration:
+        #             self.close_position(option_position)
+        #             self.cash += option_position.get_fees()
+        #             raise Exception(f'Missing data for option updates {o.symbol} {o.option_id}')
+
+        # create hook for option update when next quote method is called
+        self.bind(next=option_position.next_quote_date)
+        [self.bind(next=o.next_update) for o in option_position.options]
 
     def close_position(self, option_position: OptionCombination, quantity: int = None, **kwargs: dict):
         quantity = quantity if quantity is not None else option_position.quantity
         option_position.close_trade(quantity=quantity, **kwargs)
         closing_value = sum(o.trade_close_records[-1].premium for o in option_position.options)
+        raw_pnl = option_position.trade_value - closing_value
+        raw_pnl = raw_pnl * -1 if option_position.option_position_type == OptionPositionType.SHORT else raw_pnl
 
         # Adjust portfolio cash if the closing value is greater than the max profit for this position
         if option_position.max_profit:
-            if closing_value > option_position.max_profit:
-                self.cash -= (closing_value - option_position.max_profit)
+            if raw_pnl > option_position.max_profit:
+                self.cash -= (raw_pnl - option_position.max_profit)
+                print(f'corrected pnl > max profit: {(raw_pnl - option_position.max_profit)}')
 
         # Adjust portfolio cash if the closing value is less than the max loss for this position
         if option_position.max_loss:
             max_loss = option_position.max_loss * -1
-            if closing_value < max_loss:
-                self.cash -= closing_value - max_loss
+            if raw_pnl < max_loss:
+                self.cash += (raw_pnl - max_loss)
+                print(f'corrected pnl < max loss: {(max_loss - raw_pnl)}')
 
         self.closed_positions[option_position.position_id] = option_position
         del self.positions[option_position.position_id]
@@ -83,11 +99,15 @@ class OptionPortfolio(Dispatcher):
         return margin
 
     def on_option_open_transaction_completed(self, trade_open_info: TradeOpenInfo):
-        self.cash -= trade_open_info.premium
+        open_premium = trade_open_info.premium
+        self.cash = self.cash - open_premium
+        #print(f'opened option. ${open_premium:,.2f} subtracted from cash')
         #print(f"portfolio: option position was opened {trade_open_info.option_id}")
 
     def on_option_close_transaction_completed(self, trade_close_info: TradeCloseInfo):
-        self.cash += trade_close_info.premium
+        close_premium = trade_close_info.premium
+        self.cash = self.cash + close_premium
+        #print(f'closed option. ${close_premium:,.2f} added to cash')
         #print(f"portfolio: option position was closed {trade_close_info.option_id}")
 
     def on_option_expired(self, option_id):
@@ -101,6 +121,7 @@ class OptionPortfolio(Dispatcher):
                 self.emit('position_expired', position)
 
     def on_fees_incurred(self, fees):
-        self.cash -= fees
+        self.cash = self.cash - fees
+        #print(f'fees charged. ${fees:,.2f} subtracted from cash')
         #print("portfolio: fees incurred")
 

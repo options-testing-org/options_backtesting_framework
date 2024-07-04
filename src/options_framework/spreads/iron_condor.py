@@ -28,7 +28,7 @@ class IronCondor(OptionCombination):
     """
 
     @classmethod
-    def get_iron_condor_by_strike(cls, *, option_chain: OptionChain, expiration: datetime.date,
+    def get_iron_condor_by_strike(cls, option_chain: OptionChain, expiration: datetime.date,
                                   long_call_strike: int | float,
                                   short_call_strike: int | float,
                                   long_put_strike: int | float,
@@ -100,7 +100,7 @@ class IronCondor(OptionCombination):
         return iron_condor
 
     @classmethod
-    def get_iron_condor_by_strike_and_width(cls, *, option_chain: OptionChain, expiration: datetime.date,
+    def get_iron_condor_by_strike_and_width(cls, option_chain: OptionChain, expiration: datetime.date,
                                             option_position_type: OptionPositionType,
                                             inner_call_strike: int | float,
                                             inner_put_strike: int | float,
@@ -178,7 +178,7 @@ class IronCondor(OptionCombination):
         return iron_condor
 
     @classmethod
-    def get_iron_condor_by_delta(cls, *, option_chain: OptionChain, expiration: datetime.date,
+    def get_iron_condor_by_delta(cls, option_chain: OptionChain, expiration: datetime.date,
                                  long_delta: float,
                                  short_delta: float,
                                  quantity: int = 1) -> OptionCombination:

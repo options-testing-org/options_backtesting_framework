@@ -12,7 +12,7 @@ from options_framework.utils.helpers import decimalize_0, decimalize_2
 class Single(OptionCombination):
 
     @classmethod
-    def get_single(cls, *, option_chain: OptionChain, expiration: datetime.date,
+    def get_single(cls, option_chain: OptionChain, expiration: datetime.date,
                    option_type: OptionType,
                    option_position_type: OptionPositionType,
                    strike: float | int,
@@ -40,7 +40,7 @@ class Single(OptionCombination):
             raise ValueError("No matching strike was found in the option chain. Consider changing the selection filter.")
 
         if option.price == 0:
-            raise Exception("Option price is zero. Cannot open this option.")
+            raise Exception(f"Option price is zero ({option.symbol}). Cannot open this option.")
 
         quantity = abs(quantity) if option_position_type == OptionPositionType.LONG else abs(quantity) * -1
         single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
@@ -48,7 +48,7 @@ class Single(OptionCombination):
         return single
 
     @classmethod
-    def get_single_by_delta(cls, *, option_chain: OptionChain, expiration: datetime.date,
+    def get_single_by_delta(cls, option_chain: OptionChain, expiration: datetime.date,
                             option_type: OptionType,
                             option_position_type: OptionPositionType,
                             delta: float,
@@ -74,7 +74,7 @@ class Single(OptionCombination):
             raise ValueError("No matching options were found for the delta value. Consider changing the selection filter.")
 
         if option.price == 0:
-            raise Exception("Option price is zero. Cannot open this option.")
+            raise Exception(f"Option price is zero ({option.symbol}). Cannot open this option.")
 
         quantity = abs(quantity) if option_position_type == OptionPositionType.LONG else abs(quantity) * -1
         single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
@@ -97,6 +97,10 @@ class Single(OptionCombination):
         self.option.position_type = self.option_position_type
         self.option_combination_type = OptionCombinationType.SINGLE
 
+    def __repr__(self) -> str:
+        s = f'<{self.option_combination_type.name}({self.position_id}), {self.option.symbol}, Strike: {self.strike}, Expiring: {self.expiration}, Quantity: {self.quantity}>'
+        return s
+
     @property
     def expiration(self) -> datetime.date:
         return self.option.expiration
@@ -114,10 +118,12 @@ class Single(OptionCombination):
         return self.option.price
 
     @property
+    def symbol(self) -> str:
+        return self.option.symbol
+
+    @property
     def required_margin(self) -> float:
-        if not OptionStatus.TRADE_IS_OPEN in self.option.status:
-            return None
-        elif self.option_position_type == OptionPositionType.LONG:
+        if self.option_position_type == OptionPositionType.LONG:
             return 0
         elif self.option_position_type == OptionPositionType.SHORT:
             """
@@ -133,14 +139,13 @@ class Single(OptionCombination):
             return float(margin)
 
     def update_quantity(self, quantity: int):
+        quantity = abs(quantity) if self.option_position_type == OptionPositionType.LONG else abs(quantity)*-1
         self.quantity = quantity
         self.option.quantity = quantity
 
     def open_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
-        quantity = quantity if quantity else self.option.quantity
-        self.option_position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
-        self.option.open_trade(quantity=quantity)
-        self.quantity = quantity
+        self.update_quantity(quantity)
+        self.option.open_trade(quantity=self.quantity)
         super(Single, self).open_trade(quantity=quantity, **kwargs)
 
     def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:

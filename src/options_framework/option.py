@@ -3,7 +3,9 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 import datetime
-from pandas import DataFrame
+import numbers
+
+import pandas as pd
 from options_framework.option_types import OptionPositionType, OptionType, OptionStatus
 from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 from options_framework.config import settings
@@ -24,6 +26,9 @@ class Option(Dispatcher):
     """
 
     _events_ = ["open_transaction_completed", "close_transaction_completed", "option_expired", "fees_incurred"]
+
+    def test_open(self):
+        self.emit("open_transaction_completed")
 
     # immutable fields
     option_id: str | int = field(compare=True)
@@ -86,7 +91,7 @@ class Option(Dispatcher):
     rho: Optional[float] = field(default=None, compare=False)
     open_interest: Optional[int] = field(default=None, compare=False)
     implied_volatility: Optional[float] = field(default=None, compare=False)
-    update_cache: DataFrame | None = field(default=None, compare=False)
+    update_cache: pd.DataFrame | None = field(default=None, compare=False)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
@@ -145,10 +150,16 @@ class Option(Dispatcher):
         """
         if OptionStatus.EXPIRED in self.status:
             return True
-        quote_date, expiration_date = self.quote_datetime.date(), self.expiration
-        quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
-        if ((quote_date == expiration_date and quote_time >= exp_time)
-                or (quote_date > expiration_date)):
+        if type(self.quote_datetime) == datetime.datetime:
+            quote_date, quote_time = self.quote_datetime.date(), self.quote_datetime.time()
+        elif type(self.quote_datetime) == datetime.date:
+            quote_date, quote_time = self.quote_datetime, datetime.time(16, 15)
+        else:
+            message = f"Wrong format for option date. Must be python datetime.datetime or datetime.date format. Date was provided in {type(self.quote_datetime)} format."
+            raise ValueError(message)
+        expiration_date, exp_time = self.expiration, datetime.time(16, 15)
+        #quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
+        if ((quote_date > expiration_date) or (quote_date == expiration_date and quote_time >= exp_time)):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)
             #print(f'emit expire {self.option_id}')
@@ -160,7 +171,10 @@ class Option(Dispatcher):
         self.quote_datetime = quote_datetime
         if self._check_expired():
             return
-        update_values = self.update_cache.loc[quote_datetime]
+        try:
+            update_values = self.update_cache.loc[pd.to_datetime(quote_datetime)]
+        except KeyError as e:
+            return
         update_fields = [f for f in update_values.index if f not in ['option_id', 'symbol', 'strike', 'expiration',
                                                                      'option_type']]
         self.spot_price = update_values['spot_price']
@@ -203,13 +217,16 @@ class Option(Dispatcher):
         additional keyword arguments are added to the user_defined list of values
         """
         if OptionStatus.TRADE_IS_OPEN in self.status:
-            raise ValueError("Cannot open position. A position is already open.")
-        if (quantity is None) or not (isinstance(quantity, int)) or (quantity == 0):
-            raise ValueError("Quantity must be a non-zero integer.")
+            raise ValueError(f"Cannot open position. A position is already open. ({self.symbol})")
+        if (quantity is None) or not (isinstance(quantity, numbers.Number)) or (quantity == 0) or (quantity != int(quantity)):
+            raise ValueError(f"Quantity must be a non-zero integer. ({self.symbol}) Quantity: {quantity}")
+        quantity = int(quantity)
 
         # calculate premium debit or credit. If this is a long position, the premium is a positive number.
         # If it is a short position, the premium is a negative number.
         price = decimalize_2(self.price)
+        if price == 0:
+            raise Exception(f"Option price is zero {self.symbol} ({self.option_id}). Cannot open this option.")
         quantity = decimalize_0(quantity)
         if settings.apply_slippage_entry:
             if quantity > 0:
@@ -254,7 +271,7 @@ class Option(Dispatcher):
 
         if quantity is None:
             quantity = decimalize_0(self.quantity) * -1
-        elif not (isinstance(quantity, int)) or (quantity == 0):
+        elif not (isinstance(quantity, numbers.Number)) or (quantity == 0):
             raise ValueError("Must supply a non-zero quantity.")
         # elif self._position_type == OptionPositionType.LONG and quantity + self._quantity - closed_quantity:
         #     raise ValueError("Quantity to close is greater than the current open quantity.")
@@ -282,7 +299,8 @@ class Option(Dispatcher):
         open_price = decimalize_2(self.trade_open_info.price)
         premium = decimalize_2(close_price) * 100 * quantity*-1
         profit_loss = (open_price * 100 * quantity) - (close_price * 100 * quantity)
-        profit_loss_percent = decimalize_4((close_price - open_price) / open_price) * (quantity * -1 / abs(quantity))
+        ratio = (close_price - open_price) / open_price if open_price > 0 else 0
+        profit_loss_percent = decimalize_4(ratio) * (quantity * -1 / abs(quantity))
 
         fees = 0
         if settings.incur_fees:

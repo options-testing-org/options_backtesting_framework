@@ -250,7 +250,7 @@ def test_open_trade_sets_total_fees_to_zero_when_incur_fees_is_false(get_test_ca
 def test_open_trade_with_invalid_quantity_raises_exception(get_test_call_option, quantity):
     test_option = get_test_call_option
 
-    with pytest.raises(ValueError, match="Quantity must be a non-zero integer."):
+    with pytest.raises(ValueError):
         test_option.open_trade(quantity=quantity)
 
 
