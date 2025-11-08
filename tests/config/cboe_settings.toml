@@ -1,52 +1,15 @@
-
-DATA_IMPORT_NAME = "Test Flat Files Import CBOE"
-data_loader_type = 'FILE_DATA_LOADER'
-data_records_buffer_size = 10_000
-
-[DATA_IMPORT_FILE_PROPERTIES]
-data_files_folder = "test_data"
-data_file_name_format = "spx_{month}_{day}_{year}.csv"
-first_row_is_header = true
-put_value_in_data = 'P'
-call_value_in_data = 'C'
-option_id_columns = ['root', 'strike', 'expiration', 'option_type']
-expiration_date_format = "%m/%d/%Y"
-quote_date_format = "%m/%d/%Y %H:%M"
-column_delimiter = ','
-
-# list all the columns in the data file in order, even unused columns
-[COLUMN_ORDER]
-underlying_symbol = 0
-quote_datetime = 1
-root = 2
-expiration = 3
-strike = 4
-option_type = 5
-open = 6
-high = 7
-low = 8
-close = 9
-trade_volume = 10
-bid_size = 11
-bid = 12
-ask_size = 13
-ask = 14
-underlying_bid = 15
-underlying_ask = 16
-implied_underlying_price = 17
-active_underlying_price  = 18
-implied_volatility = 19
-delta = 20
-gamma = 21
-theta = 22
-vega = 23
-rho = 24
-open_interest = 25
+options_folder = 'C:\_code\options_backtesting_framework\tests\test_data\data_files'
+folder_name_mask = 'SPX'
+file_name_mask = '*.*'
+file_list_generator = '(f for f in option_files_list if int(f.stem[-10:-6]) >= {start.year} and int(f.stem[-10:-6]) <= {end.year} and int(f.stem[-5:-3]) >= {start.month} and int(f.stem[-5:-3]) <= {end.month} and int(f.stem[-2:]) >= {start.day} and int(f.stem[-2:]) <= {end.day})'
+call_value = 'C'
+put_value = 'P'
 
 
 # Map the data file columns to the option fields
 # The id field may contain multiple columns that will be concatenated
-[FIELD_MAPPING]
+[field_mapping]
+option_id = 'option_id'
 symbol = 'root'
 strike = 'strike'
 expiration = 'expiration'
@@ -55,6 +18,7 @@ quote_datetime = 'quote_datetime'
 spot_price = 'active_underlying_price'
 bid = 'bid'
 ask = 'ask'
+price = 'mid'
 delta = 'delta'
 gamma = 'gamma'
 theta = 'theta'

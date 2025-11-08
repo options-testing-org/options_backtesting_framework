@@ -2,6 +2,7 @@ import dataclasses
 import datetime
 
 import pandas as pd
+from pandas import DataFrame
 #import pyodbc
 from sqlalchemy.engine import URL
 from sqlalchemy import create_engine
@@ -19,10 +20,10 @@ class SQLServerDataLoader(DataLoader):
     def __init__(self, *, start: datetime.datetime, end: datetime.datetime, select_filter: SelectFilter,
                  extended_option_attributes: list[str] = None):
         super().__init__(start=start, end=end, select_filter=select_filter, extended_option_attributes=extended_option_attributes)
-        server = settings.SERVER
-        database = settings.DATABASE
-        username = settings.USERNAME
-        password = settings.PASSWORD
+        server = settings['server']
+        database = settings['database']
+        username = settings['username']
+        password = settings['password']
         connection_string = 'DRIVER={ODBC Driver 17 for SQL Server};SERVER=' + server + ';DATABASE=' + database \
                                  + ';UID=' + username + ';PWD=' + password
         connection_url = URL.create("mssql+pyodbc", query={"odbc_connect": connection_string})
@@ -30,7 +31,8 @@ class SQLServerDataLoader(DataLoader):
         self.sql_alchemy_engine = create_engine(connection_url)
         self.datetimes_list = self._get_datetimes_list()
 
-    def load_option_chain_data(self, symbol: str, start: datetime.datetime):
+    def load_option_chain_data(self, symbol: str, start: datetime.datetime) -> None:
+        start = self.start_datetime
         end = start + datetime.timedelta(days=1)
         start = pd.to_datetime(start)
         end = pd.to_datetime(end)
@@ -44,20 +46,20 @@ class SQLServerDataLoader(DataLoader):
 
         super().on_option_chain_loaded(symbol=symbol, quote_datetime=start, options_data=df)
 
-    def on_options_opened(self, portfolio, options: list[Option]) -> None:
+    def on_options_opened(self, options: list[Option]) -> None:
         option_ids = [str(o.option_id) for o in options]
         open_date = options[0].trade_open_info.date
         #print(f"options {','.join(option_ids)} were opened on {open_date}")
         fields = ['option_id', 'symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
                   'bid', 'ask', 'price'] + self.extended_option_attributes
-        field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
+        field_mapping = ','.join([db_field for option_field, db_field in settings['field_mapping'].items() \
                                   if option_field in fields])
         query = "select " + field_mapping
-        query += settings.SELECT_OPTIONS_QUERY['from']
+        query += settings['select_options_query']['from']
         query += f' where option_id in ({",".join(option_ids)})'
-        query += f' and {settings.SELECT_OPTIONS_QUERY.quote_datetime_field} >= CONVERT(datetime2, \'{open_date}\')'
-        query += f' and {settings.SELECT_OPTIONS_QUERY.quote_datetime_field} <= CONVERT(datetime2, \'{self.end_datetime}\')'
-        query += f' order by {settings.SELECT_OPTIONS_QUERY.quote_datetime_field}'
+        query += f' and {settings['select_options_query'].quote_datetime_field} >= CONVERT(datetime2, \'{open_date}\')'
+        query += f' and {settings['select_options_query'].quote_datetime_field} <= CONVERT(datetime2, \'{self.end_datetime}\')'
+        query += f' order by {settings['select_options_query'].quote_datetime_field}'
         with self.sql_alchemy_engine.connect() as conn:
             df = pd.read_sql(query, conn, index_col='quote_datetime', parse_dates='quote_datetime')
         df.index = pd.to_datetime(df.index)
@@ -74,13 +76,13 @@ class SQLServerDataLoader(DataLoader):
     def _build_query(self, symbol: str, start_date: datetime.datetime, end_date: datetime.datetime):
         fields = ['option_id', 'symbol', 'expiration', 'strike', 'option_type', 'quote_datetime', 'spot_price',
                        'bid', 'ask', 'price'] + self.extended_option_attributes
-        field_mapping = ','.join([db_field for option_field, db_field in settings.FIELD_MAPPING.items() \
+        field_mapping = ','.join([db_field for option_field, db_field in settings['field_mapping'].items() \
                                   if option_field in fields])
         filter_dict = dataclasses.asdict(self.select_filter)
-        query = settings.SELECT_OPTIONS_QUERY['select']
+        query = settings['select_options_query']['select']
         query += field_mapping
-        query += settings.SELECT_OPTIONS_QUERY['from']
-        query += (settings.SELECT_OPTIONS_QUERY['where']
+        query += settings['select_options_query']['from']
+        query += (settings['select_options_query']['where']
                   .replace('{symbol}', symbol)
                   .replace('{start_date}', str(start_date))
                   .replace('{end_date}', str(end_date)))
@@ -90,18 +92,18 @@ class SQLServerDataLoader(DataLoader):
         if self.select_filter.expiration_dte:
             low_val, high_val = self.select_filter.expiration_dte.low, self.select_filter.expiration_dte.high
             if low_val and low_val > 0:
-                query += f' and expiration >= DATEADD(day, {low_val}, {settings.SELECT_OPTIONS_QUERY.quote_datetime_field})'
+                query += f' and expiration >= DATEADD(day, {low_val}, {settings['select_options_query'].quote_datetime_field})'
             else:
-                query += f' and expiration >= {settings.SELECT_OPTIONS_QUERY.quote_datetime_field}'
+                query += f' and expiration >= {settings['select_options_query'].quote_datetime_field}'
             if high_val:
-                query += f' and expiration <= DATEADD(day, {high_val}, {settings.SELECT_OPTIONS_QUERY.quote_datetime_field})'
+                query += f' and expiration <= DATEADD(day, {high_val}, {settings['select_options_query'].quote_datetime_field})'
 
         if self.select_filter.strike_offset:
             low_val, high_val = self.select_filter.strike_offset.low, self.select_filter.strike_offset.high
             if low_val:
-                query += f' and strike > {settings.SELECT_OPTIONS_QUERY.spot_price_field}-{low_val}'
+                query += f' and strike > {settings['select_options_query'].spot_price_field}-{low_val}'
             if high_val:
-                query += f' and strike < {settings.SELECT_OPTIONS_QUERY.spot_price_field}+{high_val}'
+                query += f' and strike < {settings['select_options_query'].spot_price_field}+{high_val}'
 
         for fltr in [f for f in filter_dict.keys() if 'range' in f]:
             name, low_val, high_val = fltr[:-6], filter_dict[fltr]['low'], filter_dict[fltr]['high']
@@ -117,9 +119,9 @@ class SQLServerDataLoader(DataLoader):
     def _get_datetimes_list(self):
         start_date = self.start_datetime
         end_date = self.end_datetime
-        query = settings.SELECT_OPTIONS_QUERY.datetime_list_query.replace('{start_date}', str(start_date)).replace('{end_date}', str(end_date))
+        query = settings['select_options_query'].datetime_list_query.replace('{start_date}', str(start_date)).replace('{end_date}', str(end_date))
         with self.sql_alchemy_engine.connect() as conn:
-            df = pd.read_sql(query, conn, parse_dates=settings.SELECT_OPTIONS_QUERY.quote_datetime_field, index_col=[settings.SELECT_OPTIONS_QUERY.quote_datetime_field])
+            df = pd.read_sql(query, conn, parse_dates=settings['select_options_query'].quote_datetime_field, index_col=[settings['select_options_query'].quote_datetime_field])
         df.index = pd.to_datetime(df.index)
         return df
 
@@ -139,5 +141,5 @@ class SQLServerDataLoader(DataLoader):
                 .replace('{start_date}', str(start_date)) \
                 .replace('{end_date}', str(end_date))
         with self.sql_alchemy_engine.connect() as conn:
-            df = pd.read_sql(query, conn, parse_dates=settings.SELECT_OPTIONS_QUERY.quote_datetime_field)
+            df = pd.read_sql(query, conn, parse_dates=settings['select_options_query'].quote_datetime_field)
         return df

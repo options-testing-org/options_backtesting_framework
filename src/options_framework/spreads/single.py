@@ -1,22 +1,24 @@
 import datetime
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Optional
 
 from options_framework.option import Option
 from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionType, OptionCombinationType, OptionStatus, OptionPositionType
 from options_framework.spreads.option_combo import OptionCombination
-from options_framework.utils.helpers import decimalize_0, decimalize_2
+from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 
 @dataclass(repr=False, slots=True)
 class Single(OptionCombination):
 
     @classmethod
-    def get_single(cls, option_chain: OptionChain, expiration: datetime.date,
-                   option_type: OptionType,
-                   option_position_type: OptionPositionType,
+    def get_single(cls, option_chain: OptionChain,
+                   expiration: datetime.date,
                    strike: float | int,
-                   quantity: int = 1) -> OptionCombination:
+                   option_type: OptionType,
+                   option_position_type: OptionPositionType = OptionPositionType.LONG,
+                    quantity: int = 1) -> OptionCombination:
 
         # Find nearest matching expiration
         try:
@@ -122,21 +124,32 @@ class Single(OptionCombination):
         return self.option.symbol
 
     @property
+    def status(self) -> OptionStatus:
+        return self.option.status
+
+    @property
     def required_margin(self) -> float:
         if self.option_position_type == OptionPositionType.LONG:
             return 0
         elif self.option_position_type == OptionPositionType.SHORT:
             """
             Short options:
-            20% of the underlying price minus the out-of-money amount plus the option premium
-            10% of the strike price plus the option premium
-            $2.50
+            20% of the spot price minus the out-of-money amount plus the option premium
+            10% of the spot price plus the option premium
+            $1 + option premium
             """
-            calc1 = decimalize_2(abs(((0.20 * self.option.spot_price) - (self.strike - self.option.spot_price)) * 100 * self.quantity))
-            calc2 = decimalize_2(abs(((self.strike * 0.10) + self.option.price) * 100 * self.quantity))
-            calc3 = decimalize_2(abs(2.5 * 100 * self.quantity))
+            pct_20 = decimalize_4(self.option.spot_price * 0.2)
+            pct_10 = decimalize_4(self.option.spot_price * 0.1)
+            otm_amount = decimalize_4(self.option.strike - self.option.spot_price)
+            price = decimalize_2(self.option.trade_open_info.price)
+
+            # three calculations - take the largest value
+            calc1 = (pct_20 - otm_amount + price)
+            calc2 = (pct_10 + price)
+            calc3 = (Decimal(1) + price)
             margin = max(calc1, calc2, calc3)
-            return float(margin)
+            margin = float(margin) * 100 * abs(self.quantity)
+            return round(margin, 2)
 
     def update_quantity(self, quantity: int):
         quantity = abs(quantity) if self.option_position_type == OptionPositionType.LONG else abs(quantity)*-1

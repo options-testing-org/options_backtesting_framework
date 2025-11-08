@@ -209,7 +209,7 @@ if __name__ == "__main__":
                                      select_filter=options_select_filter, starting_cash=starting_cash,
                                      extended_option_attributes=['delta'])
     # Get price data and signals from sql server
-    price_df = get_data(database=settings.DATABASE, query=get_price_data_query(startdate, enddate),
+    price_df = get_data(database=settings['database'], query=get_price_data_query(startdate, enddate),
                         index_col='datetime')
     data = bt.feeds.PandasData(dataname=price_df, name='SPX')
 

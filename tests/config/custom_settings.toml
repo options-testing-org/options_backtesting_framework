@@ -1,4 +1,4 @@
-DATA_IMPORT_NAME = "Test Flat Files Import Custom"
+data_import_name = "Test Flat Files Import Custom"
 data_loader_type = 'FILE_DATA_LOADER'
 
 [DATA_IMPORT_FILE_PROPERTIES]

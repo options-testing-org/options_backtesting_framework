@@ -6,69 +6,46 @@ from options_framework.option_types import OptionType, OptionCombinationType, Op
     OptionPositionType
 from options_framework.spreads.single import Single
 from tests.mocks import *
-from test_data.spx_test_options import *
 
-def test_get_single_option():
-    expiration = datetime.date(2016, 3, 2)
-    strike = 1920
-    option_chain = MockSPXOptionChain()
-    single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
-                                      option_type=OptionType.PUT,
+@pytest.fixture
+def quote_date():
+    return datetime.datetime.strptime('2014-02-05', '%Y-%m-%d')
+
+def test_get_single_option_with_exact_values(option_chain_daily, quote_date):
+    test_option_chain = option_chain_daily(quote_date)
+    expiration = datetime.date(2014, 2, 7)
+    strike = 515
+    single_option = Single.get_single(option_chain=test_option_chain, expiration=expiration,
+                                      option_type=OptionType.CALL,
                                       option_position_type=OptionPositionType.LONG,
                                       strike=strike)
 
     assert single_option.option_combination_type == OptionCombinationType.SINGLE
     assert single_option.expiration == expiration
-    assert single_option.option_type == OptionType.PUT
-    assert single_option.strike == 1920
+    assert single_option.option_type == OptionType.CALL
+    assert single_option.strike ==strike
 
-
-def test_open_single_option():
-    expiration = datetime.date(2016, 3, 2)
-    strike = 1995
-
-    option_chain = MockSPXOptionChain()
-    single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
-                                      option_type=OptionType.PUT,
+def test_get_single_option_next_expiration(option_chain_daily, quote_date):
+    test_option_chain = option_chain_daily(quote_date)
+    expiration = datetime.date(2014, 2, 8)
+    strike = 519
+    single_option = Single.get_single(option_chain=test_option_chain,
+                                      expiration=expiration,
                                       option_position_type=OptionPositionType.LONG,
-                                      strike=strike)
+                                      option_type=OptionType.CALL,
+                                      strike=strike,
+                                      quantity=5)
 
-    single_option.open_trade(quantity=1)
+    assert single_option.expiration == datetime.date(2014, 2, 14)
+    assert single_option.quantity == 5
+    assert single_option.strike == 520
 
-    assert OptionStatus.TRADE_IS_OPEN in single_option.option.status
-    assert single_option.option.quantity == 1
 
 
-def test_open_single_option_loads_option_update_cache():
-    expiration = datetime.date(2016, 3, 2)
-    strike = 1950
-    update_date1 = df_index[-3]
-    update_date2 = df_index[-1]
-    option_chain = MockSPXOptionChain()
-    data_loader = MockSPXDataLoader(start=datetime.datetime(2016, 3, 1, 9, 31),
-                                    end=datetime.datetime(2016, 3, 2, 16, 15),
-                                    select_filter=SelectFilter(),
-                                    extended_option_attributes=[])
-    single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
-                                      option_type=OptionType.PUT,
-                                      option_position_type=OptionPositionType.LONG,
-                                      strike=strike)
-    portfolio = MockPortfolio()
-
-    portfolio.bind(new_position_opened=data_loader.on_options_opened)
-    portfolio.open_position(single_option)
-
-    assert single_option.current_value == 1050.0
-    portfolio.next(update_date1)
-    assert single_option.current_value == 1100.0
-    portfolio.next(update_date2)
-    assert single_option.current_value == 1100.0
-
-def test_naked_put_margin_requirement():
-    expiration = datetime.date(2016, 3, 2)
-    strike = 1930
-    option_chain = MockSPXOptionChain()
-
+def test_naked_put_margin_requirement_calc1(option_chain_daily, quote_date):
+    option_chain = option_chain_daily(quote_date)
+    expiration = option_chain.expirations[0]
+    strike = 520
     qty = -1
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
@@ -77,45 +54,60 @@ def test_naked_put_margin_requirement():
                                       strike=strike)
     single_option.open_trade(quantity=qty)
 
-    assert single_option.required_margin ==  40_473.2
+    assert single_option.required_margin ==  10_620.8
 
-def test_get_single_option_gets_next_expiration_when_expiration_is_not_in_chain():
-    expiration = datetime.date(2016, 3, 2)
-    strike = 1930
-    option_chain = MockSPXOptionChain()
+def test_naked_put_margin_requirement_itm(option_chain_daily):
+    quote_date = datetime.datetime.strptime('2014-02-10','%Y-%m-%d')
+    option_chain = option_chain_daily(quote_date)
+    expiration = datetime.datetime.strptime('2014-02-14','%Y-%m-%d').date()
+    strike = 460
+    qty = -1
 
-    test_expiration = expiration - datetime.timedelta(days=1)
+    single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
+                                      option_type=OptionType.PUT,
+                                      option_position_type=OptionPositionType.SHORT,
+                                      strike=strike)
+    single_option.open_trade(quantity=qty)
 
-    single_option = Single.get_single(option_chain=option_chain,
-                                      expiration=test_expiration,
+    assert single_option.required_margin ==  15_528.8
+
+def test_get_single_option_gets_next_expiration_when_expiration_is_not_in_chain(option_chain_daily):
+    quote_date = datetime.datetime.strptime('2014-02-10','%Y-%m-%d')
+    option_chain = option_chain_daily(quote_date)
+    expiration = datetime.datetime.strptime('2014-02-15','%Y-%m-%d').date()
+    strike = 515
+    qty = 1
+
+    test_expiration = datetime.datetime.strptime('2014-02-22','%Y-%m-%d').date()
+
+    single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
+                                      option_type=OptionType.CALL,
+                                      option_position_type=OptionPositionType.SHORT,
+                                      strike=strike)
+    single_option.open_trade(quantity=qty)
+
+    assert single_option.expiration == test_expiration
+
+def test_get_single_put_option_gets_next_lower_strike_when_strike_is_not_in_chain(option_chain_daily, quote_date):
+    option_chain = option_chain_daily(quote_date)
+    expiration = datetime.date(2014, 2, 8)
+    strike = 530
+
+    single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
                                       option_type=OptionType.PUT,
                                       option_position_type=OptionPositionType.LONG,
                                       strike=strike)
 
-    assert single_option.expiration == expiration
+    assert single_option.strike == 520
 
-def test_get_single_put_option_gets_next_lower_strike_when_strike_is_not_in_chain():
-    expiration = datetime.date(2016, 3, 2)
-    option_chain = MockSPXOptionChain()
-
-    test_strike = 1938
-
-    single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
-                                      option_type=OptionType.PUT,
-                                      option_position_type=OptionPositionType.LONG,
-                                      strike=test_strike)
-
-    assert single_option.strike == 1935
-
-def test_get_single_call_option_gets_next_higher_strike_when_strike_is_not_in_chain():
-    expiration = datetime.date(2016, 3, 2)
-    option_chain = MockSPXOptionChain()
-
-    test_strike = 1941
+def test_get_single_call_option_gets_next_higher_strike_when_strike_is_not_in_chain(option_chain_daily, quote_date):
+    option_chain = option_chain_daily(quote_date)
+    expiration = datetime.date(2014, 2, 8)
+    strike = 516
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
                                       option_type=OptionType.CALL,
                                       option_position_type=OptionPositionType.LONG,
-                                      strike=test_strike)
+                                      strike=strike)
 
-    assert single_option.strike == 1945
+    assert single_option.strike == 520

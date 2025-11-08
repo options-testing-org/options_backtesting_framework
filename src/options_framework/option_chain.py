@@ -1,68 +1,58 @@
 import datetime
 
+import pandas as pd
 from pandas import DataFrame, Series
 from dataclasses import dataclass, field
 from options_framework.option import Option
 from options_framework.option_types import OptionType
 from options_framework.utils.helpers import distinct
+from typing import Optional
+from options_framework.config import settings
+from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 
 @dataclass
 class OptionChain():
 
     symbol: str
-    quote_datetime: datetime.datetime
-    expirations: list #= field(init=False, default_factory=list, repr=False)
-    last_loaded_date: datetime.datetime | None = field(init=False, default=None)
-    data_cache: DataFrame | None = field(init=False, default=None)
+    quote_datetime: Optional[datetime.datetime] = None
+    pickle_file: Optional[str] = None
+    expirations: list = field(init=False, default_factory=list, repr=False)
     option_chain: list = field(init=False, default_factory=lambda: [], repr=False)
     expiration_strikes: dict = field(init=False, default_factory=lambda: {}, repr=False)
 
     def __post_init__(self):
         pass
 
-    def next_option_chain(self, quote_datetime: datetime.datetime | datetime.date):
-        pass
-
-
-    def on_option_chain_loaded(self, symbol: str, quote_datetime: datetime.datetime, options_data: DataFrame):
+    def on_option_chain_loaded(self, symbol: str, quote_datetime: datetime.datetime, pickle: str):
         if symbol != self.symbol:
             return
-        if len(options_data) == 0:
-            self.last_loaded_date = quote_datetime
-            return
-        self.quote_datetime = quote_datetime
-        self.data_cache = options_data
-        self.last_loaded_date = options_data.iloc[-1].name.to_pydatetime()
-        options = []
-        if not quote_datetime in self.data_cache.index:
-            return
-        data = self.data_cache.loc[quote_datetime]
+        self.symbol = symbol
+        self.pickle_file = pickle
+        self.on_next(quote_datetime) # call this the firs time to load current day's options chain
 
-        # if only one row was returned, Pandas makes it a series
-        if data.__class__.__name__ == 'Series':
-            cols = data.index.tolist() + ['quote_datetime']
-            data = DataFrame([data.values.tolist()], index=[data.name], columns=data.index.tolist())
-        for i, row in data.iterrows():
-            option = self.create_option(quote_datetime, row)
+    def on_next(self, quote_datetime: datetime.datetime):
+        self.quote_datetime = quote_datetime
+        df = pd.read_pickle(self.pickle_file)
+        df = df[df['quote_datetime'] == quote_datetime]
+        options = []
+        for _, row in df.iterrows():
+            option = self._create_option(quote_datetime, row)
             options.append(option)
         self.option_chain = options
-        data_expirations = list(distinct([option.expiration for option in self.option_chain]))
-        self.expiration_strikes = {e: list(distinct([strike for strike in [option.strike
-                                                                            for option in self.option_chain if
-                                                                            option.expiration == e]])) for e in
-                                                                            data_expirations}
-        #print(f'option chain data loaded {symbol} {quote_datetime}')
+        self.expirations = list(df['expiration'].unique())
+        expiration_strikes = df[['expiration', 'strike']].drop_duplicates().to_numpy().tolist()
+        self.expiration_strikes = {exp: [s for (e, s) in expiration_strikes if e == exp] for exp in self.expirations}
 
-
-    def create_option(self, quote_datetime: datetime.datetime | datetime.date, row: Series) -> Option:
+    def _create_option(self, quote_datetime: datetime.datetime | datetime.date, row: Series) -> Option:
+        option_id = row['option_id']
         option = Option(
-            option_id=row['option_id'],
+            option_id=option_id,
             symbol=row['symbol'],
-            expiration=row['expiration'].date(),
+            expiration=row['expiration'],
             strike=row['strike'],
-            option_type=OptionType.CALL if row['option_type'] == 1 else OptionType.PUT,
-            quote_datetime=row.name.to_pydatetime(),
-            spot_price=row['spot_price'],
+            option_type=OptionType.CALL if row['option_type'] == settings['data_settings']['call_value'] else OptionType.PUT,
+            quote_datetime=row['quote_datetime'],
+            spot_price=['spot_price'],
             bid=row['bid'],
             ask=row['ask'],
             price=row['price'],

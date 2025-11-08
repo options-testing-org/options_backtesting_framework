@@ -5,7 +5,6 @@ import time
 import csv
 import numpy as np
 
-import backtrader as bt
 import pandas as pd
 from pathlib import Path
 

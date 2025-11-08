@@ -23,6 +23,7 @@ class OptionCombination(ABC):
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
     user_defined: dict = field(default_factory=lambda: {})
     quote_datetime: datetime = field(init=False, default=None)
+    #expiration: datetime.date = field(init=False, default=None)
 
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.
