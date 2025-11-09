@@ -140,7 +140,7 @@ class Single(OptionCombination):
             """
             pct_20 = decimalize_4(self.option.spot_price * 0.2)
             pct_10 = decimalize_4(self.option.spot_price * 0.1)
-            otm_amount = decimalize_4(self.option.strike - self.option.spot_price)
+            otm_amount = decimalize_4(self.option.spot_price - self.option.strike) if self.option.otm() else decimalize_0(0)
             price = decimalize_2(self.option.trade_open_info.price)
 
             # three calculations - take the largest value

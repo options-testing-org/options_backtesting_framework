@@ -42,10 +42,10 @@ def test_get_single_option_next_expiration(option_chain_daily, quote_date):
 
 
 
-def test_naked_put_margin_requirement_calc1(option_chain_daily, quote_date):
+def test_naked_put_margin_requirement_otm(option_chain_daily, quote_date):
     option_chain = option_chain_daily(quote_date)
     expiration = option_chain.expirations[0]
-    strike = 520
+    strike = 510
     qty = -1
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
@@ -54,13 +54,13 @@ def test_naked_put_margin_requirement_calc1(option_chain_daily, quote_date):
                                       strike=strike)
     single_option.open_trade(quantity=qty)
 
-    assert single_option.required_margin ==  10_620.8
+    assert single_option.required_margin ==  10_360.8
 
 def test_naked_put_margin_requirement_itm(option_chain_daily):
     quote_date = datetime.datetime.strptime('2014-02-10','%Y-%m-%d')
     option_chain = option_chain_daily(quote_date)
     expiration = datetime.datetime.strptime('2014-02-14','%Y-%m-%d').date()
-    strike = 460
+    strike = 640
     qty = -1
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
@@ -69,7 +69,7 @@ def test_naked_put_margin_requirement_itm(option_chain_daily):
                                       strike=strike)
     single_option.open_trade(quantity=qty)
 
-    assert single_option.required_margin ==  15_528.8
+    assert single_option.required_margin ==  21_686.8
 
 def test_get_single_option_gets_next_expiration_when_expiration_is_not_in_chain(option_chain_daily):
     quote_date = datetime.datetime.strptime('2014-02-10','%Y-%m-%d')

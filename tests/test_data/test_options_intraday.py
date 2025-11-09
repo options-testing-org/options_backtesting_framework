@@ -29,7 +29,7 @@ col_mapping = {
 }
 fields_ = [col_mapping[f] for f in column_names if f in col_mapping.keys()]
 
-data = [
+intraday_option_data = [
 ['2016-03-08 09:31','SPXW20160309C00001960','SPXW',1960,'2016-03-09','C',1991.18,27.2,29.7,28.45,0.8817,0.0085,-1.3502,0.234,6.0964,72,0,0.196],
 ['2016-03-08 09:31','SPXW20160309P00001960','SPXW',1960,'2016-03-09','P',1991.18,1.25,1.4,1.32,-0.117,0.0085,-1.3249,0.2322,-0.8268,820,42,0.1949],
 ['2016-03-08 09:31','SPXW20160309C00001990','SPXW',1990,'2016-03-09','C',1991.18,6.2,6.9,6.55,0.4439,0.0199,-3.0396,0.4668,3.0964,2417,45,0.1678],
@@ -350,13 +350,13 @@ def quote_datetime_to_datetime(x):
 def intraday_option_type_from_str(x):
     return {**x, 'option_type': OptionType.CALL if x['option_type'] == 'C' else OptionType.PUT}
 
-intraday_test_data = list(map(lambda x: dict(zip(fields_, x)), data))
+intraday_test_data = list(map(lambda x: dict(zip(fields_, x)), intraday_option_data))
 intraday_test_data = list(map(quote_datetime_to_datetime, intraday_test_data))
 intraday_test_data = list(map(expiration_to_date, intraday_test_data))
 intraday_test_data = list(map(intraday_option_type_from_str, intraday_test_data))
 intraday_test_options = create_option_objects(intraday_test_data)
 
-intraday_test_df = pd.DataFrame(data, columns=column_names)
+intraday_test_df = pd.DataFrame(intraday_option_data, columns=column_names)
 intraday_test_df = intraday_test_df.rename(columns=col_mapping)
 intraday_test_df = intraday_test_df.sort_values(by=['quote_datetime', 'expiration', 'strike'])
 intraday_test_df['quote_datetime'] = pd.to_datetime(intraday_test_df['quote_datetime'])

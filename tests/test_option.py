@@ -4,45 +4,32 @@ from options_framework.config import settings
 
 from test_data.test_option_daily import *
 from test_data.test_options_intraday import *
+from test_helpers import create_option_objects, get_daily_option_data, get_daily_fields
 
 
 @pytest.fixture(scope='function')
 def test_values_call():
-    vals = next(x for x in daily_test_data if x['option_id'] == 'AAPL140207C00512500')
-    option = Option(option_id=vals['option_id'], symbol=vals['symbol'], strike=vals['strike'],
-                    expiration=vals['expiration'],
-                    option_type=vals['option_type'], quote_datetime=vals['quote_datetime'],
-                    spot_price=vals['spot_price'],
-                    bid=vals['bid'], ask=vals['ask'], price=vals['price'], volume=vals['volume'],
-                    open_interest=vals['open_interest'], implied_volatility=vals['implied_volatility'],
-                    delta=vals['delta'], gamma=vals['gamma'], theta=vals['theta'], vega=vals['vega'], rho=vals['rho'])
+    option_data = get_daily_option_data()
+    vals = next(x for x in option_data if x['option_id'] == 'AAPL140207C00512500')
+    option = create_option_objects([vals])[0]
     return vals, option
 
 
 @pytest.fixture
 def test_values_put(scope='function'):
-    vals = next(x for x in daily_test_data if x['option_id'] == 'AAPL140214P00520000')
-    option = Option(option_id=vals['option_id'], symbol=vals['symbol'], strike=vals['strike'],
-                    expiration=vals['expiration'],
-                    option_type=vals['option_type'], quote_datetime=vals['quote_datetime'],
-                    spot_price=vals['spot_price'],
-                    bid=vals['bid'], ask=vals['ask'], price=vals['price'], volume=vals['volume'],
-                    open_interest=vals['open_interest'], implied_volatility=vals['implied_volatility'],
-                    delta=vals['delta'], gamma=vals['gamma'], theta=vals['theta'], vega=vals['vega'], rho=vals['rho'])
+    option_data = get_daily_option_data()
+    vals = next(x for x in option_data if x['option_id'] == 'AAPL140214P00520000')
+    option = create_option_objects([vals])[0]
     return vals, option
 
 
 @pytest.fixture
 def test_values_put_expiring():
-    option_data = (x for x in daily_test_data if x['option_id'] == 'AAPL140207P00512500')
+    option_data = get_daily_option_data()
+    fields = get_daily_fields()
+    option_data = (x for x in option_data if x['option_id'] == 'AAPL140207P00512500')
     vals = next(option_data)
-    option = Option(option_id=vals['option_id'], symbol=vals['symbol'], strike=vals['strike'],
-                    expiration=vals['expiration'],
-                    option_type=vals['option_type'], quote_datetime=vals['quote_datetime'],
-                    spot_price=vals['spot_price'],
-                    bid=vals['bid'], ask=vals['ask'], price=vals['price'], volume=vals['volume'],
-                    open_interest=vals['open_interest'], implied_volatility=vals['implied_volatility'],
-                    delta=vals['delta'], gamma=vals['gamma'], theta=vals['theta'], vega=vals['vega'], rho=vals['rho'])
+    option = create_option_objects([vals])[0]
     updates = list(option_data)
     df = pd.DataFrame(updates, columns=fields)
     return option, df, updates
@@ -50,29 +37,29 @@ def test_values_put_expiring():
 
 @pytest.fixture
 def call_updates():
-    updates = [x for x in daily_test_data if x['option_id'] == 'AAPL140207C00512500'][1:]
+    option_data = get_daily_option_data()
+    fields = get_daily_fields()
+    updates = [x for x in option_data if x['option_id'] == 'AAPL140207C00512500'][1:]
     df = pd.DataFrame(updates, columns=fields)
     return df, updates
 
 
 @pytest.fixture
 def put_updates():
-    updates = [x for x in daily_test_data if x['option_id'] == 'AAPL140214P00520000'][1:]
+    option_data = get_daily_option_data()
+    fields = get_daily_fields()
+    updates = [x for x in option_data if x['option_id'] == 'AAPL140214P00520000'][1:]
     df = pd.DataFrame(updates, columns=fields)
     return df, updates
 
 
 @pytest.fixture
 def call_intraday_option():
+    fields = get_daily_fields()
     option_data = (x for x in intraday_test_data if x['option_id'] == 'SPXW20160309C00001990')
     vals = next(option_data)
+    option = create_option_objects([vals])[0]
     updates = list(option_data)
-
-    option = Option(option_id=vals['option_id'], symbol=vals['symbol'], strike=vals['strike'],
-                    expiration=vals['expiration'],
-                    option_type=vals['option_type'], quote_datetime=vals['quote_datetime'],
-                    spot_price=vals['spot_price'],
-                    bid=vals['bid'], ask=vals['ask'], price=vals['price'])
     df = pd.DataFrame(updates, columns=fields)
     return option, df, updates
 

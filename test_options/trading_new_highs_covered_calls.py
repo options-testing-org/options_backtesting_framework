@@ -115,7 +115,7 @@ class TradingNewHighsStrategy(bt.Strategy):
         print('init complete')
 
     def notify_order(self, order):
-        ticker = order.data.p.name
+        ticker = order.daily_option_data.p.name
         if order.status in [order.Submitted, order.Accepted]:
             # Buy/Sell order submitted/accepted to/by broker - Nothing to do
             return
@@ -142,8 +142,8 @@ class TradingNewHighsStrategy(bt.Strategy):
     def notify_trade(self, trade):
         if not trade.isclosed:
             return
-        self.log(f'{trade.data.p.name}, P/L: GROSS: {trade.pnl :.2f}, Portfolio Value: ${self.broker.get_value():,.2f}')
-        data_line = f'{datetime.datetime.strftime(self.dt, "%Y-%m-%d")},{trade.data.p.name},{trade.pnl :.2f}\n'
+        self.log(f'{trade.daily_option_data.p.name}, P/L: GROSS: {trade.pnl :.2f}, Portfolio Value: ${self.broker.get_value():,.2f}')
+        data_line = f'{datetime.datetime.strftime(self.dt, "%Y-%m-%d")},{trade.daily_option_data.p.name},{trade.pnl :.2f}\n'
 
     def expired(self, position):
         symbol = position.symbol

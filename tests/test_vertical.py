@@ -7,81 +7,126 @@ from options_framework.option_types import OptionType, OptionPositionType, Selec
 from options_framework.spreads.vertical import Vertical
 
 from tests.test_data.test_option_daily import *
+from test_data.test_options_intraday import *
 from mocks import Nexter, MockOptionChain
-
-@pytest.fixture(scope='function')
-def test_values_call():
-    pass
-
-@pytest.fixture
-def test_values_put(scope='function'):
-    pass
-
-
-
+#
+# @pytest.fixture(scope='function')
+# def option_chain_data():
+#     def get_option_data():
+#     option_data = [x for x in daily_test_data if x['quote_datetime']]
+#     pass
+#     # # 'AAPL140207C00510000' 'AAPL140207P00520000'
+#     # vals_510 = next(x for x in daily_test_data if x['option_id'] == 'AAPL140207C00510000')
+#     # vals_520 = next(x for x in daily_test_data if x['option_id'] == 'AAPL140207C00520000')
+#     # option_510 = Option(option_id=vals_510['option_id'], symbol=vals_510['symbol'], strike=vals_510['strike'],
+#     #                 expiration=vals_510['expiration'], option_type=vals_510['option_type'],
+#     #                 quote_datetime=vals_510['quote_datetime'],spot_price=vals_510['spot_price'],bid=vals_510['bid'],
+#     #                 ask=vals_510['ask'], price=vals_510['price'],delta=vals_510['delta'], )
+#     # option_520 = Option(option_id=vals_520['option_id'], symbol=vals_520['symbol'], strike=vals_520['strike'],
+#     #                 expiration=vals_520['expiration'], option_type=vals_520['option_type'],
+#     #                 quote_datetime=vals_520['quote_datetime'],spot_price=vals_520['spot_price'],bid=vals_520['bid'],
+#     #                 ask=vals_520['ask'], price=vals_520['price'],delta=vals_520['delta'], )
+#     # return option_510, option_520
+#
+#
+# @pytest.fixture
+# def test_values_put(scope='function'):
+#     vals_510 = next(x for x in daily_test_data if x['option_id'] == 'AAPL140207P00510000')
+#     vals_520 = next(x for x in daily_test_data if x['option_id'] == 'AAPL140207P00520000')
+#     option1 = Option(option_id=vals_510['option_id'], symbol=vals_510['symbol'], strike=vals_510['strike'],
+#                      expiration=vals_510['expiration'], option_type=vals_510['option_type'],
+#                      quote_datetime=vals_510['quote_datetime'], spot_price=vals_510['spot_price'], bid=vals_510['bid'],
+#                      ask=vals_510['ask'], price=vals_510['price'], delta=vals_510['delta'], )
+#     option2 = Option(option_id=vals_520['option_id'], symbol=vals_520['symbol'], strike=vals_520['strike'],
+#                      expiration=vals_520['expiration'], option_type=vals_520['option_type'],
+#                      quote_datetime=vals_520['quote_datetime'], spot_price=vals_520['spot_price'], bid=vals_520['bid'],
+#                      ask=vals_520['ask'], price=vals_520['price'], delta=vals_520['delta'], )
+#     return option1, option2
+#
+# def get_mock_option_chain(scope='function'):
+#     pass
+#
+#
 # def test_get_call_debit_spread():
-#     expiration = datetime.date(2016, 3, 2)
-#     long_strike = 1950
-#     short_strike = 1960
-#     option_chain = MockSPXOptionChain()
+#     option_510, option_520 = test_options_call
+#     quote_datetime = datetime.datetime(2014, 2, 5)
+#     option_chain = MockOptionChain('AAPL')
+#
+#     expiration = datetime.date(2014, 2, 7)
+#     long_strike = 510
+#     short_strike = 520
+#
 #     vertical_spread: Vertical = Vertical.get_vertical(option_chain=option_chain, expiration=expiration,
 #                                             option_type=OptionType.CALL,
 #                                             long_strike=long_strike, short_strike=short_strike)
 #
 #     assert vertical_spread.option_type == OptionType.CALL
-#     assert vertical_spread.long_option.strike == 1950
+#     assert vertical_spread.option_position_type == OptionPositionType.LONG
+#     assert vertical_spread.long_option.strike == 510 # 3.25
 #     assert vertical_spread.long_option.option_type == OptionType.CALL
-#     assert vertical_spread.short_option.strike == 1960
+#     assert vertical_spread.short_option.strike == 520 # 0.57
 #     assert vertical_spread.short_option.option_type == OptionType.CALL
-#     assert vertical_spread.max_profit == 570.0
-#     assert vertical_spread.max_loss == 430.0
+#     assert vertical_spread.max_profit == 732.0
+#     assert vertical_spread.max_loss == 268.0
 #
-# def test_get_put_debit_spread():
-#     expiration = datetime.date(2016, 3, 2)
-#     long_strike = 1945
-#     short_strike = 1925
-#     option_chain = MockSPXOptionChain()
+# def test_get_call_credit_spread(option_chain_daily):
+#     quote_datetime = datetime.datetime(2014, 2, 5)
+#     option_chain = option_chain_daily(quote_datetime)
+#
+#     expiration = datetime.date(2014, 2, 7)
+#     long_strike = 520
+#     short_strike = 510
+#
+#     vertical_spread: Vertical = Vertical.get_vertical(option_chain=option_chain, expiration=expiration,
+#                                             option_type=OptionType.CALL,
+#                                             long_strike=long_strike, short_strike=short_strike)
+#
+#     assert vertical_spread.option_position_type == OptionPositionType.SHORT
+#     assert vertical_spread.long_option.strike == 520
+#     assert vertical_spread.short_option.strike == 510
+#     assert vertical_spread.max_profit == 268.0
+#     assert vertical_spread.max_loss == 732.0
+#
+#
+# def test_get_put_debit_spread(option_chain_daily):
+#     quote_datetime = datetime.datetime(2014, 2, 5)
+#     option_chain = option_chain_daily(quote_datetime)
+#
+#     expiration = datetime.date(2014, 2, 7)
+#     long_strike = 520
+#     short_strike = 510
+#
 #     vertical_spread: Vertical = Vertical.get_vertical(option_chain=option_chain, expiration=expiration,
 #                                             option_type=OptionType.PUT,
 #                                             long_strike=long_strike, short_strike=short_strike)
 #
 #     assert vertical_spread.option_position_type == OptionPositionType.LONG
 #     assert vertical_spread.option_type == OptionType.PUT
-#     assert vertical_spread.long_option.strike == 1945
-#     assert vertical_spread.short_option.strike == 1925
-#     assert vertical_spread.max_profit == 1450.0
-#     assert vertical_spread.max_loss == 550.0
+#     assert vertical_spread.long_option.strike == 520 # 11.1
+#     assert vertical_spread.short_option.strike == 510 # 3.68
+#     assert vertical_spread.max_profit == 258.0
+#     assert vertical_spread.max_loss == 742.0
 #
-# def test_get_call_credit_spread():
-#     expiration = datetime.date(2016, 3, 2)
-#     long_strike = 1960
-#     short_strike = 1950
-#     option_chain = MockSPXOptionChain()
+#
+# def test_get_put_credit_spread(option_chain_daily):
+#     quote_datetime = datetime.datetime(2014, 2, 5)
+#     option_chain = option_chain_daily(quote_datetime)
+#
+#     expiration = datetime.date(2014, 2, 7)
+#     long_strike = 510
+#     short_strike = 520
+#
 #     vertical_spread: Vertical = Vertical.get_vertical(option_chain=option_chain, expiration=expiration,
-#                                             option_type=OptionType.CALL,
-#                                             long_strike=long_strike, short_strike=short_strike)
+#                                                       option_type=OptionType.PUT,
+#                                                       long_strike=long_strike, short_strike=short_strike)
 #
 #     assert vertical_spread.option_position_type == OptionPositionType.SHORT
-#     assert vertical_spread.long_option.strike == 1960
-#     assert vertical_spread.short_option.strike == 1950
-#     assert vertical_spread.max_profit == 430.0
-#     assert vertical_spread.max_loss == 570.0
-#
-# def test_get_put_credit_spread():
-#     expiration = datetime.date(2016, 3, 2)
-#     long_strike = 1925
-#     short_strike = 1935
-#     option_chain = MockSPXOptionChain()
-#     vertical_spread: Vertical = Vertical.get_vertical(option_chain=option_chain, expiration=expiration,
-#                                             option_type=OptionType.PUT,
-#                                             long_strike=long_strike, short_strike=short_strike)
-#
-#     assert vertical_spread.option_position_type == OptionPositionType.SHORT
-#     assert vertical_spread.long_option.strike == 1925
-#     assert vertical_spread.short_option.strike == 1935
-#     assert vertical_spread.max_profit == 220.0
-#     assert vertical_spread.max_loss == 780.0
-#
+#     assert vertical_spread.option_type == OptionType.PUT
+#     assert vertical_spread.long_option.strike == 510  # 11.1
+#     assert vertical_spread.short_option.strike == 520  # 3.68
+#     assert vertical_spread.max_profit == 742.0
+#     assert vertical_spread.max_loss == 258.0
+
 # def test_vertical_spread_updates():
 #     expiration = datetime.date(2016, 3, 2)
 #     long_strike = 1940

@@ -6,9 +6,10 @@ import os
 
 os.environ["OPTIONS_FRAMEWORK_CONFIG_FOLDER"] = r'C:\_code\options_backtesting_framework\tests\config'
 from mocks import *
-from test_data.test_option_daily import daily_test_options, daily_test_df
+#from test_data.test_option_daily import daily_test_options, daily_test_df
 from pprint import pprint as pp
-from test_helpers import get_option_chain_items
+
+from test_helpers import get_daily_option_chain_items, create_option_objects, get_daily_test_df, get_daily_option_data
 from options_framework.config import settings, load_settings
 
 
@@ -60,9 +61,9 @@ def allow_slippage():
 @pytest.fixture
 def option_chain_daily():
     def get_option_chain_daily_for_date(quote_date):
-        option_chain = MockOptionChain(symbol='AAPL',
-                                   quote_datetime=quote_date)
-        options, expirations, expiration_strikes = get_option_chain_items(quote_date, daily_test_df, daily_test_options)
+
+        option_chain = MockOptionChain(symbol='AAPL',quote_datetime=quote_date)
+        options, expirations, expiration_strikes = get_daily_option_chain_items(quote_date)
         option_chain.option_chain = options
         option_chain.expirations = expirations
         option_chain.expiration_strikes = expiration_strikes

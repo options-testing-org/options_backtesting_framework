@@ -48,7 +48,6 @@ class OptionTestManager:
         self.portfolio.bind(new_position_opened=self.data_loader.on_options_opened)
 
 
-
     def initialize_ticker(self, symbol: str, quote_datetime: datetime.datetime) :
         if symbol not in self.option_chains.keys():
             option_chain = OptionChain(symbol=symbol)
