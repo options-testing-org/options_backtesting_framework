@@ -40,7 +40,7 @@ def get_data(database, query, index_col):
 
     engine = create_engine(connection_url)
     with engine.connect() as conn:
-        df = pd.read_sql(text(query), conn, index_col=index_col, parse_dates=True)
+        df = pd.read_sql(text(query), conn, index_col=index_col, parse_dates=index_col)
 
     return df
 
@@ -212,7 +212,6 @@ if __name__ == "__main__":
 
     # Set up options for testing
     options_select_filter = SelectFilter(
-        symbol='SPXW',
         option_type=OptionType.PUT,
         expiration_dte=FilterRange(low=5, high=15),
         strike_offset=FilterRange(low=100, high=100))

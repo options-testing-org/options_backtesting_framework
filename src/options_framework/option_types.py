@@ -70,7 +70,6 @@ class FilterRange:
 
 @dataclass
 class SelectFilter:
-    symbol: str
     option_type: OptionType = None
     expiration_dte: FilterRange = field(default_factory=lambda: FilterRange())
     strike_offset: FilterRange = field(default_factory=lambda: FilterRange())

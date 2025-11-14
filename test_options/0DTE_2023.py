@@ -44,7 +44,7 @@ def get_data(database, query, index_col):
 
     engine = create_engine(connection_url)
     with engine.connect() as conn:
-        df = pd.read_sql(text(query), conn, index_col=index_col, parse_dates=True)
+        df = pd.read_sql(text(query), conn, index_col=index_col, parse_dates=index_col)
 
     return df
 
@@ -209,7 +209,7 @@ if __name__ == "__main__":
                                      select_filter=options_select_filter, starting_cash=starting_cash,
                                      extended_option_attributes=['delta'])
     # Get price data and signals from sql server
-    price_df = get_data(database=settings.DATABASE, query=get_price_data_query(startdate, enddate),
+    price_df = get_data(database=settings['database'], query=get_price_data_query(startdate, enddate),
                         index_col='datetime')
     data = bt.feeds.PandasData(dataname=price_df, name='SPX')
 

@@ -3,7 +3,10 @@ from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
 import datetime
-from pandas import DataFrame
+import numbers
+
+import pandas as pd
+import numpy as np
 from options_framework.option_types import OptionPositionType, OptionType, OptionStatus
 from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 from options_framework.config import settings
@@ -24,6 +27,7 @@ class Option(Dispatcher):
     """
 
     _events_ = ["open_transaction_completed", "close_transaction_completed", "option_expired", "fees_incurred"]
+
 
     # immutable fields
     option_id: str | int = field(compare=True)
@@ -85,8 +89,9 @@ class Option(Dispatcher):
     vega: Optional[float] = field(default=None, compare=False)
     rho: Optional[float] = field(default=None, compare=False)
     open_interest: Optional[int] = field(default=None, compare=False)
+    volume: Optional[int] = field(default=None, compare=False)
     implied_volatility: Optional[float] = field(default=None, compare=False)
-    update_cache: DataFrame | None = field(default=None, compare=False)
+    update_cache: pd.DataFrame | None = field(default=None, compare=False)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
@@ -103,6 +108,8 @@ class Option(Dispatcher):
             raise ValueError("option_type cannot be None")
         if self.quote_datetime is None:
             raise ValueError("quote_datetime cannot be None")
+        elif type(self.quote_datetime) != datetime.datetime and type(self.quote_datetime) != pd.Timestamp:
+            raise ValueError("quote datetime must be python datetime.datetime or pandas Timestamp")
         if self.spot_price is None:
             raise ValueError("spot_price cannot be None")
         if self.bid is None:
@@ -126,7 +133,7 @@ class Option(Dispatcher):
         :return: fees that were added to the option
         :rtype: float
         """
-        fee = decimalize_2(settings.STANDARD_FEE)
+        fee = decimalize_2(settings['standard_fee'])
         qty = decimalize_0(quantity)
         fees = fee * abs(qty)
         total_fees = decimalize_2(self.total_fees) + fees
@@ -145,10 +152,14 @@ class Option(Dispatcher):
         """
         if OptionStatus.EXPIRED in self.status:
             return True
-        quote_date, expiration_date = self.quote_datetime.date(), self.expiration
-        quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
-        if ((quote_date == expiration_date and quote_time >= exp_time)
-                or (quote_date > expiration_date)):
+        if type(self.quote_datetime) == datetime.datetime or type(self.quote_datetime) == pd.Timestamp:
+            quote_date, quote_time = self.quote_datetime.date(), self.quote_datetime.time()
+        else:
+            message = f"Wrong format for option date. Must be python datetime.datetime. Date was provided in {type(self.quote_datetime)} format."
+            raise ValueError(message)
+        expiration_date, exp_time = self.expiration, datetime.time(16, 15)
+        #quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
+        if ((quote_date > expiration_date) or (quote_date == expiration_date and quote_time >= exp_time)):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)
             #print(f'emit expire {self.option_id}')
@@ -160,9 +171,15 @@ class Option(Dispatcher):
         self.quote_datetime = quote_datetime
         if self._check_expired():
             return
-        update_values = self.update_cache.loc[quote_datetime]
-        update_fields = [f for f in update_values.index if f not in ['option_id', 'symbol', 'strike', 'expiration',
-                                                                     'option_type']]
+        try:
+            update_row = self.update_cache[self.update_cache['quote_datetime'] == quote_datetime]
+            values = list(np.array(update_row)[0])
+            update_fields = [f for f in update_row.columns]
+            update_values = dict(zip(update_fields, values))
+            self.update_cache = self.update_cache[self.update_cache['quote_datetime'] > quote_datetime] # drop row after updating
+        except KeyError as e:
+            return
+
         self.spot_price = update_values['spot_price']
         self.bid = float(decimalize_2(update_values['bid']))
         self.ask = float(decimalize_2(update_values['ask']))
@@ -180,6 +197,8 @@ class Option(Dispatcher):
             self.rho = update_values['rho']
         if 'open_interest' in update_fields:
             self.open_interest = update_values['open_interest']
+        if 'volume' in update_fields:
+            self.volume = update_values['volume']
         if 'implied_volatility' in update_fields:
             self.implied_volatility = update_values['implied_volatility']
 
@@ -203,15 +222,18 @@ class Option(Dispatcher):
         additional keyword arguments are added to the user_defined list of values
         """
         if OptionStatus.TRADE_IS_OPEN in self.status:
-            raise ValueError("Cannot open position. A position is already open.")
-        if (quantity is None) or not (isinstance(quantity, int)) or (quantity == 0):
-            raise ValueError("Quantity must be a non-zero integer.")
+            raise ValueError(f"Cannot open position. A position is already open. ({self.symbol})")
+        if (quantity is None) or not (isinstance(quantity, numbers.Number)) or (quantity == 0) or (quantity != int(quantity)):
+            raise ValueError(f"Quantity must be a non-zero integer. ({self.symbol}) Quantity: {quantity}")
+        quantity = int(quantity)
 
         # calculate premium debit or credit. If this is a long position, the premium is a positive number.
         # If it is a short position, the premium is a negative number.
         price = decimalize_2(self.price)
+        if price == 0:
+            raise Exception(f"Option price is zero {self.symbol} ({self.option_id}). Cannot open this option.")
         quantity = decimalize_0(quantity)
-        if settings.apply_slippage_entry:
+        if settings['apply_slippage_entry']:
             if quantity > 0:
                 price -= self.slippage
             else:
@@ -224,7 +246,7 @@ class Option(Dispatcher):
             self.user_defined[key] = value
 
         fees = 0
-        if settings.incur_fees:
+        if settings['incur_fees']:
             fees = self._incur_fees(quantity=quantity)
         trade_open_info = TradeOpenInfo(option_id=self.option_id, date=self.quote_datetime, quantity=quantity,
                                         price=price,
@@ -254,7 +276,7 @@ class Option(Dispatcher):
 
         if quantity is None:
             quantity = decimalize_0(self.quantity) * -1
-        elif not (isinstance(quantity, int)) or (quantity == 0):
+        elif not (isinstance(quantity, numbers.Number)) or (quantity == 0):
             raise ValueError("Must supply a non-zero quantity.")
         # elif self._position_type == OptionPositionType.LONG and quantity + self._quantity - closed_quantity:
         #     raise ValueError("Quantity to close is greater than the current open quantity.")
@@ -271,9 +293,9 @@ class Option(Dispatcher):
             quantity = decimalize_0(quantity) * -1
 
         close_price = decimalize_2(self.get_closing_price())
-        if settings.apply_slippage_exit:
+        if settings['apply_slippage_exit']:
             if not OptionStatus.EXPIRED in self.status:
-                slippage = settings.slippage
+                slippage = settings['slippage']
                 if self.trade_open_info.quantity > 0:
                     close_price += close_price * decimalize_2(slippage)
                 elif self.trade_open_info.quantity < 0:
@@ -282,10 +304,11 @@ class Option(Dispatcher):
         open_price = decimalize_2(self.trade_open_info.price)
         premium = decimalize_2(close_price) * 100 * quantity*-1
         profit_loss = (open_price * 100 * quantity) - (close_price * 100 * quantity)
-        profit_loss_percent = decimalize_4((close_price - open_price) / open_price) * (quantity * -1 / abs(quantity))
+        ratio = (close_price - open_price) / open_price if open_price > 0 else 0
+        profit_loss_percent = decimalize_4(ratio) * (quantity * -1 / abs(quantity))
 
         fees = 0
-        if settings.incur_fees:
+        if settings['incur_fees']:
             fees = self._incur_fees(quantity=abs(quantity))
 
         # date quantity price premium profit_loss fees
@@ -434,7 +457,7 @@ class Option(Dispatcher):
         the trade open and the current quote.
         The value is determined by multiplying the price difference by the quantity and number
         of underlying units the option represents (100).
-        This method uses the current price of the option. This may be different than the closing
+        This method uses the current price of the option. This may be different from the closing
         price which considers other factors such as expiration and intrinsic value.
         :return: the current value of the trade
         :rtype: float
@@ -556,180 +579,3 @@ class Option(Dispatcher):
             close_fees = 0
 
         return open_fees + close_fees
-
-    #
-    # @property
-    # def option_contract(self):
-    #     """
-    #     The option contains all the properties of a contract that do not change:
-    #
-    #     id: A unique identifier for the option
-    #     symbol: The ticker symbol of the underlying asset
-    #     expiration: The option expiration date
-    #     strike: The option strike price
-    #     option_type: OptionType.PUT or OptionType.CALL
-    #     :return: A named tuple with the following properties: id, symbol, expiration, strike, option_type
-    #     :rtype: OptionContract named tuple
-    #     """
-    #     return self._option_contract
-    #
-    # @property
-    # def option_id(self):
-    #     return self._option_contract.option_id
-    #
-    # @property
-    # def symbol(self):
-    #     return self._option_contract.symbol
-    #
-    # @property
-    # def strike(self):
-    #     return self._option_contract.strike
-    #
-    # @property
-    # def expiration(self):
-    #     return self._option_contract.expiration
-    #
-    # @property
-    # def option_type(self):
-    #     return self._option_contract.option_type
-    #
-    # @property
-    # def option_quote(self):
-    #     """
-    #     The option quote contains all the information that will change throughout it's lifetime, such as the price
-    #     The option quote has the following properties:
-    #
-    #     quote_date: The data date
-    #     spot_price: The price of the underlying as of the data date
-    #     bid: The bid price of the option as of the data date
-    #     ask: The ask price of the option as of the data date
-    #     price: The mid-point of the bid and ask price of the option as of the data date
-    #
-    #     These may be set to None if the option contract data is not populated
-    #
-    #     :return: A named tuple with the following properties: quote_date, spot_price, bid, ask, price
-    #     :rtype: OptionQuote named tuple
-    #     """
-    #     return self._option_quote
-    #
-    # @property
-    # def quote_date(self):
-    #     return None if self._option_quote is None else self._option_quote.quote_date
-    #
-    # @property
-    # def spot_price(self):
-    #     return None if self._option_quote is None else self._option_quote.spot_price
-    #
-    # @property
-    # def bid(self):
-    #     return None if self._option_quote is None else self._option_quote.bid
-    #
-    # @property
-    # def ask(self):
-    #     return None if self._option_quote is None else self._option_quote.ask
-    #
-    # @property
-    # def price(self):
-    #     return None if self._option_quote is None else self._option_quote.price
-    #
-    # @property
-    # def extended_properties(self):
-    #     """
-    #     The extended properties are optional properties that can be set and updated on an option.
-    #     The extended properties contain the following: implied volatility, open interest,
-    #         the standard fee for trading 1 contract
-    #     :return: A named tuple with the following properties: implied_volatility, open_interest
-    #     :rtype: ExtendedProperties named tuple containing: implied_volatility, open_interest
-    #     """
-    #     return self._extended_properties
-    #
-    # @property
-    # def implied_volatility(self):
-    #     return None if self._extended_properties is None else self._extended_properties.implied_volatility
-    #
-    # @property
-    # def open_interest(self):
-    #     return None if self._extended_properties is None else self._extended_properties.open_interest
-    #
-    # @property
-    # def greeks(self):
-    #     """
-    #     The option greeks contains the current values as of the data date of the option_contract property
-    #     The greeks property contains the following attributes: delta, gamma, theta, vega, rho
-    #     These may be set to None if they are not populated
-    #
-    #     :return: A named tuple with the following properties: delta, gamma, theta, vega, rho
-    #     :rtype: A Greeks named tuple containing: delta, gamma, theta, vega, rho
-    #     """
-    #     return self._greeks
-    #
-    # @property
-    # def delta(self):
-    #     return None if self._greeks is None else self._greeks.delta
-    #
-    # @property
-    # def gamma(self):
-    #     return None if self._greeks is None else self._greeks.gamma
-    #
-    # @property
-    # def theta(self):
-    #     return None if self._greeks is None else self._greeks.theta
-    #
-    # @property
-    # def vega(self):
-    #     return None if self._greeks is None else self._greeks.vega
-    #
-    # @property
-    # def rho(self):
-    #     return None if self._greeks is None else self._greeks.rho
-
-    # @property
-    # def trade_close_records(self):
-    #     """
-    #     When a trade is closed, either fully or partially, a trade close record is created and added to the
-    #     close records. This methon will return all the trade close transaction records.
-    #     :return: The array containing all the closing trade records
-    #     :rtype: TradeClose, a numed tuple containing: date, quantity, price, premium, profit_loss, fees
-    #     """
-    #     return self._trade_close_records
-
-    # @property
-    # def total_fees(self):
-    #     """
-    #     All the fees that have been incurred for this option.
-    #     A fee per contract amount can be set when the option is created. When the option is traded,
-    #     the fee will be applied for the number of contracts traded and added to the total fees.
-    #     :return: current fees
-    #     :rtype: float
-    #     """
-    #     return self._total_fees
-
-    # @property
-    # def position_type(self):
-    #     """
-    #     The position type is determined when the option is opened. It is either long or short.
-    #         An option is long if the quantity is positive. It is bought to open and sold to close.
-    #         An option is short if the quantity is negative. It is sold to open and bought to close
-    #     :return: OptionPositionType of LONG or SHORT
-    #     :rtype: OptionPositionType
-    #     """
-    #     return self._position_type
-
-    # @property
-    # def quantity(self):
-    #     """
-    #     A positive quantity indicates a long position, and a negative quantity indicates a short position
-    #     :return: quantity
-    #     :rtype: integer
-    #     """
-    #     return self._quantity
-
-    # @property
-    # def fee_per_contract(self):
-    #     return self._fee
-    #
-    # @fee_per_contract.setter
-    # def fee_per_contract(self, value):
-    #     if math.isnan(value) or value < 0:
-    #         raise ValueError("Fee per contract must be zero or a positive number")
-    #     self._fee = value

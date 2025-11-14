@@ -22,13 +22,15 @@ class OptionCombination(ABC):
     quantity: int = field(default=1)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
     user_defined: dict = field(default_factory=lambda: {})
+    quote_datetime: datetime = field(init=False, default=None)
+    #expiration: datetime.date = field(init=False, default=None)
 
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.
         raise NotImplementedError
 
     def __repr__(self) -> str:
-        return f'<{self.option_combination_type.name}({self.position_id}) Quantity: {len(self.options)} options>'
+        return f'<{self.option_combination_type.name}({self.position_id}) Quantity: {len(self.options)} positions>'
 
     @property
     def current_value(self) -> float:
@@ -85,6 +87,14 @@ class OptionCombination(ABC):
     def required_margin(self) -> float:
         pass
 
+    @property
+    @abstractmethod
+    def status(self) -> OptionStatus:
+        pass
+
+    def next_quote_date(self, quote_datetime: datetime.datetime) -> None:
+        self.quote_datetime = quote_datetime
+
     def get_profit_loss(self) -> float:
         pnl = sum(o.get_profit_loss() for o in self.options)
         fees = self.get_fees()
@@ -104,10 +114,6 @@ class OptionCombination(ABC):
     @abstractmethod
     def get_trade_price(self) -> float | None:
         pass
-
-    # @abstractmethod
-    # def get_closing_price(self) -> float | None:
-    #     pass
 
     def get_open_datetime(self) -> datetime.datetime | None:
         first_option = self.options[0]

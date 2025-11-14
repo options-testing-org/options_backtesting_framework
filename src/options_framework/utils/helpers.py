@@ -1,4 +1,6 @@
 from decimal import Context, Decimal, getcontext
+from pathlib import Path
+import os
 
 
 def decimalize_0(value: int | float | Decimal) -> Decimal:
@@ -47,3 +49,10 @@ def distinct(iterable: list) -> list:
         yield x
         distinct_values.add(x)
 
+def temp_data_dir_cleanup() -> None:
+    temp_dir = Path.cwd().joinpath('temp_data')
+    if not temp_dir.exists():
+        temp_dir.mkdir()
+    for x in temp_dir.iterdir():
+        if x.is_file():
+            os.remove(x)

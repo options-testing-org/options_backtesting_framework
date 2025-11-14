@@ -2,146 +2,210 @@ import datetime
 import pytest
 import pandas as pd
 from pandas import DataFrame
+import os
+
+os.environ["OPTIONS_FRAMEWORK_CONFIG_FOLDER"] = r'C:\_code\options_backtesting_framework\tests\config'
+from mocks import *
+#from test_data.test_option_daily import daily_test_options, daily_test_df
 from pprint import pprint as pp
 
-from options_framework.option_types import OptionType
-from options_framework.option import Option
+from test_helpers import get_daily_option_chain_items, create_option_objects, get_daily_test_df, get_daily_option_data
+from options_framework.config import settings, load_settings
 
 
 @pytest.fixture
-def test_expiration():
-    return datetime.date(2021, 7, 16)
-
-@pytest.fixture
-def test_quote_date():
-    return (datetime.datetime(2021, 7, 1, 9, 45))
-
-@pytest.fixture
-def test_update_quote_date():
-    return (datetime.datetime(2021, 7, 2, 9, 45))
-
-@pytest.fixture
-def test_update_quote_date2():
-    return datetime.datetime(2021, 7, 2, 14, 31)
+def incur_fees_true():
+    original_setting = settings['incur_fees']
+    settings['incur_fees'] = True
+    yield
+    settings['incur_fees'] = original_setting
 
 
 @pytest.fixture
-def test_update_quote_date3():
-    return datetime.datetime(2021, 7, 16, 11, 31)
+def incur_fees_false():
+    original_setting = settings['incur_fees']
+    settings['incur_fees'] = False
+    yield
+    settings['incur_fees'] = original_setting
+
+@pytest.fixture
+def parquet_daily_loader_settings():
+    original_settings = settings['data_format_settings']
+    data_settings = load_settings("parquet_daily_settings.toml")
+    settings['data_settings'] = data_settings
+    yield
+    data_settings = load_settings(original_settings)
+    settings['data_settings'] = data_settings
 
 
 @pytest.fixture
-def at_expiration_quote_date():
-    return datetime.datetime(2021, 7, 16, 16, 15)
-
-@pytest.fixture
-def past_expiration_quote_date():
-    return datetime.datetime(2021, 7, 17, 9, 45)
-
-
-@pytest.fixture
-def standard_fee():
-    return 0.50
+def parquet_cboe_loader_settings():
+    original_settings = settings['data_format_settings']
+    data_settings = load_settings("cboe_settings.toml")
+    settings['data_settings'] = data_settings
+    yield
+    data_settings = load_settings(original_settings)
+    settings['data_settings'] = data_settings
+    pass
 
 
 @pytest.fixture
-def ticker():
-    return "XYZ"
+def allow_slippage():
+    settings.apply_slippage_entry=True
+    settings.apply_slippage_exit=True
+    yield
+    settings.apply_slippage_entry = False
+    settings.apply_slippage_exit = False
 
 
 @pytest.fixture
-def strike():
-    return 100
+def option_chain_daily():
+    def get_option_chain_daily_for_date(quote_date):
+
+        option_chain = MockOptionChain(symbol='AAPL',quote_datetime=quote_date)
+        options, expirations, expiration_strikes = get_daily_option_chain_items(quote_date)
+        option_chain.option_chain = options
+        option_chain.expirations = expirations
+        option_chain.expiration_strikes = expiration_strikes
+        return option_chain
+    return get_option_chain_daily_for_date
 
 
-@pytest.fixture
-def option_id():
-    return '1'
 
-
-@pytest.fixture
-def get_test_call_option(option_id, test_expiration, test_quote_date, ticker):
-    strike, spot_price, bid, ask, price = (100.0, 90.0, 1.0, 2.0, 1.5)
-    test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.CALL, quote_datetime=test_quote_date,
-                         spot_price=spot_price, bid=bid, ask=ask, price=price)
-    return test_option
-
-
-@pytest.fixture
-def get_test_call_option_update_values_1(test_update_quote_date):
-    quote_date, spot_price, bid, ask, price = (test_update_quote_date, 110.0, 9.50, 10.5, 10.00)  # ITM
-    return quote_date, spot_price, bid, ask, price
-
-
-@pytest.fixture
-def get_test_call_option_update_values_2(test_update_quote_date2):
-    quote_date, spot_price, bid, ask, price = (test_update_quote_date2, 105.0, 4.50, 5.5, 5.00)  # ITM
-    return quote_date, spot_price, bid, ask, price
-
-
-@pytest.fixture
-def get_test_call_option_update_values_3(test_update_quote_date3):
-    quote_date, spot_price, bid, ask, price = (test_update_quote_date3, 90.0, 0, .05, 0.03)  # OTM
-    return quote_date, spot_price, bid, ask, price
-
-
-@pytest.fixture
-def get_test_call_option_extended_properties(option_id, test_expiration, test_quote_date, ticker):
-    strike = 100
-    spot_price, bid, ask, price = (110.0, 1.0, 2.0, 1.5)
-    delta, gamma, theta, vega, open_interest, rho, iv = (0.3459, -0.1234, 0.0485, 0.0935, 100, 0.132, 0.3301)
-    test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.CALL, quote_datetime=test_quote_date,
-                         spot_price=spot_price, bid=bid, ask=ask, price=price,
-                         delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, implied_volatility=iv,
-                         open_interest=open_interest)
-    return test_option
-
-
-@pytest.fixture
-def get_test_put_option(option_id, test_expiration, test_quote_date, ticker):
-    strike, spot_price, bid, ask, price = (100.0, 105.0, 1.0, 2.0, 1.5)
-    test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.PUT, quote_datetime=test_quote_date,
-                         spot_price=spot_price, bid=bid, ask=ask, price=price)
-    return test_option
-
-
-@pytest.fixture
-def get_test_put_option_update_values_1(test_update_quote_date):
-    quote_date, spot_price, bid, ask, price = (test_update_quote_date, 90.0, 9.50, 10.5, 10.00)  # ITM
-    return quote_date, spot_price, bid, ask, price
-
-
-@pytest.fixture
-def get_test_put_option_update_values_2(test_update_quote_date2):
-    quote_date, spot_price, bid, ask, price = (test_update_quote_date2, 95.0, 4.50, 5.5, 5.00)  # ITM
-    return quote_date, spot_price, bid, ask, price
-
-
-@pytest.fixture
-def get_test_put_option_update_values_3(test_update_quote_date3):
-    quote_date, spot_price, bid, ask, price = (test_update_quote_date3, 110.0, 0, .05, 0.03)  # OTM
-    return quote_date, spot_price, bid, ask, price
-
-
-@pytest.fixture
-def get_test_put_option_with_extended_properties(option_id, test_expiration, test_quote_date, ticker):
-    strike = 100
-    spot_price, bid, ask, price = (105, 1.0, 2.0, 1.5)
-    delta, gamma, theta, vega, open_interest, rho, iv = (-0.4492, -0.1045, 0.0412, 0.1143, 900, 0.0282, 0.3347)
-    test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
-                         option_type=OptionType.PUT, quote_datetime=test_quote_date,
-                         spot_price=spot_price, bid=bid, ask=ask, price=price,
-                         delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, implied_volatility=iv,
-                         open_interest=open_interest)
-    return test_option
-
-
-@pytest.fixture
-def datafile_file_name():
-    return "L2_options_20230301.csv"
+# @pytest.fixture
+# def test_expiration():
+#     return datetime.date(2021, 7, 16)
+#
+# @pytest.fixture
+# def test_quote_date():
+#     return datetime.datetime(2021, 7, 1, 9, 45)
+#
+# @pytest.fixture
+# def test_update_quote_date():
+#     return datetime.datetime(2021, 7, 2, 9, 45)
+#
+# @pytest.fixture
+# def test_update_quote_date2():
+#     return datetime.datetime(2021, 7, 2, 14, 31)
+#
+#
+# @pytest.fixture
+# def test_update_quote_date3():
+#     return datetime.datetime(2021, 7, 16, 11, 31)
+#
+#
+# @pytest.fixture
+# def at_expiration_quote_date():
+#     return datetime.datetime(2021, 7, 16, 16, 15)
+#
+# @pytest.fixture
+# def past_expiration_quote_date():
+#     return datetime.datetime(2021, 7, 17, 9, 45)
+#
+#
+# @pytest.fixture
+# def standard_fee():
+#     return 0.50
+#
+#
+# @pytest.fixture
+# def ticker():
+#     return "XYZ"
+#
+#
+# @pytest.fixture
+# def strike():
+#     return 100
+#
+#
+# @pytest.fixture
+# def option_id():
+#     return '1'
+#
+#
+# @pytest.fixture
+# def get_test_call_option(option_id, test_expiration, test_quote_date, ticker):
+#     strike, spot_price, bid, ask, price = (100.0, 90.0, 1.0, 2.0, 1.5)
+#     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
+#                          option_type=OptionType.CALL, quote_datetime=test_quote_date,
+#                          spot_price=spot_price, bid=bid, ask=ask, price=price)
+#     return test_option
+#
+#
+# @pytest.fixture
+# def get_test_call_option_update_values_1(test_update_quote_date):
+#     quote_date, spot_price, bid, ask, price = (test_update_quote_date, 110.0, 9.50, 10.5, 10.00)  # ITM
+#     return quote_date, spot_price, bid, ask, price
+#
+#
+# @pytest.fixture
+# def get_test_call_option_update_values_2(test_update_quote_date2):
+#     quote_date, spot_price, bid, ask, price = (test_update_quote_date2, 105.0, 4.50, 5.5, 5.00)  # ITM
+#     return quote_date, spot_price, bid, ask, price
+#
+#
+# @pytest.fixture
+# def get_test_call_option_update_values_3(test_update_quote_date3):
+#     quote_date, spot_price, bid, ask, price = (test_update_quote_date3, 90.0, 0, .05, 0.03)  # OTM
+#     return quote_date, spot_price, bid, ask, price
+#
+#
+# @pytest.fixture
+# def get_test_call_option_extended_properties(option_id, test_expiration, test_quote_date, ticker):
+#     strike = 100
+#     spot_price, bid, ask, price = (110.0, 1.0, 2.0, 1.5)
+#     delta, gamma, theta, vega, open_interest, rho, iv = (0.3459, -0.1234, 0.0485, 0.0935, 100, 0.132, 0.3301)
+#     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
+#                          option_type=OptionType.CALL, quote_datetime=test_quote_date,
+#                          spot_price=spot_price, bid=bid, ask=ask, price=price,
+#                          delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, implied_volatility=iv,
+#                          open_interest=open_interest)
+#     return test_option
+#
+#
+# @pytest.fixture
+# def get_test_put_option(option_id, test_expiration, test_quote_date, ticker):
+#     strike, spot_price, bid, ask, price = (100.0, 105.0, 1.0, 2.0, 1.5)
+#     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
+#                          option_type=OptionType.PUT, quote_datetime=test_quote_date,
+#                          spot_price=spot_price, bid=bid, ask=ask, price=price)
+#     return test_option
+#
+#
+# @pytest.fixture
+# def get_test_put_option_update_values_1(test_update_quote_date):
+#     quote_date, spot_price, bid, ask, price = (test_update_quote_date, 90.0, 9.50, 10.5, 10.00)  # ITM
+#     return quote_date, spot_price, bid, ask, price
+#
+#
+# @pytest.fixture
+# def get_test_put_option_update_values_2(test_update_quote_date2):
+#     quote_date, spot_price, bid, ask, price = (test_update_quote_date2, 95.0, 4.50, 5.5, 5.00)  # ITM
+#     return quote_date, spot_price, bid, ask, price
+#
+#
+# @pytest.fixture
+# def get_test_put_option_update_values_3(test_update_quote_date3):
+#     quote_date, spot_price, bid, ask, price = (test_update_quote_date3, 110.0, 0, .05, 0.03)  # OTM
+#     return quote_date, spot_price, bid, ask, price
+#
+#
+# @pytest.fixture
+# def get_test_put_option_with_extended_properties(option_id, test_expiration, test_quote_date, ticker):
+#     strike = 100
+#     spot_price, bid, ask, price = (105, 1.0, 2.0, 1.5)
+#     delta, gamma, theta, vega, open_interest, rho, iv = (-0.4492, -0.1045, 0.0412, 0.1143, 900, 0.0282, 0.3347)
+#     test_option = Option(option_id=option_id, symbol=ticker, strike=strike, expiration=test_expiration,
+#                          option_type=OptionType.PUT, quote_datetime=test_quote_date,
+#                          spot_price=spot_price, bid=bid, ask=ask, price=price,
+#                          delta=delta, gamma=gamma, theta=theta, vega=vega, rho=rho, implied_volatility=iv,
+#                          open_interest=open_interest)
+#     return test_option
+#
+#
+# @pytest.fixture
+# def datafile_file_name():
+#     return "L2_options_20230301.csv"
 
 def dump(o):
     #datetime.date(2016, 3, 2)
