@@ -35,12 +35,13 @@ class DataLoader(ABC, Dispatcher):
         pass
 
     def option_chain_load_data_complete(self, symbol: str, quote_datetime: datetime.datetime | datetime.date,
-                               options_data : pd.DataFrame):
+                                        options_data: pd.DataFrame, datetimes: list[datetime.datetime]):
         prefix = f'{symbol}-'
         with NamedTemporaryFile(delete=False, dir='./temp_data', prefix=prefix, suffix='.pkl') as pkl:
-            pickle_file = Path(pkl.name)
+            pickle_file = pkl.name
         options_data.to_pickle(pickle_file)
-        self.emit('option_chain_loaded', symbol=symbol, quote_datetime=quote_datetime, pickle=pickle_file)
+
+        self.emit('option_chain_loaded', quote_datetime=quote_datetime, pickle=pickle_file, datetimes=datetimes)
 
 
     def on_options_opened(self, options: list[Option]) -> None:

@@ -8,7 +8,7 @@ from options_framework.spreads.vertical import Vertical
 
 from tests.test_data.test_option_daily import *
 from test_data.test_options_intraday import *
-from mocks import Nexter, MockOptionChain
+from mocks import MockEventDispatcher, MockOptionChain
 #
 # @pytest.fixture(scope='function')
 # def option_chain_data():

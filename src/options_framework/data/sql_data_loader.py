@@ -31,7 +31,7 @@ class SQLServerDataLoader(DataLoader):
         self.sql_alchemy_engine = create_engine(connection_url)
         self.datetimes_list = self._get_datetimes_list()
 
-    def load_option_chain_data(self, symbol: str, start: datetime.datetime) -> None:
+    def load_option_chain_data(self, symbol: str, start: datetime.datetime, end: datetime.datetime) -> None:
         start = self.start_datetime
         end = start + datetime.timedelta(days=1)
         start = pd.to_datetime(start)

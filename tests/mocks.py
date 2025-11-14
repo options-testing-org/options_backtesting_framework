@@ -34,7 +34,9 @@ class MockIntegrationDataLoader(Dispatcher):
                                options_data : DataFrame| None):
         test_data_dir = settings['test_data_dir']
         pkl_file = Path(test_data_dir, 'data_files', f'{symbol}.pkl')
-        self.emit('option_chain_loaded', symbol=symbol, quote_datetime=quote_datetime, pickle=pkl_file)
+        df = pd.read_pickle(pkl_file)
+        dates = [x.to_pydatetime() for x in df['quote_datetime'].unique()]
+        self.emit('option_chain_loaded', quote_datetime=quote_datetime, pickle=pkl_file, datetimes=dates)
 
     def on_options_opened(self, options: list[Option]) -> None:
         symbol = options[0].symbol
@@ -59,7 +61,7 @@ class MockDataLoader:
 
 
 # Emits the "next" event with a date, and the "new_position_opened" with the options
-class Nexter(Dispatcher):
+class MockEventDispatcher(Dispatcher):
     _events_ = ['next', 'new_position_opened']
 
     def do_next(self, quote_datetime: datetime.datetime):

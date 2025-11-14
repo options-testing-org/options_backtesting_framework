@@ -17,6 +17,7 @@ class OptionPortfolio(Dispatcher):
     cash: float | int
     start_date: datetime.datetime
     end_date: datetime.datetime
+    current_datetime: datetime.datetime = field(init=False, default=None)
     positions: Optional[dict] = field(init=False, default_factory=lambda: {})
     closed_positions: Optional[dict] = field(init=False, default_factory=lambda: {})
     portfolio_risk: float = field(init=False, default=0.0)
@@ -42,7 +43,7 @@ class OptionPortfolio(Dispatcher):
                      fees_incurred=self.on_fees_incurred) for option in option_position.options]
         option_position.open_trade(quantity=quantity, **kwargs)
         self.positions[option_position.position_id] = option_position
-        self.emit("new_position_opened", self, option_position.options)
+        self.emit("new_position_opened", option_position.options)
         # for o in list(option_position.options):
         #     last_data_date = o.update_cache.iloc[-1].name.to_pydatetime()
         #     if last_data_date < self.end_date:
@@ -82,6 +83,7 @@ class OptionPortfolio(Dispatcher):
         [option.unbind(self) for option in option_position.options]
 
     def next(self, quote_datetime: datetime.datetime, *args):
+        self.current_datetime = quote_datetime
         self.emit('next', quote_datetime)
         values = [quote_datetime, self.portfolio_value] + list(args)
         self.close_values.append(values)

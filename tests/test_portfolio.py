@@ -10,29 +10,6 @@ from options_framework.spreads.single import Single
 from options_framework.config import settings
 from test_data.test_options_intraday import *
 
-@pytest.fixture
-def test_position_1():
-    option = next((x for x in t1_options if x.option_id == 382520), None)
-    test_option = copy.copy(option)
-    start_date = datetimes[0]
-    end_date = datetimes[-1]
-    single = Single([test_option],  OptionCombinationType.SINGLE, OptionPositionType.LONG)
-    return single, start_date, end_date
-
-@pytest.fixture
-def test_position_2():
-    option = next((x for x in t1_options if x.option_id == 427182), None)
-    test_option = copy.copy(option)
-    start_date = datetimes[0]
-    end_date = start_date + datetime.timedelta(days=1)
-    single = Single([test_option], OptionCombinationType.SINGLE, OptionPositionType.LONG)
-    return single, start_date, end_date
-
-@pytest.fixture
-def test_cache():
-    df = pd.DataFrame(df_values, index=df_index, columns=df_columns)
-    df.sort_index()
-    return df
 
 # def test_new_portfolio_cash_balance(test_position_1):
 #     position, start, end = test_position_1
@@ -41,7 +18,7 @@ def test_cache():
 #
 #     assert pf.cash == 100_000.0
 #     assert pf.portfolio_value == 100_000.0
-#
+
 # def test_open_long_option_position(test_position_1, test_cache):
 #     position, start, end = test_position_1
 #     options_df = test_cache

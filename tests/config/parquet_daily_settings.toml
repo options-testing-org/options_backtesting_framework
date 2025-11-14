@@ -1,7 +1,10 @@
 options_folder = 'C:\_code\options_backtesting_framework\tests\test_data\data_files'
 folder_name_mask = '{ticker}_'
 file_name_mask = '{ticker}_????.parquet'
-file_list_generator = '(f for f in option_files_list if int(f.name[-12:-8]) >= {start.year} and int(f.name[-12:-8]) <= {end.year})'
+file_interval = 'year'
+file_data_date = '1-1-{f.stem[-4:]}'
+file_date_format = '%m-%d-%Y'
+max_pickle_file_size = 1_000_000_000
 call_value = 'call'
 put_value = 'put'
 

@@ -22,7 +22,7 @@ def map_data_file_fields() -> dict:
 
 class CSVDataLoader(DataLoader):
 
-    def load_option_chain_data(self, symbol: str, start: datetime.datetime):
+    def load_option_chain_data(self, symbol: str, start: datetime.datetime, end: datetime.datetime):
         pass
 
     def on_options_opened(self, portfolio, options: list[Option]) -> None:

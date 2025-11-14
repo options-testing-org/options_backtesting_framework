@@ -19,8 +19,8 @@ from options_framework.config import settings
 class OptionTestManager:
     start_datetime: datetime.datetime
     end_datetime: datetime.datetime
-    select_filter: SelectFilter
     starting_cash: float
+    select_filter: SelectFilter = field(default_factory=lambda: SelectFilter())
     extended_option_attributes: list = field(default_factory=lambda: [])
     option_chains: dict = field(default_factory=lambda: {})
     data_loader: DataLoader = field(init=False, default=None)
@@ -45,14 +45,16 @@ class OptionTestManager:
         else:
             raise Exception("Data loader is not set in settings, or data loader is not found.")
 
+        self.portfolio.current_datetime = self.start_datetime
         self.portfolio.bind(new_position_opened=self.data_loader.on_options_opened)
 
 
     def initialize_ticker(self, symbol: str, quote_datetime: datetime.datetime) :
         if symbol not in self.option_chains.keys():
-            option_chain = OptionChain(symbol=symbol)
+            option_chain = OptionChain(symbol=symbol, quote_datetime=quote_datetime, end_datetime=self.end_datetime)
             self.portfolio.bind(next=option_chain.on_next)
             self.data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
+            option_chain.bind(load_next_data=self.data_loader.load_option_chain_data)
             self.data_loader.load_option_chain_data(symbol, quote_datetime, self.end_datetime)
             self.option_chains[symbol] = option_chain
 
@@ -60,3 +62,6 @@ class OptionTestManager:
     def de_initialize(self):
         for symbol, option_chain in self.option_chains.items():
             os.unlink(option_chain.pickle_file)
+
+    def __del__(self):
+        self.de_initialize()

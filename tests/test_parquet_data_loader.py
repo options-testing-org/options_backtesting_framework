@@ -7,7 +7,7 @@ import os
 from options_framework.data.parquet_data_loader import ParquetDataLoader
 from options_framework.option import Option
 from options_framework.option_types import OptionType, SelectFilter, FilterRange
-from mocks import Nexter
+from mocks import MockEventDispatcher
 
 
 from options_framework.config import settings
@@ -45,7 +45,7 @@ def test_load_daily_option_chain_data(parquet_daily_loader_settings, get_setting
     parquet_loader = ParquetDataLoader(start=start_date, end=end_date, select_filter=select_filter)
     pickle_file = None
 
-    def on_data_loaded(symbol: str, quote_datetime: datetime.datetime, pickle: str):
+    def on_data_loaded(quote_datetime: datetime.datetime, pickle: str, datetimes: list[datetime.datetime]):
         nonlocal pickle_file
         pickle_file = pickle
 
@@ -68,7 +68,7 @@ def test_load_daily_options_chain_with_iv_and_delta(parquet_daily_loader_setting
                                        extended_option_attributes=['implied_volatility', 'delta'])
     pickle_file = None
 
-    def on_data_loaded(symbol: str, quote_datetime: datetime.datetime, pickle: str):
+    def on_data_loaded(quote_datetime: datetime.datetime, pickle: str, datetimes: list[datetime.datetime]):
         nonlocal pickle_file
         pickle_file = pickle
 
@@ -87,9 +87,9 @@ def test_load_daily_option_updates_when_option_is_opened_adds_updates_till_expir
     select_filter = SelectFilter()
     parquet_loader = ParquetDataLoader(start=start_date, end=end_date, select_filter=select_filter)
 
-    nexter = Nexter()
+    nexter = MockEventDispatcher()
     pickle_file = None
-    def on_data_loaded(symbol: str, quote_datetime: datetime.datetime, pickle: str):
+    def on_data_loaded(quote_datetime: datetime.datetime, pickle: str, datetimes: list[datetime.datetime]):
         nonlocal pickle_file
         pickle_file = pickle
 
@@ -127,7 +127,7 @@ def test_load_cboe_parquet_option_chain(parquet_cboe_loader_settings):
     parquet_loader = ParquetDataLoader(start=start_date, end=end_date, select_filter=select_filter)
     pickle_file = None
 
-    def on_data_loaded(symbol: str, quote_datetime: datetime.datetime, pickle: str):
+    def on_data_loaded(quote_datetime: datetime.datetime, pickle: str, datetimes: list[datetime.datetime]):
         nonlocal pickle_file
         pickle_file = pickle
 
@@ -140,3 +140,90 @@ def test_load_cboe_parquet_option_chain(parquet_cboe_loader_settings):
     assert df['quote_datetime'].max().to_pydatetime() == end_date + datetime.timedelta(hours=-7, minutes=-45)
 
     os.unlink(pickle_file)
+
+def test_load_cboe_with_expiration_filter_screens_for_0dte(parquet_cboe_loader_settings):
+    start_date = datetime.datetime.strptime('2016-03-08', '%Y-%m-%d')
+    end_date = datetime.datetime.strptime('2016-03-10', '%Y-%m-%d')
+    symbol = 'SPXW'
+
+
+    # load with no screening
+    select_filter = SelectFilter()
+    parquet_loader = ParquetDataLoader(start=start_date, end=end_date, select_filter=select_filter)
+    pickle_file = None
+
+    def on_data_loaded(quote_datetime: datetime.datetime, pickle: str, datetimes: list[datetime.datetime]):
+        nonlocal pickle_file
+        pickle_file = pickle
+
+    parquet_loader.bind(option_chain_loaded=on_data_loaded)
+    parquet_loader.load_option_chain_data(symbol, start_date, end_date)
+
+    # Check for dte before screening
+    df = pd.read_pickle(pickle_file)
+    row = df.iloc[0]
+    assert row['expiration'] > row['quote_datetime'].date()
+    os.unlink(pickle_file)
+
+    # set filter for 0DTE
+    select_filter = SelectFilter()
+    select_filter.expiration_dte = FilterRange(low=0, high=0)
+    parquet_loader = ParquetDataLoader(start=start_date, end=end_date, select_filter=select_filter)
+    parquet_loader.bind(option_chain_loaded=on_data_loaded)
+
+    pickle_file = None
+    parquet_loader.load_option_chain_data(symbol, start_date, end_date)
+
+    df = pd.read_pickle(pickle_file)
+    row = df.iloc[0]
+    assert row['expiration'] == row['quote_datetime'].date()
+
+    os.unlink(pickle_file)
+
+# This takes a very long time to run. Remove leading _ to run this test.
+def _test_load_more_data_than_max_size_does_not_load_all_data(parquet_cboe_loader_settings):
+    start_date = datetime.datetime.strptime('2016-03-08', '%Y-%m-%d')
+    end_date = datetime.datetime.strptime('2016-04-30', '%Y-%m-%d')
+    symbol = 'SPXW'
+
+    settings['data_settings']['options_folder'] = 'D:\options_data\intraday'
+
+    # load with 0DTE screening
+    select_filter = SelectFilter()
+    parquet_loader = ParquetDataLoader(start=start_date, end=end_date, select_filter=select_filter)
+    pickle_file = None
+
+    def on_data_loaded(quote_datetime: datetime.datetime, pickle: str, datetimes: list[datetime.datetime]):
+        nonlocal pickle_file
+        pickle_file = pickle
+
+    parquet_loader.bind(option_chain_loaded=on_data_loaded)
+    parquet_loader.load_option_chain_data(symbol, start_date, end_date)
+
+    df = pd.read_pickle(pickle_file)
+    assert df['quote_datetime'].max().month < end_date.month
+
+    os.unlink(pickle_file)
+
+    pass
+
+def option_to_pickle(parque_cboe_loader_settings):
+    start_date = datetime.datetime.strptime('2016-03-08', '%Y-%m-%d')
+    end_date = datetime.datetime.strptime('2016-04-30', '%Y-%m-%d')
+    symbol = 'SPXW'
+    settings['data_settings']['options_folder'] = 'D:\options_data\intraday'
+
+    select_filter = SelectFilter()
+    parquet_loader = ParquetDataLoader(start=start_date, end=end_date, select_filter=select_filter)
+    pickle_file = None
+
+    def on_data_loaded(quote_datetime: datetime.datetime, pickle: str, datetimes: list[datetime.datetime]):
+        nonlocal pickle_file
+        pickle_file = pickle
+
+    parquet_loader.bind(option_chain_loaded=on_data_loaded)
+    parquet_loader.load_option_chain_data(symbol, start_date, end_date)
+
+    df = pd.read_pickle(pickle_file)
+
+    

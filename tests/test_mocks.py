@@ -17,7 +17,7 @@ def test_initialize_mock_data_loader(mock_settings):
 
     test_pickle_file = None
 
-    def mock_data_loaded(symbol: str, quote_datetime: datetime.datetime, pickle: str):
+    def mock_data_loaded(quote_datetime: datetime.datetime, pickle: str, datetimes: list[datetime.datetime]):
         nonlocal test_pickle_file
         test_pickle_file = pickle
 

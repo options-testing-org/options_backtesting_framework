@@ -1,9 +1,14 @@
 options_folder = 'C:\_code\options_backtesting_framework\tests\test_data\data_files'
 folder_name_mask = 'SPX'
-file_name_mask = '*.*'
-file_list_generator = '(f for f in option_files_list if int(f.stem[-10:-6]) >= {start.year} and int(f.stem[-10:-6]) <= {end.year} and int(f.stem[-5:-3]) >= {start.month} and int(f.stem[-5:-3]) <= {end.month} and int(f.stem[-2:]) >= {start.day} and int(f.stem[-2:]) <= {end.day})'
+file_name_mask = 'spx_????_??_??.parquet'
+#file_list_generator = '(f for f in option_files_list if int(f.stem[-10:-6]) >= {start.year} and int(f.stem[-10:-6]) <= {end.year} and int(f.stem[-5:-3]) >= {start.month} and int(f.stem[-5:-3]) <= {end.month} and int(f.stem[-2:]) >= {start.day} and int(f.stem[-2:]) <= {end.day})'
 call_value = 'C'
 put_value = 'P'
+file_interval = 'day'
+file_data_date = '{f.stem[-10:]}'
+file_date_format = '%Y_%m_%d'
+max_pickle_file_size = 1_000_000_000
+stock_data_file = 'D:\stock_data\intraday\market\indices\SPX.parquet'
 
 
 # Map the data file columns to the option fields
@@ -26,3 +31,4 @@ vega = 'vega'
 rho = 'rho'
 open_interest = 'open_interest'
 implied_volatility = 'implied_volatility'
+
