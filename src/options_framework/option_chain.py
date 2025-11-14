@@ -52,7 +52,7 @@ class OptionChain(Dispatcher):
 
         options = []
         for _, row in df.iterrows():
-            option = self._create_option(quote_datetime, row)
+            option = self._create_option(row)
             options.append(option)
         self.option_chain = options
         self.expirations = list(df['expiration'].unique())
@@ -64,7 +64,7 @@ class OptionChain(Dispatcher):
             self.cache = None
             self.emit('load_next_data', symbol=self.symbol, start=quote_datetime, end=self.end_datetime)
 
-    def _create_option(self, quote_datetime: datetime.datetime | datetime.date, row: Series) -> Option:
+    def _create_option(self, row: Series) -> Option:
         option_id = row['option_id']
         option = Option(
             option_id=option_id,

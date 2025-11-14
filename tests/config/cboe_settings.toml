@@ -29,6 +29,7 @@ gamma = 'gamma'
 theta = 'theta'
 vega = 'vega'
 rho = 'rho'
+volume = 'trade_volume'
 open_interest = 'open_interest'
 implied_volatility = 'implied_volatility'
 
