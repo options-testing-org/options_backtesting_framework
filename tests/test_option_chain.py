@@ -1,9 +1,11 @@
 import datetime
 import pandas as pd
+import numpy as np
 from mocks import MockIntegrationDataLoader, MockEventDispatcher
 import pytest
 
 from options_framework.data.parquet_data_loader import ParquetDataLoader
+from options_framework.option import Option
 from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionType, SelectFilter
 from options_framework.config import settings
@@ -14,11 +16,65 @@ def setup():
     symbol = 'AAPL'
     start_date = datetime.datetime.strptime('2014-02-05', '%Y-%m-%d')
     end_date = datetime.datetime.strptime('2014-02-10', '%Y-%m-%d')
-    data_loader = MockIntegrationDataLoader(start=start_date, end=end_date, select_filter=SelectFilter())
     option_chain = OptionChain(symbol, start_date, end_date)
-    data_loader.bind(option_chain_loaded=option_chain.on_option_chain_loaded)
-    data_loader.load_option_chain_data(symbol, start_date, end_date)
-    return symbol, start_date, end_date, option_chain, data_loader
+    return symbol, start_date, end_date, option_chain
+
+def test_load_option_chain_from_pickle():
+    quote_date = datetime.datetime.strptime('2016-03-01 10:31', '%Y-%m-%d %H:%M')
+    end_date = datetime.datetime.strptime('2016-03-02 11:00', '%Y-%m-%d %H:%M')
+    option_chain = OptionChain('SPXW', quote_datetime=quote_date, end_datetime=end_date,
+                               pickle_folder=r'D:\options_data\intraday_pkl')
+
+    option_chain.on_next(quote_datetime=quote_date)
+
+    assert option_chain.quote_datetime == quote_date
+    assert option_chain.end_datetime == end_date
+    assert len(option_chain.option_chain) > 0
+    assert len(option_chain.expirations) > 0
+    assert len(option_chain.expiration_strikes) > 0
+    assert len(option_chain.expiration_strikes[option_chain.expirations[0]]) > 0
+
+
+def test_load_options_datatimes_list_is_populated_correctly():
+    quote_date = datetime.datetime.strptime('2016-03-01 10:31', '%Y-%m-%d %H:%M')
+    end_date = datetime.datetime.strptime('2016-03-02 11:00', '%Y-%m-%d %H:%M')
+    option_chain = OptionChain('SPXW', quote_datetime=quote_date, end_datetime=end_date,
+                               pickle_folder=r'D:\options_data\intraday_pkl')
+    assert len(option_chain.datetimes) > 0
+    assert option_chain.datetimes[0] == quote_date
+    assert option_chain.end_datetime == end_date
+
+def test_option_open_loads_option_updates():
+    quote_date = datetime.datetime.strptime('2016-03-01 10:31', '%Y-%m-%d %H:%M')
+    end_date = datetime.datetime.strptime('2016-03-02 11:00', '%Y-%m-%d %H:%M')
+    option_chain = OptionChain('SPXW', quote_datetime=quote_date, end_datetime=end_date,
+                               pickle_folder=r'D:\options_data\intraday_pkl')
+
+    opt1 = Option(quote_datetime=quote_date,
+                  option_id='SPXW20160302P00001900',
+                  symbol='SPXW',
+                  strike=1900.0,
+                  expiration=datetime.datetime.strptime('2016-03-02 00:00', '%Y-%m-%d %H:%M').date(),
+                  option_type=OptionType.PUT,
+                  spot_price=1944.95,
+                  bid=42.1,
+                  ask=48.3,
+                  price=45.2)
+    opt2 = Option(quote_datetime=quote_date,
+                  option_id='SPXW20160302C00001900',
+                  symbol='SPXW',
+                  strike=1900.0,
+                  expiration=datetime.datetime.strptime('2016-03-02 00:00', '%Y-%m-%d %H:%M').date(),
+                  option_type=OptionType.CALL,
+                  spot_price=1944.95,
+                  bid=0.55,
+                  ask=0.8,
+                  price=0.68)
+
+    option_chain.on_options_opened([opt1, opt2])
+
+    assert opt1.update_cache[0]['quote_datetime'] == quote_date + datetime.timedelta(minutes=1)
+    assert opt1.update_cache[-1]['quote_datetime'] == end_date
 
 def test_option_chain_contains_only_quotedate_option_records(setup):
     quote_date = datetime.datetime.strptime('2014-02-05', '%Y-%m-%d')

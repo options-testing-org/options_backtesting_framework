@@ -91,7 +91,7 @@ class Option(Dispatcher):
     open_interest: Optional[int] = field(default=None, compare=False)
     volume: Optional[int] = field(default=None, compare=False)
     implied_volatility: Optional[float] = field(default=None, compare=False)
-    update_cache: pd.DataFrame | None = field(default=None, compare=False)
+    update_cache: list | None = field(default_factory=list, compare=False)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
@@ -172,11 +172,12 @@ class Option(Dispatcher):
         if self._check_expired():
             return
         try:
-            update_row = self.update_cache[self.update_cache['quote_datetime'] == quote_datetime]
-            values = list(np.array(update_row)[0])
-            update_fields = [f for f in update_row.columns]
-            update_values = dict(zip(update_fields, values))
-            self.update_cache = self.update_cache[self.update_cache['quote_datetime'] > quote_datetime] # drop row after updating
+            update_values = next(x for x in self.update_cache if x['quote_datetime'] == quote_datetime) #self.update_cache[self.update_cache['quote_datetime'] == quote_datetime]
+            #values = list(np.array(update_row)[0])
+            # update_fields = [f for f in update_row.columns]
+            # update_values = dict(zip(update_fields, values))
+            self.update_cache = [x for x in self.update_cache if x['quote_datetime'] > quote_datetime]
+            #self.update_cache[self.update_cache['quote_datetime'] > quote_datetime] # drop row after updating
         except KeyError as e:
             return
 
@@ -185,22 +186,22 @@ class Option(Dispatcher):
         self.ask = float(decimalize_2(update_values['ask']))
         self.price = float(decimalize_2(update_values['price']))
 
-        if 'delta' in update_fields:
-            self.delta = update_values['delta']
-        if 'gamma' in update_fields:
-            self.gamma = update_values['gamma']
-        if 'theta' in update_fields:
-            self.theta = update_values['theta']
-        if 'vega' in update_fields:
-            self.vega = update_values['vega']
-        if 'rho' in update_fields:
-            self.rho = update_values['rho']
-        if 'open_interest' in update_fields:
-            self.open_interest = update_values['open_interest']
-        if 'volume' in update_fields:
-            self.volume = update_values['volume']
-        if 'implied_volatility' in update_fields:
-            self.implied_volatility = update_values['implied_volatility']
+        #if 'delta' in update_fields:
+        self.delta = update_values['delta']
+        #if 'gamma' in update_fields:
+        self.gamma = update_values['gamma']
+        #if 'theta' in update_fields:
+        self.theta = update_values['theta']
+        #if 'vega' in update_fields:
+        self.vega = update_values['vega']
+        #if 'rho' in update_fields:
+        self.rho = update_values['rho']
+        #if 'open_interest' in update_fields:
+        self.open_interest = update_values['open_interest']
+        #if 'volume' in update_fields:
+        self.volume = update_values['volume']
+        #if 'implied_volatility' in update_fields:
+        self.implied_volatility = update_values['implied_volatility']
 
     def open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
         """

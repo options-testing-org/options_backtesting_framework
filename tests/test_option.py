@@ -40,8 +40,8 @@ def call_updates():
     option_data = get_daily_option_data()
     fields = get_daily_fields()
     updates = [x for x in option_data if x['option_id'] == 'AAPL140207C00512500'][1:]
-    df = pd.DataFrame(updates, columns=fields)
-    return df, updates
+    #df = pd.DataFrame(updates, columns=fields)
+    return updates
 
 
 @pytest.fixture
@@ -188,7 +188,7 @@ def test_option_init_quote_datetime_raises_error_if_is_not_datetime_or_timestamp
 
 def test_option_update_quote_datetimeraises_error_if_is_not_datetime_or_timestamp_type(test_values_call, call_updates):
     _, call = test_values_call
-    _, updates = call_updates
+    updates = call_updates
 
     update_date = updates[0]['quote_datetime'].date()
 
@@ -210,9 +210,9 @@ def test_call_option_string_representation(test_values_call, test_values_put, op
 
 def test_update_sets_correct_values(test_values_call, call_updates):
     _, call = test_values_call
-    update_df, updates = call_updates
+    updates = call_updates
 
-    call.update_cache = update_df
+    call.update_cache = updates
     call.next_update(updates[0]['quote_datetime'])
 
     assert call.spot_price == updates[0]['spot_price']
@@ -230,7 +230,7 @@ def test_update_sets_correct_values(test_values_call, call_updates):
 
 def test_update_sets_expiration_status_if_quote_date_is_greater_than_expiration(test_values_call, call_updates):
     _, call = test_values_call
-    update_df, updates = call_updates
+    updates = call_updates
     update_df.iloc[0]['quote_datetime'] = updates[1]['quote_datetime'] + datetime.timedelta(days=2)
 
     call.update_cache = update_df
