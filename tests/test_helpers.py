@@ -69,26 +69,6 @@ def create_option_objects(option_data):
     options = []
     for item in option_data:
         option = Option(**item)
-        # option_id = item['option_id']
-        # option = Option(
-        #         option_id=option_id,
-        #         symbol=item['symbol'],
-        #         expiration=item['expiration'],
-        #         strike=item['strike'],
-        #         option_type=item['option_type'],
-        #         quote_datetime=item['quote_datetime'],
-        #         spot_price=item['spot_price'],
-        #         bid=item['bid'],
-        #         ask=item['ask'],
-        #         price=item['price'],
-        #         delta=item['delta'],
-        #         gamma=item['gamma'],
-        #         theta=item['theta'],
-        #         vega=item['vega'],
-        #         rho=item['rho'],
-        #         volume=item['volume'],
-        #         open_interest=item['open_interest'] ,
-        #         implied_volatility=item['implied_volatility'] )
         options.append(option)
     return options
 def get_daily_fields():

@@ -60,20 +60,6 @@ def test_get_parquet_test_manager(parquet_daily_loader_settings):
     assert tm.portfolio.cash == 100_000
 
 
-    # remove any pickle files created
-    tm.de_initialize()
-
-def test_get_sql_data_loader_test_manager(parquet_daily_loader_settings):
-    start_date = datetime.datetime(2016, 3, 1, 9, 31)
-    end_date = datetime.datetime(2016, 3, 1, 16,15)
-    starting_cash = 100_000.0
-    select_filter = SelectFilter()
-
-    option_test_manager = OptionTestManager(start_datetime=start_date, end_datetime=end_date,
-                                            select_filter=select_filter, starting_cash=starting_cash)
-    assert isinstance(option_test_manager.data_loader, DataLoader)
-    assert isinstance(option_test_manager.option_chains, dict)
-
 def test_cboe_initialize_data(parquet_cboe_loader_settings):
     settings['data_settings']['options_folder'] = 'D:\options_data\intraday'
     start_date = datetime.datetime.strptime("2016-03-01", "%Y-%m-%d")

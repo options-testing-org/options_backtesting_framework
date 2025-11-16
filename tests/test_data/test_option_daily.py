@@ -1,32 +1,3 @@
-import pandas as pd
-import datetime
-from options_framework.option import Option
-from options_framework.option_types import OptionType
-#from tests.test_helpers import expiration_to_date,create_option_objects, daily_option_type_from_str, daily_quote_datetime_to_datetime
-
-# column_names = ['data_date', 'option_id', 'symbol', 'underlying_price', 'option_type', 'expiration',
-#         'strike', 'bid', 'ask', 'mid', 'volume','open_interest',  'iv', 'delta', 'gamma', 'theta', 'vega', 'rho']
-# col_mapping = {
-#     'data_date': 'quote_datetime',
-#     'option_id': 'option_id',
-#     'symbol': 'symbol',
-#     'underlying_price':'spot_price',
-#     'option_type': 'option_type',
-#     'expiration': 'expiration',
-#     'strike': 'strike',
-#     'bid': 'bid',
-#     'ask': 'ask',
-#     'mid':'price',
-#     'volume': 'volume',
-#     'open_interest': 'open_interest',
-#     'iv': 'implied_volatility',
-#     'delta': 'delta',
-#     'gamma': 'gamma',
-#     'theta': 'theta',
-#     'vega': 'vega',
-#     'rho': 'rho',
-# }
-# fields = [col_mapping[f] for f in column_names if f in col_mapping.keys()]
 daily_option_data = [
 ['2014-02-05','AAPL140207C00510000','AAPL',512.59,'call','2014-02-07',510,3.15,3.35,3.25,32743,10752,0.1588,0.6744,0.0731,-170.4774,11.1425,0.0766,],
 ['2014-02-05','AAPL140207P00510000','AAPL',512.59,'put','2014-02-07',510,3.55,3.8,3.68,13655,3511,0.3809,-0.421,0.0331,-676.0497,12.1088,0.2134,],
@@ -171,31 +142,4 @@ daily_option_data = [
 ['2014-02-10','AAPL140222C00530000','AAPL',528.99,'call','2014-02-22',530,6.3,6.5,6.4,6368,7095,0.1976,0.4627,0.0215,-102.739,36.9592,0.633,],
 ['2014-02-10','AAPL140222P00530000','AAPL',528.99,'put','2014-02-22',530,7.25,7.45,7.35,2431,3861,0.1694,-0.5436,0.0251,-118.035,36.8818,0.1422,],
 ]
-
-
-
-
-
-
-
-# daily_test_data = list(map(lambda x: dict(zip(fields, x)), daily_option_data))
-# daily_test_data = list(map(daily_quote_datetime_to_datetime, daily_test_data))
-# daily_test_data = list(map(expiration_to_date, daily_test_data))
-# daily_test_data = list(map(daily_option_type_from_str, daily_test_data))
-# daily_test_options = create_option_objects(daily_test_data)
-#
-# daily_test_df = pd.DataFrame(daily_option_data, columns=column_names)
-# daily_test_df = daily_test_df.rename(columns=col_mapping)
-# daily_test_df = daily_test_df.sort_values(by=['quote_datetime', 'expiration', 'strike'])
-# daily_test_df['quote_datetime'] = pd.to_datetime(daily_test_df['quote_datetime'])
-# daily_test_df['expiration'] = pd.to_datetime(daily_test_df['expiration']).dt.date
-
-# def get_option_chain_items(quote_date):
-#     df = test_df[test_df['quote_datetime'] == quote_date]
-#     expirations = [x for x in list(df['expiration'].unique())]
-#     exp_str = df[['expiration', 'strike']].drop_duplicates().to_numpy().tolist()
-#     expiration_strikes = {exp: [s for (e, s) in exp_str if e == exp] for exp in expirations}
-#     return test_options, expirations, expiration_strikes
-
-
 

@@ -356,15 +356,8 @@ intraday_test_data = list(map(expiration_to_date, intraday_test_data))
 intraday_test_data = list(map(intraday_option_type_from_str, intraday_test_data))
 intraday_test_options = create_option_objects(intraday_test_data)
 
-intraday_test_df = pd.DataFrame(intraday_option_data, columns=column_names)
-intraday_test_df = intraday_test_df.rename(columns=col_mapping)
-intraday_test_df = intraday_test_df.sort_values(by=['quote_datetime', 'expiration', 'strike'])
-intraday_test_df['quote_datetime'] = pd.to_datetime(intraday_test_df['quote_datetime'])
-intraday_test_df['expiration'] = pd.to_datetime(intraday_test_df['expiration']).dt.date
-
-# def get_option_chain_items(quote_date):
-#     df = intraday_test_df[intraday_test_df.index == quote_date]
-#     expirations = [x for x in list(df['expiration'].unique())]
-#     exp_str = df[['expiration', 'strike']].drop_duplicates().to_numpy().tolist()
-#     expiration_strikes = {exp: [s for (e, s) in exp_str if e == exp] for exp in expirations}
-#     return test_options, expirations, expiration_strikes
+# intraday_test_df = pd.DataFrame(intraday_option_data, columns=column_names)
+# intraday_test_df = intraday_test_df.rename(columns=col_mapping)
+# intraday_test_df = intraday_test_df.sort_values(by=['quote_datetime', 'expiration', 'strike'])
+# intraday_test_df['quote_datetime'] = pd.to_datetime(intraday_test_df['quote_datetime'])
+# intraday_test_df['expiration'] = pd.to_datetime(intraday_test_df['expiration']).dt.date
