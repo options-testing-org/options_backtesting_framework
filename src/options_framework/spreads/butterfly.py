@@ -2,7 +2,7 @@ from dataclasses import dataclass, field
 import datetime
 from options_framework.utils.helpers import decimalize_0, decimalize_2
 from options_framework.option import Option
-from options_framework.option_types import OptionType, OptionCombinationType, OptionStatus, OptionPositionType
+from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
 from options_framework.spreads.option_combo import OptionCombination
 
 
@@ -10,7 +10,7 @@ from options_framework.spreads.option_combo import OptionCombination
 class Butterfly(OptionCombination):
 
     @classmethod
-    def get_balanced_butterfly(cls, *, option_chain: list[Option], expiration: datetime.date, option_type: OptionType,
+    def get_balanced_butterfly(cls, *, option_chain: list[Option], expiration: datetime.date, option_type: str,
                                center_strike: int | float, wing_width: int | float, quantity: int = 1):
 
         expiration = datetime.date(expiration.year, expiration.month, expiration.day)
@@ -36,7 +36,7 @@ class Butterfly(OptionCombination):
         return butterfly
 
     @classmethod
-    def get_unbalanced_butterfly(cls, *, option_chain: list[Option], expiration: datetime.date, option_type: OptionType,
+    def get_unbalanced_butterfly(cls, *, option_chain: list[Option], expiration: datetime.date, option_type: str,
                                  center_strike: int | float,  lower_wing_width: int | float,
                                  upper_wing_width: int | float, center_quantity_multiple: int = -3,
                                  lower_quantity_multiple: int = 2, upper_quantity_multiple: int = 1,
@@ -107,7 +107,7 @@ class Butterfly(OptionCombination):
         return self.center_option.expiration
 
     @property
-    def option_type(self) -> OptionType:
+    def option_type(self) -> str:
         return self.center_option.option_type
 
     def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
@@ -168,7 +168,7 @@ class Butterfly(OptionCombination):
 
         max_profit = None
         if self.option_position_type == OptionPositionType.LONG:
-            if self.option_type == OptionType.CALL:
+            if self.option_type == 'call':
                 # debit spread max profit
                 spread = center_strike - lower_strike
                 price = self.center_option.trade_price + self.lower_option.trade_price
@@ -178,7 +178,7 @@ class Butterfly(OptionCombination):
                 pass
             # the spread between the strike prices - net premium paid
             spread1 = self.upper_option.trade_value * 0
-            compare_strike = lower_strike if self.option_type == OptionType.CALL else upper_strike
+            compare_strike = lower_strike if self.option_type == 'call' else upper_strike
         else:
             pass
 

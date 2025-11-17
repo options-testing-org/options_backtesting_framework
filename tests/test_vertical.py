@@ -3,7 +3,7 @@ import datetime
 import pytest
 
 from options_framework.option import Option
-from options_framework.option_types import OptionType, OptionPositionType, SelectFilter
+from options_framework.option_types import OptionPositionType
 from options_framework.spreads.vertical import Vertical
 
 from tests.test_data.test_option_daily import *

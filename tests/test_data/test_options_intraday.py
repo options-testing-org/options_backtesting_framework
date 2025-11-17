@@ -1,7 +1,4 @@
-import pandas as pd
 import datetime
-from options_framework.option import Option
-from options_framework.option_types import OptionType
 from tests.test_helpers import expiration_to_date, create_option_objects
 
 column_names = ['quote_datetime','option_id','root','strike','expiration','option_type','active_underlying_price',
@@ -348,7 +345,7 @@ def quote_datetime_to_datetime(x):
     return {**x, 'quote_datetime': datetime.datetime.strptime(x['quote_datetime'], "%Y-%m-%d %H:%M")}
 
 def intraday_option_type_from_str(x):
-    return {**x, 'option_type': OptionType.CALL if x['option_type'] == 'C' else OptionType.PUT}
+    return {**x, 'option_type': 'call' if x['option_type'] == 'C' else 'put'}
 
 intraday_test_data = list(map(lambda x: dict(zip(fields_, x)), intraday_option_data))
 intraday_test_data = list(map(quote_datetime_to_datetime, intraday_test_data))

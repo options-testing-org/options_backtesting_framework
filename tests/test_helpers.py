@@ -2,7 +2,6 @@ import pandas as pd
 import datetime
 from tempfile import NamedTemporaryFile
 from options_framework.option import Option
-from options_framework.option_types import OptionType
 from options_framework.utils.helpers import *
 from test_data.test_option_daily import daily_option_data
 
@@ -60,7 +59,7 @@ def daily_quote_datetime_to_datetime(x):
     return {**x, 'quote_datetime': datetime.datetime.strptime(x['quote_datetime'], "%Y-%m-%d")}
 
 def daily_option_type_from_str(x):
-    return {**x, 'option_type': OptionType.CALL if x['option_type'] == 'call' else OptionType.PUT}
+    return {**x, 'option_type': 'call' if x['option_type'] == 'call' else 'put'}
 
 def expiration_to_date(x):
     return {**x, 'expiration': datetime.datetime.strptime(x['expiration'], "%Y-%m-%d").date()}
@@ -113,7 +112,7 @@ def get_daily_option_data():
     data = list(map(lambda x: dict(zip(get_daily_fields(), x)), daily_option_data))
     data = list(map(daily_quote_datetime_to_datetime, data))
     data = list(map(expiration_to_date, data))
-    data = list(map(daily_option_type_from_str, data))
+    #data = list(map(daily_option_type_from_str, data))
     return data
 
 def get_daily_test_df():

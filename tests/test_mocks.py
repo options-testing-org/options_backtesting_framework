@@ -1,19 +1,16 @@
 from mocks import *
 import pytest
-from options_framework.config import settings
-from options_framework.option_types import SelectFilter
 
 @pytest.fixture
 def mock_settings():
     start_date = datetime.datetime.strptime('2014-02-05', '%Y-%m-%d')
     end_date = datetime.datetime.strptime('2014-02-10', '%Y-%m-%d')
-    select_filter = SelectFilter()
-    return start_date, end_date, select_filter
+    return start_date, end_date
 
 
 def test_initialize_mock_data_loader(mock_settings):
-    start_date, end_date, filter = mock_settings
-    mock_dl = MockIntegrationDataLoader(start=start_date, end=end_date, select_filter=filter)
+    start_date, end_date = mock_settings
+    mock_dl = MockIntegrationDataLoader(start=start_date, end=end_date)
 
     test_pickle_file = None
 

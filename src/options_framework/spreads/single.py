@@ -5,7 +5,7 @@ from typing import Optional
 
 from options_framework.option import Option
 from options_framework.option_chain import OptionChain
-from options_framework.option_types import OptionType, OptionCombinationType, OptionStatus, OptionPositionType
+from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
 from options_framework.spreads.option_combo import OptionCombination
 from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 
@@ -16,7 +16,7 @@ class Single(OptionCombination):
     def get_single(cls, option_chain: OptionChain,
                    expiration: datetime.date,
                    strike: float | int,
-                   option_type: OptionType,
+                   option_type: str,
                    option_position_type: OptionPositionType = OptionPositionType.LONG,
                     quantity: int = 1) -> OptionCombination:
 
@@ -30,7 +30,7 @@ class Single(OptionCombination):
         # Find nearest matching strike for this expiration
         strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
         try:
-            if option_type == OptionType.CALL:
+            if option_type == 'call':
                 strike = next(s for s in strikes if s >= strike)
             else:
                 strikes.sort(reverse=True)
@@ -51,7 +51,7 @@ class Single(OptionCombination):
 
     @classmethod
     def get_single_by_delta(cls, option_chain: OptionChain, expiration: datetime.date,
-                            option_type: OptionType,
+                            option_type: str,
                             option_position_type: OptionPositionType,
                             delta: float,
                             quantity: int = 1) -> OptionCombination:
@@ -66,7 +66,7 @@ class Single(OptionCombination):
         # Find option with the nearest delta
         options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
         try:
-            if option_type == OptionType.CALL:
+            if option_type == 'call':
                 options.sort(key=lambda x: x.delta, reverse=True)
                 option = next(o for o in options if o.delta <= delta)
             else:
@@ -108,7 +108,7 @@ class Single(OptionCombination):
         return self.option.expiration
 
     @property
-    def option_type(self) -> OptionType:
+    def option_type(self) -> str:
         return self.option.option_type
 
     @property

@@ -1,4 +1,5 @@
 import pytest
+from options_framework.option import Option
 from options_framework.option_types import OptionPositionType, OptionStatus
 from options_framework.config import settings
 
@@ -189,10 +190,10 @@ def test_option_update_quote_datetimeraises_error_if_is_not_datetime_or_timestam
 
 
 @pytest.mark.parametrize("option_type, expected_repr", [
-    (OptionType.CALL, '<CALL(AAPL140207C00512500) AAPL 512.5 2014-02-07>'),
-    (OptionType.PUT, '<PUT(AAPL140214P00520000) AAPL 520 2014-02-14>')])
+    ('call', '<CALL(AAPL140207C00512500) AAPL 512.5 2014-02-07>'),
+    ('put', '<PUT(AAPL140214P00520000) AAPL 520 2014-02-14>')])
 def test_call_option_string_representation(test_values_call, test_values_put, option_type, expected_repr):
-    if option_type == OptionType.CALL:
+    if option_type == 'call':
         _, test_option = test_values_call
     else:
         _, test_option = test_values_put
@@ -263,16 +264,16 @@ def test_open_trade_has_correct_position_type(test_values_call, quantity, positi
     assert call.position_type == position_type
 
 @pytest.mark.parametrize("option_type, quantity, expected_premium", [
-    (OptionType.CALL, 10, 2_210.0),
-    (OptionType.CALL, 5, 1_105.0),
-    (OptionType.CALL, -10, -2_210.0),
-    (OptionType.PUT, 10, 13_300.0),
-    (OptionType.PUT, -10, -13_300.0),
-    (OptionType.PUT, 5, 6_650.0),
+    ('call', 10, 2_210.0),
+    ('call', 5, 1_105.0),
+    ('call', -10, -2_210.0),
+    ('put', 10, 13_300.0),
+    ('put', -10, -13_300.0),
+    ('put', 5, 6_650.0),
 ])
 def test_open_trade_returns_correct_premium_value(test_values_call, test_values_put, incur_fees_false, option_type, quantity,
                                                   expected_premium):
-    if option_type == OptionType.CALL:
+    if option_type == 'call':
         _, test_option = test_values_call
     else:
         _, test_option = test_values_put
@@ -566,7 +567,7 @@ def test_option_update_skips_date_has_correct_quote_datetime(test_values_put, pu
 
 
 
-@pytest.mark.parametrize("option_type", [OptionType.CALL, OptionType.PUT])
+@pytest.mark.parametrize("option_type", ['call', 'put'])
 def test_option_get_close_price_is_zero_when_option_expires_otm(test_values_call, call_updates, test_values_put_expiring, option_type):
     _, call = test_values_call
     updates = call_updates
@@ -576,7 +577,7 @@ def test_option_get_close_price_is_zero_when_option_expires_otm(test_values_call
     put, updates = test_values_put_expiring
     put.update_cache = updates
 
-    test_option = put if option_type == OptionType.PUT else call
+    test_option = put if option_type == 'put' else call
     test_option.open_trade(quantity=1)
 
 
@@ -620,13 +621,13 @@ def test_dte_is_zero_on_expiration_day(test_values_call, call_updates):
 
 
 @pytest.mark.parametrize("option_type, spot_price, expected_value", [
-    (OptionType.CALL, 512.50, False), (OptionType.CALL, 512.49, True),
-    (OptionType.CALL, 512.51, False),
-    (OptionType.PUT, 520.0, False), (OptionType.PUT, 520.01, True),
-    (OptionType.PUT, 519.99, False)])
+    ('call', 512.50, False), ('call', 512.49, True),
+    ('call', 512.51, False),
+    ('put', 520.0, False), ('put', 520.01, True),
+    ('put', 519.99, False)])
 def test_call_option_otm(test_values_call, test_values_put, option_type, spot_price,
                          expected_value):
-    if option_type == OptionType.CALL:
+    if option_type == 'call':
         _, test_option = test_values_call # 512.5 strike
     else:
         _, test_option = test_values_put # 520 strike
@@ -638,16 +639,16 @@ def test_call_option_otm(test_values_call, test_values_put, option_type, spot_pr
 
 
 @pytest.mark.parametrize("option_type, spot_price, expected_value", [
-    (OptionType.CALL, 512.49, False), (OptionType.CALL, 512.5, True),
-    (OptionType.CALL, 512.51, True),
-    (OptionType.PUT, 520.0, True), (OptionType.PUT, 519.99, True),
-    (OptionType.PUT, 520.01, False)])
+    ('call', 512.49, False), ('call', 512.5, True),
+    ('call', 512.51, True),
+    ('put', 520.0, True), ('put', 519.99, True),
+    ('put', 520.01, False)])
 def test_call_option_itm(test_values_call, test_values_put, option_type, spot_price,
                          expected_value):
     _, call = test_values_call # 512.5 strike
     _, put = test_values_put # 520 strike
 
-    test_option = call if option_type == OptionType.CALL else put
+    test_option = call if option_type == 'call' else put
     test_option.spot_price = spot_price
 
     actual_value = test_option.itm()
@@ -741,22 +742,22 @@ def test_get_unrealized_profit_loss_is_zero_when_trade_is_closed(test_values_cal
 
 
 @pytest.mark.parametrize("option_type, quantity, price, expected_profit_loss", [
-    (OptionType.CALL, 10, 2.31, 100.0),
-    (OptionType.CALL, 10, 2.11, -100.0),
-    (OptionType.CALL, 10, 2.21, 0.0),
-    (OptionType.CALL, -10, 2.31, -100.0),
-    (OptionType.CALL, -10, 2.11, 100.0),
-    (OptionType.CALL, -10, 2.21, 0.0),
-    (OptionType.PUT, 10, 13.4, 100.0),
-    (OptionType.PUT, 10, 13.2, -100.0),
-    (OptionType.PUT, 10, 13.3, 0.0),
-    (OptionType.PUT, -10, 13.4, -100.0),
-    (OptionType.PUT, -10, 13.2, 100.0),
-    (OptionType.PUT, -10, 13.3, 0.0)
+    ('call', 10, 2.31, 100.0),
+    ('call', 10, 2.11, -100.0),
+    ('call', 10, 2.21, 0.0),
+    ('call', -10, 2.31, -100.0),
+    ('call', -10, 2.11, 100.0),
+    ('call', -10, 2.21, 0.0),
+    ('put', 10, 13.4, 100.0),
+    ('put', 10, 13.2, -100.0),
+    ('put', 10, 13.3, 0.0),
+    ('put', -10, 13.4, -100.0),
+    ('put', -10, 13.2, 100.0),
+    ('put', -10, 13.3, 0.0)
 ])
 def test_get_unrealized_profit_loss_value(test_values_call, test_values_put, call_updates, put_updates,
                                           option_type, quantity, price, expected_profit_loss):
-    if option_type == OptionType.CALL:
+    if option_type == 'call':
         _, test_option = test_values_call
         updates = call_updates
     else:
@@ -790,23 +791,23 @@ def test_get_unrealized_profit_loss_percent_returns_zero_when_trade_is_closed(te
 
 
 @pytest.mark.parametrize("option_type, quantity, test_price, expected_profit_loss_pct", [
-    (OptionType.CALL, 10, 10.50, 0.05),
-    (OptionType.CALL, 10, 9.50, -0.05),
-    (OptionType.CALL, 10, 10.0, 0.0),
-    (OptionType.CALL, -10, 10.50, -0.05),
-    (OptionType.CALL, -10, 9.5, 0.05),
-    (OptionType.CALL, -10, 10.0, 0.0),
-    (OptionType.PUT, 10, 10.5, 0.05),
-    (OptionType.PUT, 10, 9.5, -0.05),
-    (OptionType.PUT, 10, 10.0, 0.0),
-    (OptionType.PUT, -10, 10.5, -0.05),
-    (OptionType.PUT, -10, 9.5, 0.05),
-    (OptionType.PUT, -10, 10.0, 0.0)
+    ('call', 10, 10.50, 0.05),
+    ('call', 10, 9.50, -0.05),
+    ('call', 10, 10.0, 0.0),
+    ('call', -10, 10.50, -0.05),
+    ('call', -10, 9.5, 0.05),
+    ('call', -10, 10.0, 0.0),
+    ('put', 10, 10.5, 0.05),
+    ('put', 10, 9.5, -0.05),
+    ('put', 10, 10.0, 0.0),
+    ('put', -10, 10.5, -0.05),
+    ('put', -10, 9.5, 0.05),
+    ('put', -10, 10.0, 0.0)
 ])
 def test_get_unrealized_profit_loss_percent_value(test_values_call, test_values_put,
                                                   call_updates, put_updates,
                                                   option_type, quantity, test_price, expected_profit_loss_pct):
-    if option_type == OptionType.CALL:
+    if option_type == 'call':
         _, test_option = test_values_call
         updates = call_updates
     else:
@@ -854,19 +855,19 @@ def test_get_profit_loss_raises_exception_if_not_traded(test_values_call):
 
 
 @pytest.mark.parametrize("option_type, qty, test_price, expected_value", [
-    (OptionType.CALL, 10, 15.0, 5000.0),
-    (OptionType.CALL, 10, 5.0, -5000.0),
-    (OptionType.CALL, -10, 15.0, -5000.0),
-    (OptionType.CALL, -10, 5.0, 5000.0),
-    (OptionType.PUT, 10, 15.0, 5000.0),
-    (OptionType.PUT, 10, 5.0, -5000.0),
-    (OptionType.PUT, -10, 15.0, -5000.0),
-    (OptionType.PUT, -10, 5.0, 5000.0),
+    ('call', 10, 15.0, 5000.0),
+    ('call', 10, 5.0, -5000.0),
+    ('call', -10, 15.0, -5000.0),
+    ('call', -10, 5.0, 5000.0),
+    ('put', 10, 15.0, 5000.0),
+    ('put', 10, 5.0, -5000.0),
+    ('put', -10, 15.0, -5000.0),
+    ('put', -10, 5.0, 5000.0),
 
 ])
 def test_get_total_profit_loss_returns_unrealized_when_no_contracts_are_closed(test_values_call, test_values_put, call_updates, put_updates,
                                                                                option_type, qty, test_price, expected_value):
-    if option_type == OptionType.CALL:
+    if option_type == 'call':
         _, test_option = test_values_call
         updates = call_updates
     else:
@@ -942,15 +943,15 @@ def test_get_profit_loss_percent_raises_exception_if_not_traded(test_values_call
 
 
 @pytest.mark.parametrize("option_type, qty, test_price, expected_value", [
-    (OptionType.CALL, 10, 12.0, 0.2),
-    (OptionType.CALL, -10, 12.0, -0.2),
-    (OptionType.PUT, 10, 12.0, 0.2),
-    (OptionType.PUT, -10, 12.0, -0.2),
+    ('call', 10, 12.0, 0.2),
+    ('call', -10, 12.0, -0.2),
+    ('put', 10, 12.0, 0.2),
+    ('put', -10, 12.0, -0.2),
 ])
 def test_get_profit_loss_percent_returns_unrealized_when_no_contracts_are_closed(test_values_call, test_values_put,
                                                                                  call_updates, put_updates, option_type,
                                                                                      qty, test_price, expected_value):
-    if option_type == OptionType.CALL:
+    if option_type == 'call':
         _, test_option = test_values_call
         updates = call_updates
     else:
@@ -971,16 +972,16 @@ def test_get_profit_loss_percent_returns_unrealized_when_no_contracts_are_closed
 
 
 @pytest.mark.parametrize("option_type, qty, test_price, expected_value", [
-    (OptionType.CALL, 10, 12, 0.2),
-    (OptionType.CALL, -10, 12, -0.2),
-    (OptionType.PUT, 10, 12, 0.2),
-    (OptionType.PUT, -10, 12, -0.2),
+    ('call', 10, 12, 0.2),
+    ('call', -10, 12, -0.2),
+    ('put', 10, 12, 0.2),
+    ('put', -10, 12, -0.2),
 ])
 def test_get_total_profit_loss_percent_returns_closed_pnl_when_all_contracts_are_closed(test_values_call, test_values_put,
                                                                                         call_updates, put_updates,
                                                                                         option_type, qty, test_price,
                                                                                         expected_value):
-    if option_type == OptionType.CALL:
+    if option_type == 'call':
         _, test_option = test_values_call
         updates = call_updates
     else:

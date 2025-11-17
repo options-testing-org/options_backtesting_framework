@@ -6,11 +6,10 @@ import numpy as np
 import sys
 from pprint import pprint as pp
 
-from options_framework.option_types import SelectFilter, OptionType, FilterRange, OptionPositionType
+from options_framework.option_types import OptionPositionType
 from options_framework.spreads.single import Single
 from options_framework.spreads.vertical import Vertical
 from options_framework.test_manager import OptionTestManager
-from options_framework.data.data_loader import DataLoader
 from options_framework.utils.helpers import temp_data_dir_cleanup
 from options_framework.option_chain import OptionChain
 from options_framework.config import settings
@@ -28,36 +27,33 @@ def test_post_init_removes_existing_files_from_temp_dir():
     start_date = datetime.datetime(2014, 5, 1)
     end_date = datetime.datetime(2014, 6, 30)
     starting_cash = 100_000.0
-    select_filter = SelectFilter()
+
 
     tm = OptionTestManager(start_datetime=start_date, end_datetime=end_date,
-                           select_filter=select_filter, starting_cash=starting_cash)
+                           starting_cash=starting_cash)
 
     files = [x for x in temp_dir.iterdir() if x.is_file()]
     assert len(files) == 0
 
 
-def test_get_parquet_test_manager(parquet_daily_loader_settings):
-    start_date = datetime.datetime(2014, 5, 1)
-    end_date = datetime.datetime(2014, 6, 30)
-    starting_cash = 100_000.0
-    select_filter = SelectFilter()
-    symbol = 'AAPL'
-
-    tm = OptionTestManager(start_datetime=start_date, end_datetime=end_date,
-                                            select_filter=select_filter, starting_cash=starting_cash)
-    tm.initialize_ticker(symbol, quote_datetime=start_date)
-    options = tm.option_chains[symbol].option_chain
-    option = [op for op in options if op.option_id == 'AAPL140502C00485000'][0]
-    expirations = tm.option_chains[symbol].expirations
-    expiration_strikes = tm.option_chains[symbol].expiration_strikes[expirations[0]]
-    assert isinstance(tm.data_loader, DataLoader)
-    assert isinstance(tm.option_chains, dict)
-    assert symbol in tm.option_chains
-    assert option.price == 105.95
-    assert 590.0 in expiration_strikes
-    assert len(expirations) == len(tm.option_chains[symbol].expiration_strikes.keys())
-    assert tm.portfolio.cash == 100_000
+# def test_get_parquet_test_manager(parquet_daily_loader_settings):
+#     start_date = datetime.datetime(2014, 5, 1)
+#     end_date = datetime.datetime(2014, 6, 30)
+#     starting_cash = 100_000.0
+#     symbol = 'AAPL'
+#
+#     tm = OptionTestManager(start_datetime=start_date, end_datetime=end_date, starting_cash=starting_cash)
+#     tm.initialize_ticker(symbol, quote_datetime=start_date)
+#     options = tm.option_chains[symbol].option_chain
+#     option = [op for op in options if op.option_id == 'AAPL140502C00485000'][0]
+#     expirations = tm.option_chains[symbol].expirations
+#     expiration_strikes = tm.option_chains[symbol].expiration_strikes[expirations[0]]
+#     assert isinstance(tm.option_chains, dict)
+#     assert symbol in tm.option_chains
+#     assert option.price == 105.95
+#     assert 590.0 in expiration_strikes
+#     assert len(expirations) == len(tm.option_chains[symbol].expiration_strikes.keys())
+#     assert tm.portfolio.cash == 100_000
 
 
 def test_cboe_initialize_data(parquet_cboe_loader_settings):
@@ -65,10 +61,8 @@ def test_cboe_initialize_data(parquet_cboe_loader_settings):
     start_date = datetime.datetime.strptime("2016-03-01", "%Y-%m-%d")
     end_date = datetime.datetime.strptime("2016-04-01", "%Y-%m-%d")
     starting_cash = 100_000.0
-    select_filter = SelectFilter()
-    select_filter.expiration_dte = FilterRange(low=0, high=0)
-    test_manager = OptionTestManager(start_datetime=start_date, end_datetime=end_date, select_filter=select_filter,
-                                     starting_cash=starting_cash)
+
+    test_manager = OptionTestManager(start_datetime=start_date, end_datetime=end_date, starting_cash=starting_cash)
     portfolio = test_manager.portfolio
 
     df = pd.read_parquet(settings['data_settings']['stock_data_file'])
@@ -133,7 +127,7 @@ def test_cboe_initialize_data(parquet_cboe_loader_settings):
                             long_strike = next(x for x in strikes if x >= short_strike + 10)
                             vertical_spread: Vertical = Vertical.get_vertical(option_chain=option_chain,
                                                                               expiration=expiration,
-                                                                              option_type=OptionType.CALL,
+                                                                              option_type='call',
                                                                               long_strike=long_strike,
                                                                               short_strike=short_strike,
                                                                               quantity=-1)

@@ -2,8 +2,7 @@ import datetime
 
 import pytest
 
-from options_framework.option_types import OptionType, OptionCombinationType, OptionStatus, SelectFilter, FilterRange, \
-    OptionPositionType
+from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
 from options_framework.spreads.single import Single
 from tests.mocks import *
 
@@ -16,13 +15,13 @@ def test_get_single_option_with_exact_values(option_chain_daily, quote_date):
     expiration = datetime.date(2014, 2, 7)
     strike = 515
     single_option = Single.get_single(option_chain=test_option_chain, expiration=expiration,
-                                      option_type=OptionType.CALL,
+                                      option_type='call',
                                       option_position_type=OptionPositionType.LONG,
                                       strike=strike)
 
     assert single_option.option_combination_type == OptionCombinationType.SINGLE
     assert single_option.expiration == expiration
-    assert single_option.option_type == OptionType.CALL
+    assert single_option.option_type == 'call'
     assert single_option.strike ==strike
 
 def test_get_single_option_next_expiration(option_chain_daily, quote_date):
@@ -32,7 +31,7 @@ def test_get_single_option_next_expiration(option_chain_daily, quote_date):
     single_option = Single.get_single(option_chain=test_option_chain,
                                       expiration=expiration,
                                       option_position_type=OptionPositionType.LONG,
-                                      option_type=OptionType.CALL,
+                                      option_type='call',
                                       strike=strike,
                                       quantity=5)
 
@@ -49,7 +48,7 @@ def test_naked_put_margin_requirement_otm(option_chain_daily, quote_date):
     qty = -1
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
-                                      option_type=OptionType.PUT,
+                                      option_type='put',
                                       option_position_type=OptionPositionType.SHORT,
                                       strike=strike)
     single_option.open_trade(quantity=qty)
@@ -64,7 +63,7 @@ def test_naked_put_margin_requirement_itm(option_chain_daily):
     qty = -1
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
-                                      option_type=OptionType.PUT,
+                                      option_type='put',
                                       option_position_type=OptionPositionType.SHORT,
                                       strike=strike)
     single_option.open_trade(quantity=qty)
@@ -81,7 +80,7 @@ def test_get_single_option_gets_next_expiration_when_expiration_is_not_in_chain(
     test_expiration = datetime.datetime.strptime('2014-02-22','%Y-%m-%d').date()
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
-                                      option_type=OptionType.CALL,
+                                      option_type='call',
                                       option_position_type=OptionPositionType.SHORT,
                                       strike=strike)
     single_option.open_trade(quantity=qty)
@@ -94,7 +93,7 @@ def test_get_single_put_option_gets_next_lower_strike_when_strike_is_not_in_chai
     strike = 530
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
-                                      option_type=OptionType.PUT,
+                                      option_type='put',
                                       option_position_type=OptionPositionType.LONG,
                                       strike=strike)
 
@@ -106,7 +105,7 @@ def test_get_single_call_option_gets_next_higher_strike_when_strike_is_not_in_ch
     strike = 516
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
-                                      option_type=OptionType.CALL,
+                                      option_type='call',
                                       option_position_type=OptionPositionType.LONG,
                                       strike=strike)
 

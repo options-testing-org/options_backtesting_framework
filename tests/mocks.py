@@ -10,17 +10,15 @@ from options_framework.config import settings
 from options_framework.option import Option
 from pydispatch import Dispatcher
 
-from options_framework.option_types import SelectFilter
+
 
 
 class MockIntegrationDataLoader(Dispatcher):
     _events_ = ['option_chain_loaded']
-    def __init__(self, *, start: datetime.datetime | datetime.date, end: datetime.datetime | datetime.date,
-                 select_filter: SelectFilter, extended_option_attributes: list[str] = None):
+    def __init__(self, *, start: datetime.datetime | datetime.date, end: datetime.datetime | datetime.date):
         self.start_datetime = start
         self.end_datetime = end
-        self.select_filter = select_filter
-        self.extended_option_attributes = extended_option_attributes if extended_option_attributes else []
+
         self.option_required_fields = ['option_id', 'symbol', 'strike', 'expiration', 'option_type', 'quote_datetime',
                               'spot_price', 'bid', 'ask', 'price']
         self.optional_fields = ['delta', 'gamma', 'theta', 'vega', 'rho', 'open_interest', 'volume',
@@ -50,8 +48,7 @@ class MockIntegrationDataLoader(Dispatcher):
             option.update_cache = option_data
 
 class MockDataLoader:
-    def __init__(self, *, start: datetime.datetime | datetime.date, end: datetime.datetime | datetime.date,
-                 select_filter: SelectFilter, extended_option_attributes: list[str] = None):
+    def __init__(self, *, start: datetime.datetime | datetime.date, end: datetime.datetime | datetime.date):
         self.start_datetime = start
         self.end_datetime = end
         self.select_filter = select_filter

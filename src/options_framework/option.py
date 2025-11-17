@@ -7,7 +7,7 @@ import numbers
 
 import pandas as pd
 import numpy as np
-from options_framework.option_types import OptionPositionType, OptionType, OptionStatus
+from options_framework.option_types import OptionPositionType, OptionStatus
 from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 from options_framework.config import settings
 
@@ -38,7 +38,7 @@ class Option(Dispatcher):
     """The option strike"""
     expiration: datetime.date = field(compare=True)
     """The expiration date"""
-    option_type: OptionType = field(compare=True)
+    option_type: str = field(compare=True)
     """Put or Call"""
     quote_datetime: datetime.datetime = field(default=None, compare=False)
     """The date of the current price information: spot_price, bid, ask, and price"""
@@ -124,7 +124,7 @@ class Option(Dispatcher):
             raise ValueError("Cannot create an option with a quote date past its expiration date")
 
     def __repr__(self) -> str:
-        return f'<{self.option_type.name}({self.option_id}) {self.symbol} {self.strike} ' \
+        return f'<{self.option_type.upper()}({self.option_id}) {self.symbol} {self.strike} ' \
             + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}>'
 
     def _incur_fees(self, *, quantity: int | Decimal) -> float:
@@ -370,9 +370,9 @@ class Option(Dispatcher):
 
             # ITM options value is the difference between the spot price and the strike price
             elif self.itm():  # ITM options only have intrinsic value at expiration
-                if self.option_type == OptionType.CALL:
+                if self.option_type == 'call':
                     close_price = spot_price - strike
-                elif self.option_type == OptionType.PUT:
+                elif self.option_type == 'put':
                     close_price = strike - spot_price
 
         # Normally, the option price is assumed to be halfway between the bid and ask
@@ -552,9 +552,9 @@ class Option(Dispatcher):
         :rtype: bool
         """
 
-        if self.option_type == OptionType.CALL:
+        if self.option_type == 'call':
             return True if self.spot_price >= self.strike else False
-        elif self.option_type == OptionType.PUT:
+        elif self.option_type == 'put':
             return True if self.spot_price <= self.strike else False
 
     def otm(self) -> bool:
@@ -565,9 +565,9 @@ class Option(Dispatcher):
         :return: Returns a boolean value indicating whether the option is currently out of the money.
         :rtype: bool
         """
-        if self.option_type == OptionType.CALL:
+        if self.option_type == 'call':
             return True if self.spot_price < self.strike else False
-        elif self.option_type == OptionType.PUT:
+        elif self.option_type == 'put':
             return True if self.spot_price > self.strike else False
 
     def get_fees(self):

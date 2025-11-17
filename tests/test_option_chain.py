@@ -4,10 +4,9 @@ import numpy as np
 from mocks import MockIntegrationDataLoader, MockEventDispatcher
 import pytest
 
-from options_framework.data.parquet_data_loader import ParquetDataLoader
 from options_framework.option import Option
 from options_framework.option_chain import OptionChain
-from options_framework.option_types import OptionType, SelectFilter
+
 from options_framework.config import settings
 
 @pytest.fixture

@@ -11,7 +11,6 @@ from pydispatch import Dispatcher
 from pathlib import Path
 
 from options_framework.option import Option
-from options_framework.option_types import OptionType
 from options_framework.utils.helpers import distinct
 from typing import Optional
 from options_framework.config import settings

@@ -5,7 +5,7 @@ import copy
 
 from conftest import create_update_cache
 from options_framework.option_portfolio import OptionPortfolio
-from options_framework.option_types import OptionCombinationType, OptionPositionType, SelectFilter
+from options_framework.option_types import OptionCombinationType, OptionPositionType
 from options_framework.spreads.single import Single
 from options_framework.config import settings
 from test_data.test_options_intraday import *
