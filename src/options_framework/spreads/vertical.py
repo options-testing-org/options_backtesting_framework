@@ -204,7 +204,7 @@ class Vertical(OptionCombination):
             strikes.sort()
         else:
             strikes.sort(reverse=True)
-        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option_type.name} {self.option_position_type.name} ' \
+        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option_type.upper()} {self.option_position_type.name} ' \
                 + f'{self.symbol} {strikes[0]}/{strikes[1]} ' \
                 + f'Expiring {self.expiration}>'
         return s

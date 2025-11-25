@@ -1,12 +1,15 @@
 import datetime
 
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Optional
 
 from options_framework.option import Option, TradeOpenInfo, TradeCloseInfo
 from options_framework.option_types import OptionStatus, OptionPositionType
 from options_framework.spreads.option_combo import OptionCombination
 from options_framework.utils.helpers import decimalize_2
+from options_framework.config import settings
+from options_framework.option_chain import OptionChain
 from pydispatch import Dispatcher
 
 @dataclass(repr=False)
@@ -22,6 +25,7 @@ class OptionPortfolio(Dispatcher):
     closed_positions: Optional[dict] = field(init=False, default_factory=lambda: {})
     portfolio_risk: float = field(init=False, default=0.0)
     close_values: list = field(init=False, default_factory=lambda: [])
+    option_chains: dict = field(default_factory=lambda: {})
 
     def __post_init__(self):
         pass
@@ -127,3 +131,13 @@ class OptionPortfolio(Dispatcher):
         #print(f'fees charged. ${fees:,.2f} subtracted from cash')
         #print("portfolio: fees incurred")
 
+
+    def initialize_ticker(self, symbol: str, quote_datetime: datetime.datetime) :
+        if symbol not in self.option_chains.keys():
+            options_folder = Path(settings['options_directory'], settings['data_fequency'], symbol)
+            option_chain = OptionChain(symbol=symbol, quote_datetime=quote_datetime, end_datetime=self.end_date,
+                                       pickle_folder=options_folder)
+            self.bind(next=option_chain.on_next)
+            self.bind(new_position_opened=option_chain.on_options_opened)
+            option_chain.on_next(quote_datetime=quote_datetime)
+            self.option_chains[symbol] = option_chain

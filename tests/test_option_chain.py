@@ -18,7 +18,7 @@ def setup():
     option_chain = OptionChain(symbol, start_date, end_date)
     return symbol, start_date, end_date, option_chain
 
-def test_load_option_chain_from_pickle():
+def test_load_option_chain():
     quote_date = datetime.datetime.strptime('2016-03-01 10:31', '%Y-%m-%d %H:%M')
     end_date = datetime.datetime.strptime('2016-03-02 11:00', '%Y-%m-%d %H:%M')
     option_chain = OptionChain('SPXW', quote_datetime=quote_date, end_datetime=end_date,

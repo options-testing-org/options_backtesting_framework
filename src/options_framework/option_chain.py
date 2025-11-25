@@ -6,6 +6,7 @@ import glob
 import pandas as pd
 from pandas import DataFrame, Series
 from dataclasses import dataclass, field
+from dateutil import relativedelta
 
 from pydispatch import Dispatcher
 from pathlib import Path
@@ -22,19 +23,31 @@ class OptionChain():
     symbol: str
     quote_datetime: datetime.datetime
     end_datetime: datetime.datetime
-    pickle_folder: str
+    pickle_folder: Path
     cache: pd.DataFrame = field(init=False, default=None)
     datetimes: list = field(init=False, default_factory=lambda: [], repr=False)
-    expirations: list = field(init=False, default_factory=list, repr=False)
+    expirations: list = field(init=False, default_factory=lambda: [], repr=False)
     option_chain: list = field(init=False, default_factory=lambda: [], repr=False)
     expiration_strikes: dict = field(init=False, default_factory=lambda: {}, repr=False)
+    _timelost_fn_format: str = field(init=False, default=None)
 
     def __post_init__(self):
-        self.datetimes = self.get_datetimes_from_pickle_files(self.quote_datetime, self.end_datetime)
+        self._timelost_fn_format = settings['timeslot_filename_format']
+        self.datetimes = datetimes = self.get_datetimes_in_date_range(self.pickle_folder, self.quote_datetime, self.end_datetime)
 
     def on_next(self, quote_datetime: datetime.datetime):
+        # find quote datetime in datetimes list
         self.quote_datetime = quote_datetime
-        options = self.load_pickled_options(quote_datetime=quote_datetime)
+        try:
+            dt = next(d for d in self.datetimes if d == quote_datetime)
+        except StopIteration:
+            # There are no matching timeslots for the quote given
+            self.option_chain = []
+            self.expirations = []
+            self.expiration_strikes = {}
+            return
+
+        options = self.load_timeslot(quote_datetime=quote_datetime)
         if options is None:
             return # no options for this time slot
 
@@ -64,58 +77,77 @@ class OptionChain():
             updates = [x for x in o_dict if x['quote_datetime'] > o.quote_datetime and x['quote_datetime'] <= self.end_datetime]
             o.update_cache = updates
 
-    def get_folders_in_date_range(self, folders, start_dt, end_dt):
+    def load_timeslot(self, quote_datetime: datetime.datetime) -> list[Option]:
+        timeslots_root = self.pickle_folder / 'timeslot_pkl'
+        ym_str = datetime.datetime.strftime(quote_datetime, '%Y_%m')
+        timeslots_folder = timeslots_root.joinpath(ym_str)
+        dt_str = datetime.datetime.strftime(quote_datetime, '%Y_%m_%d_%H_%M')
+        find_timeslot = timeslots_folder.glob(f'{dt_str}.pkl')
+        try:
+            ts_file = next(find_timeslot)
+        except StopIteration:
+            raise ValueError(f'Cannot find option chain for {self.symbol} on {quote_datetime}.')
 
-        match_folders = []
-        for x in folders:
-            n = x.name
-            date_from_folder = datetime.datetime.strptime(f'{n[-10:-6]}-{n[-5:-3]}-{n[-2:]}', '%Y-%m-%d').date()
-            if date_from_folder >= start_dt and date_from_folder <= end_dt:
-                match_folders.append(x)
-            if date_from_folder > end_dt:
-                break
-        return match_folders
+        with open(ts_file, 'rb') as f:
+            options_data = pickle.load(f)
+        options = [Option(**data) for data in options_data]
+        return options
 
-    def get_pickle_files_in_folder(self, folders):
-        all_files = []
-        for f in folders:
-            files = f.glob('*.pkl')
-            all_files.extend(list(files))
-        return all_files
+    def get_folder_as_date(self, folder):
+        return folder, datetime.datetime.strptime(folder.name, '%Y_%m').date()
 
-    def parse_pickle_file_name(self, pickle_files):
+    def get_datetimes_in_date_range(self, folder, start_dt, end_dt):
+        timeslot_folder = folder / 'timeslot_pkl'
+        folders_list = timeslot_folder.glob('*')
+
+        start_folder = datetime.date(start_dt.year, start_dt.month, 1)
+        end_folder = datetime.date(end_dt.year, end_dt.month, 1)
+        end = end_dt + datetime.timedelta(days=1) # Need to add a day so we can capture all the times from that day.
+
         datetimes = []
-        for pf in pickle_files:
-            f = pf.parent.stem # WindowsPath('D:/options_data/intraday_pkl/spx_2016_03_01')
-            fn = pf.stem # '09_31'
-            dt_str = f'{f}_{fn}'
-            dt = datetime.datetime.strptime(dt_str, '%Y_%m_%d_%H_%M')
-            datetimes.append(dt)
+        while True:
+            fol, folder_dt = self.get_folder_as_date(next(folders_list))
 
-        return datetimes
-
-
-    def get_datetimes_from_pickle_files(self, start: datetime.datetime, end: datetime.datetime) -> list[datetime.datetime]:
-        folder = Path(self.pickle_folder)
-        folders = self.get_folders_in_date_range(folder.iterdir(), start.date(), end.date())
-        files = self.get_pickle_files_in_folder(folders)
-        datetimes = self.parse_pickle_file_name(files)
-        datetimes = [d for d in datetimes if d >= start and d <= end]
-        return datetimes
-
-
-    def load_pickled_options(self, quote_datetime: datetime.datetime) -> list[Option] | None:
-        day_folder = Path(self.pickle_folder,
-                          f'{quote_datetime.year}_{quote_datetime.month:0{2}}_{quote_datetime.day:0{2}}')
-        pkl_file = day_folder / f'{quote_datetime.hour:0{2}}_{quote_datetime.minute:0{2}}.pkl'
-        if not pkl_file.exists():
-            return None
-        with open(pkl_file, 'rb') as f:
-            while True:
-                try:
-                    option_dicts = pickle.load(f)
-                except EOFError:
+            if folder_dt >= start_folder:
+                if folder_dt <= end_folder:
+                    fol_dts = [datetime.datetime.strptime(f.stem, '%Y_%m_%d_%H_%M') for f in fol.iterdir()]
+                    datetimes.extend(fol_dts)
+                    #fol, folder_dt = self.get_folder_as_date(next(folders_list))
+                else:
                     break
 
-        options = [Option(**d) for d in option_dicts]
-        return options
+
+
+                # if start_date <
+                #
+                # if fol_dt < end_date:
+                #     pass
+                # if fol_dt >= start_date and fol_dt <= end_date:
+                #     fol_dts = [datetime.datetime.strptime(f.stem, '%Y_%m_%d_%H_%M') for f in fol.iterdir()]
+                #     datetimes.extend(fol_dts)
+                # if fol_dt > end_date:
+                #     break
+
+        datetimes.sort()
+        datetimes = [x for x in datetimes if x >= start_dt and x <= end]
+        return datetimes
+
+
+    def parse_folder_name_to_date(self, folder_name: str) -> datetime.date:
+        dt = datetime.datetime.strptime(folder_name, '%Y_%m_%d').date()
+        return dt
+
+
+    def on_options_opened(self, options: list[Option]) -> list[dict] | None:
+        option_pickle_folder = self.pickle_folder / 'option_pkl'
+        for option in options:
+            pkl_file = option_pickle_folder / f'{option.option_id}.pkl'
+            if not pkl_file.exists():
+                raise ValueError(f'Cannot find updates for option {option.option_id} : {str(option)}')
+            with open(pkl_file, 'rb') as f:
+                option_dicts = pickle.load(f)
+
+            # get all updates past the current quote
+            option.update_cache = [d for d in option_dicts if d['quote_datetime'] > self.quote_datetime]
+
+
