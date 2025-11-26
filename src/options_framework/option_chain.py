@@ -56,11 +56,11 @@ class OptionChain():
             self.datetimes = self.datetimes[idx_quote + 1:]
         self.option_chain = options
 
-        expirations = [x.expiration for x in options]
+        expirations = [x['expiration'] for x in options]
         expirations = list(set(expirations))
         expirations.sort()
         self.expirations = expirations
-        expiration_strikes = [(x.expiration, x.strike) for x in options]
+        expiration_strikes = [(x['expiration'], x['strike']) for x in options]
         expiration_strikes = list(set(expiration_strikes))
         expiration_strikes = sorted(expiration_strikes,key=lambda x: (x[0], x[1]))
         expiration_strikes = {exp: [s for (e, s) in expiration_strikes if e == exp] for exp in expirations}
@@ -90,8 +90,8 @@ class OptionChain():
 
         with open(ts_file, 'rb') as f:
             options_data = pickle.load(f)
-        options = [Option(**data) for data in options_data]
-        return options
+        #options = [Option(**data) for data in options_data]
+        return options_data
 
     def get_folder_as_date(self, folder):
         return folder, datetime.datetime.strptime(folder.name, '%Y_%m').date()
