@@ -183,10 +183,11 @@ def test_option_update_quote_datetimeraises_error_if_is_not_datetime_or_timestam
     _, call = test_values_call
     updates = call_updates
 
-    update_date = updates[0]['quote_datetime'].date()
+    update = updates[0]
+    update['quote_datetime'] = update['quote_datetime'].date()
 
     with pytest.raises(Exception, match="Wrong format for option date. Must be python datetime.datetime. Date was provided in <class 'datetime.date'> format."):
-        call.next(update_date)
+        call.next(update)
 
 
 @pytest.mark.parametrize("option_type, expected_repr", [
@@ -205,8 +206,7 @@ def test_update_sets_correct_values(test_values_call, call_updates):
     _, call = test_values_call
     updates = call_updates
 
-    call.update_cache = updates
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
 
     assert call.spot_price == updates[0]['spot_price']
     assert call.quote_datetime == updates[0]['quote_datetime']
@@ -226,8 +226,9 @@ def test_update_sets_expiration_status_if_quote_date_is_greater_than_expiration(
     updates = call_updates
     updates[0]['quote_datetime'] = updates[1]['quote_datetime'] + datetime.timedelta(days=2)
 
-    call.update_cache = updates
-    call.next(updates[1]['quote_datetime'] + datetime.timedelta(days=2))
+    update = updates[1]
+    update['quote_datetime'] = update['quote_datetime'] + datetime.timedelta(days=2)
+    call.next(update)
 
     assert OptionStatus.EXPIRED in call.status
 
@@ -393,11 +394,9 @@ def test_close_trade_values_with_one_close_trade(test_values_call, call_updates,
     _, call = test_values_call
     updates = call_updates
 
-    call.update_cache = updates
-
     call.open_trade(quantity=open_qty)
 
-    call.next(quote_datetime=updates[0]['quote_datetime'])
+    call.next(updates[0])
     trade_close_info = call.close_trade(quantity=close_qty)
 
     assert trade_close_info.date == updates[0]['quote_datetime']
@@ -421,20 +420,19 @@ def test_partial_option_close_trade_with_multiple_transactions(test_values_put, 
         , open_qty, cqty1, cqty2, close_price, close_pnl, pnl_pct, close_fees, closed_qty, remaining_qty):
     _, put = test_values_put
     updates = put_updates
-    put.update_cache = updates
 
     put.open_trade(quantity=open_qty) # price = 13.3
 
     # first update
     close_date = updates[0]['quote_datetime']
-    put.next(quote_datetime=close_date)
+    put.next(updates[0])
     trade_close_info = put.close_trade(quantity=cqty1)
     assert trade_close_info.date == close_date
     assert trade_close_info.price == 10.58
 
     # second update
     close_date = updates[1]['quote_datetime']
-    put.next(quote_datetime=close_date)
+    put.next(updates[1])
     put.close_trade(quantity=cqty2) # price = 5.5
     trade_close_info = put.trade_close_info
 
@@ -456,16 +454,15 @@ def test_trade_close_records_returns_all_close_trades(test_values_call, call_upd
     updates = call_updates
 
     call.open_trade(quantity=10)
-    call.update_cache = updates
 
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
 
     call.close_trade(quantity=3)
 
     records = call.trade_close_records
     assert len(records) == 1
 
-    call.next(updates[1]['quote_datetime'])
+    call.next(updates[1])
     call.close_trade(quantity=6)
 
     records = call.trade_close_records
@@ -480,13 +477,12 @@ def test_total_fees_returns_all_fees_incurred(test_values_call, call_updates):
 
     assert call.total_fees == 5.0
 
-    call.update_cache = updates
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
     call.close_trade(quantity=2)
 
     assert call.total_fees == 6.0
 
-    call.next(updates[1]['quote_datetime'])
+    call.next(updates[1])
     call.close_trade(quantity=3)
 
     assert call.total_fees == 7.5
@@ -496,8 +492,8 @@ def test_get_closing_price(test_values_call, call_updates):
     _, call = test_values_call
     updates = call_updates
     call.open_trade(quantity=1)
-    call.update_cache = updates
-    call.next(updates[0]['quote_datetime'])
+
+    call.next(updates[0])
     expected_close_price = 2.31
 
     close_price = call.get_closing_price()
@@ -509,8 +505,7 @@ def test_get_close_price_on_option_that_has_not_been_traded_raises_exception(tes
     _, call = test_values_call
     updates = call_updates
 
-    call.update_cache = updates
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
 
     with pytest.raises(ValueError,
                        match="Cannot determine closing price on option that does not have an opening trade"):
@@ -525,13 +520,12 @@ def test_get_closing_price_on_call_option_when_bid_is_zero(test_values_call, cal
     updates = call_updates
     updates[1]['bid'] = 0.0
 
-    call.update_cache = updates
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
 
     # open trade
     call.open_trade(quantity=open_qty)
 
-    call.next(updates[1]['quote_datetime'])
+    call.next(updates[1])
 
     assert call.get_closing_price() == expected_closing_price
 
@@ -545,13 +539,12 @@ def test_get_closing_price_on_put_option_when_bid_is_zero(test_values_put, put_u
     updates = put_updates
     updates[1]['bid'] = 0.0
 
-    put.update_cache = updates
-    put.next(updates[0]['quote_datetime'])
+    put.next(updates[0])
 
     # open trade
     put.open_trade(quantity=open_qty)
 
-    put.next(updates[1]['quote_datetime'])
+    put.next(updates[1])
 
     assert put.get_closing_price() == expected_closing_price
 
@@ -559,35 +552,35 @@ def test_option_update_skips_date_has_correct_quote_datetime(test_values_put, pu
     _, put = test_values_put
     updates = put_updates
 
-    put.update_cache = updates
     put.open_trade(quantity=1)
-    put.next(updates[1]['quote_datetime'])
+    put.next(updates[1])
 
     assert put.quote_datetime == updates[1]['quote_datetime']
 
 
 
-@pytest.mark.parametrize("option_type", ['call', 'put'])
-def test_option_get_close_price_is_zero_when_option_expires_otm(test_values_call, call_updates, test_values_put_expiring, option_type):
+@pytest.mark.parametrize("option_type, closing_price", [
+    ('call', 512.49), ('put', 512.51)
+])
+def test_option_get_close_price_is_zero_when_option_expires_otm(test_values_call, call_updates, test_values_put_expiring,
+                                                                option_type, closing_price):
     _, call = test_values_call
-    updates = call_updates
-    updates[1]['spot_price'] = 512.0
-    call.update_cache = updates
-
-    put, updates = test_values_put_expiring
-    put.update_cache = updates
+    call_updates = call_updates
+    put, put_updates = test_values_put_expiring
 
     test_option = put if option_type == 'put' else call
+    updates = call_updates if option_type == 'call' else put_updates
     test_option.open_trade(quantity=1)
+    updates[0]['spot_price'] = closing_price
 
-
-    test_option.next(updates[1]['quote_datetime'])
+    test_option.next(updates[0])
 
     # make option expired
-    expired_date = datetime.datetime(2014, 2, 8)
-    test_option.next(expired_date)
-
-    assert test_option.otm() == True
+    expired_date = datetime.datetime(2014, 2, 8, 0, 0)
+    updates[1]['quote_datetime'] = expired_date
+    test_option.next(updates[1])
+    otm = test_option.otm()
+    assert otm == True
     assert test_option.price != 0.0
     assert test_option.get_closing_price() == 0.0
 
@@ -603,8 +596,7 @@ def test_dte_when_option_has_quote_data(test_values_call):
 def test_dte_is_updated_when_quote_date_is_updated(test_values_call, call_updates):
     _, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
 
     expected_dte = 1
     assert call.dte() == expected_dte
@@ -613,8 +605,8 @@ def test_dte_is_updated_when_quote_date_is_updated(test_values_call, call_update
 def test_dte_is_zero_on_expiration_day(test_values_call, call_updates):
     _, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
-    call.next(updates[1]['quote_datetime'])
+
+    call.next(updates[1])
 
     expected_dte = 0
     assert call.dte() == expected_dte
@@ -657,17 +649,18 @@ def test_call_option_itm(test_values_call, test_values_put, option_type, spot_pr
 def test_expired_for_daily_data_next_day(test_values_call, call_updates):
     _, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
 
     assert OptionStatus.INITIALIZED in call.status
 
     call.open_trade(quantity=1)
-    call.next(updates[1]['quote_datetime'])
+    call.next(updates[1])
 
     assert call.quote_datetime.date() == call.expiration
 
-    next_date = updates[1]['quote_datetime'] + datetime.timedelta(days=1)
-    call.next(next_date)
+    next_update = updates[1]
+    next_update['quote_datetime'] = next_update['quote_datetime'] + datetime.timedelta(days=1)
+
+    call.next(next_update)
 
     assert OptionStatus.EXPIRED in call.status
 
@@ -730,10 +723,9 @@ def test_get_unrealized_profit_loss_is_zero_if_quote_data_has_not_changed(test_v
 def test_get_unrealized_profit_loss_is_zero_when_trade_is_closed(test_values_call, call_updates):
     _, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
 
     call.open_trade(quantity=10)
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
     call.close_trade(quantity=10)
 
     pnl = call.get_unrealized_profit_loss()
@@ -757,18 +749,15 @@ def test_get_unrealized_profit_loss_is_zero_when_trade_is_closed(test_values_cal
 ])
 def test_get_unrealized_profit_loss_value(test_values_call, test_values_put, call_updates, put_updates,
                                           option_type, quantity, price, expected_profit_loss):
-    if option_type == 'call':
-        _, test_option = test_values_call
-        updates = call_updates
-    else:
-        _, test_option = test_values_put
-        updates = put_updates
-    test_option.update_cache = updates
+    _, call = test_values_call
+    _, put = test_values_put
+    test_option = call if option_type == 'call' else put
+    updates = call_updates if option_type == 'call' else put_updates
 
     test_option.open_trade(quantity=quantity)
 
-    test_option.update_cache[0]['price'] = price
-    test_option.next(updates[0]['quote_datetime'])
+    updates[0]['price'] = price
+    test_option.next(updates[0])
 
     actual_profit_loss = test_option.get_unrealized_profit_loss()
     assert actual_profit_loss == expected_profit_loss
@@ -807,25 +796,22 @@ def test_get_unrealized_profit_loss_percent_returns_zero_when_trade_is_closed(te
 def test_get_unrealized_profit_loss_percent_value(test_values_call, test_values_put,
                                                   call_updates, put_updates,
                                                   option_type, quantity, test_price, expected_profit_loss_pct):
-    if option_type == 'call':
-        _, test_option = test_values_call
-        updates = call_updates
-    else:
-        _, test_option = test_values_put
-        updates = put_updates
+    _, call = test_values_call
+    _, put = test_values_put
+    test_option = call if option_type == 'call' else put
+    updates = call_updates if option_type == 'call' else put_updates
 
 
     # set price of option to 10 before opening trade
     updates[0]['price'] = 10
     updates[1]['price'] = test_price
-    test_option.update_cache = updates
 
-    test_option.next(updates[0]['quote_datetime'])
+    test_option.next(updates[0])
     test_option.open_trade(quantity=quantity)
 
     # update price for test
 
-    test_option.next(updates[1]['quote_datetime'])
+    test_option.next(updates[1])
 
     actual_profit_loss = test_option.get_unrealized_profit_loss_percent()
     assert actual_profit_loss == expected_profit_loss_pct
@@ -838,10 +824,10 @@ def test_get_unrealized_profit_loss_percent_value(test_values_call, test_values_
 ])
 def test_get_days_in_trade(call_intraday_option, quote_date, expected_days_in_trade):
     call, updates = call_intraday_option
-    call.update_cache = updates
     call.open_trade(quantity=1)
 
-    call.next(quote_date)
+    update = next(x for x in updates if x['quote_datetime'] == quote_date)
+    call.next(update)
     days_in_trade = call.get_days_in_trade()
     assert days_in_trade == expected_days_in_trade
 
@@ -867,20 +853,18 @@ def test_get_profit_loss_raises_exception_if_not_traded(test_values_call):
 ])
 def test_get_total_profit_loss_returns_unrealized_when_no_contracts_are_closed(test_values_call, test_values_put, call_updates, put_updates,
                                                                                option_type, qty, test_price, expected_value):
-    if option_type == 'call':
-        _, test_option = test_values_call
-        updates = call_updates
-    else:
-        _, test_option = test_values_put
-        updates = put_updates
+    _, call = test_values_call
+    _, put = test_values_put
+    test_option = call if option_type == 'call' else put
+    updates = call_updates if option_type == 'call' else put_updates
+
     updates[0]['price'] = 10.0
     updates[1]['price'] = test_price
-    test_option.update_cache = updates
 
-    test_option.next(updates[0]['quote_datetime'])
+    test_option.next(updates[0])
     test_option.open_trade(quantity=qty)
 
-    test_option.next(updates[1]['quote_datetime'])
+    test_option.next(updates[1])
 
     actual_value = test_option.get_profit_loss()
     assert actual_value == expected_value
@@ -889,10 +873,9 @@ def test_get_total_profit_loss_returns_unrealized_when_no_contracts_are_closed(t
 def test_get_profit_loss_returns_closed_pnl_when_all_contracts_are_closed(test_values_call, call_updates):
     _, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
 
     call.open_trade(quantity=10)
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
     call.close_trade(quantity=10)
 
     assert call.get_profit_loss() == 100.0
@@ -901,13 +884,12 @@ def test_get_profit_loss_returns_closed_pnl_when_all_contracts_are_closed(test_v
 def test_get_profit_loss_returns_unrealized_and_closed_pnl_when_partially_closed(test_values_call, call_updates):
     _, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
 
     call.open_trade(quantity=10)
 
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
     call.close_trade(quantity=5) # up $50 - $10 for 5 closed contracts
-    call.next(updates[1]['quote_datetime']) # up $497 per contract, $2_485
+    call.next(updates[1]) # up $497 per contract, $2_485
 
     assert call.get_profit_loss() == 2_535.0
 
@@ -916,20 +898,19 @@ def test_get_total_profit_loss_returns_unrealized_and_closed_pnl_when_multiple_c
         put_updates):
     _, put = test_values_put
     updates = put_updates
-    put.update_cache = updates
 
     put.open_trade(quantity=-10) # price 13.3
 
     # close the first 3 contracts at updated price
-    put.next(updates[0]['quote_datetime']) # price 10.58
+    put.next(updates[0]) # price 10.58
     put.close_trade(quantity=-3)  # $816
 
     # close another 3 contracts at updated price
-    put.next(updates[1]['quote_datetime']) # price 5.5
+    put.next(updates[1]) # price 5.5
     put.close_trade(quantity=-3)  # $2_340
 
     # update the price to the next time slot values
-    put.next(updates[2]['quote_datetime']) # price 1.42, unrealized for 4 contracts = 4_752
+    put.next(updates[2]) # price 1.42, unrealized for 4 contracts = 4_752
 
     actual_value = put.get_profit_loss()
     assert actual_value == 7908.0
@@ -960,12 +941,11 @@ def test_get_profit_loss_percent_returns_unrealized_when_no_contracts_are_closed
 
     updates[0]['price'] = 10.0 # open price
     updates[1]['price'] = test_price
-    test_option.update_cache = updates
 
-    test_option.next(updates[0]['quote_datetime'])
+    test_option.next(updates[0])
     test_option.open_trade(quantity=qty)
 
-    test_option.next(updates[1]['quote_datetime'])
+    test_option.next(updates[1])
 
     actual_value = test_option.get_profit_loss_percent()
     assert actual_value == expected_value
@@ -981,21 +961,18 @@ def test_get_total_profit_loss_percent_returns_closed_pnl_when_all_contracts_are
                                                                                         call_updates, put_updates,
                                                                                         option_type, qty, test_price,
                                                                                         expected_value):
-    if option_type == 'call':
-        _, test_option = test_values_call
-        updates = call_updates
-    else:
-        _, test_option = test_values_put
-        updates = put_updates
+    _, call = test_values_call
+    _, put = test_values_put
+    test_option = call if option_type == 'call' else put
+    updates = call_updates if option_type == 'call' else put_updates
 
     updates[0]['price'] = 10.0
     updates[1]['price'] = test_price
-    test_option.update_cache = updates
-    test_option.next(updates[0]['quote_datetime'])
+    test_option.next(updates[0])
 
     test_option.open_trade(quantity=qty)
 
-    test_option.next(updates[1]['quote_datetime'])
+    test_option.next(updates[1])
     test_option.close_trade(quantity=qty)
 
     assert test_option.get_profit_loss_percent() == expected_value
@@ -1034,16 +1011,15 @@ def test_get_total_profit_loss_percent_returns_unrealized_and_closed_pnl_when_mu
     updates[0]['price'] = price1
     updates[1]['price'] = price2
     updates[2]['price'] = price3
-    test_option.update_cache = updates
     test_option.open_trade(quantity=qty)
 
-    test_option.next(updates[0]['quote_datetime'])
+    test_option.next(updates[0])
     test_option.close_trade(quantity=close_qty_1)
 
-    test_option.next(updates[1]['quote_datetime'])
+    test_option.next(updates[1])
     test_option.close_trade(quantity=close_qty_2)  # 1050
 
-    test_option.next(updates[2]['quote_datetime'])
+    test_option.next(updates[2])
 
     actual_value = test_option.get_profit_loss_percent()
     assert actual_value == expected_value
@@ -1098,7 +1074,6 @@ def test_close_option_emits_close_transaction_completed_event(test_values_call,
                                                               call_updates):
     _, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
     test_close_info = None
 
     # create handler method
@@ -1115,7 +1090,7 @@ def test_close_option_emits_close_transaction_completed_event(test_values_call,
 
     call.open_trade(quantity=10)
 
-    call.next(quote_date)
+    call.next(updates[0])
     call.close_trade(quantity=5)
 
     assert test_close_info is not None
@@ -1128,7 +1103,6 @@ def test_update_to_expired_date_emits_option_expired_event(test_values_call,
                                                            call_updates):
     _, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
 
     expired_option_id = None
 
@@ -1145,12 +1119,14 @@ def test_update_to_expired_date_emits_option_expired_event(test_values_call,
 
     # update to last day of option
     last_quote_date = updates[-1]['quote_datetime']
-    call.next(last_quote_date)
+    call.next(updates[-1])
 
     # update to next day - which is expired
     expired_date = last_quote_date + datetime.timedelta(days=1)
+    expired_update = updates[-1]
+    expired_update['quote_datetime'] = expired_date
 
-    call.next(expired_date)
+    call.next(expired_update)
     assert expired_option_id == call.option_id
 
 
@@ -1158,7 +1134,6 @@ def test_fees_incurred_event_emitted_when_open_or_close_fees_are_incurred(test_v
                                                                           call_updates):
     _, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
     my_fees = None
 
     # create handler method
@@ -1177,7 +1152,7 @@ def test_fees_incurred_event_emitted_when_open_or_close_fees_are_incurred(test_v
 
     my_fees = 0
 
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
     assert my_fees == 0
 
     call.close_trade(quantity=5)
@@ -1201,10 +1176,9 @@ def test_current_value_is_same_as_open_premium_if_no_price_change(test_values_ca
 def test_current_value_is_updated_when_price_changes(test_values_call, call_updates):
     test_values, call = test_values_call
     updates = call_updates
-    call.update_cache = updates
 
     call.open_trade(quantity=1)
-    call.next(updates[0]['quote_datetime'])
+    call.next(updates[0])
 
     new_premium = updates[0]['price'] * 100
 
@@ -1214,22 +1188,21 @@ def test_current_value_is_updated_when_price_changes(test_values_call, call_upda
 def test_current_value_when_partially_closed_price_changes(test_values_put, put_updates):
     test_values, put = test_values_put
     updates = put_updates
-    put.update_cache = updates
 
     put.open_trade(quantity=10) # price 13.3
-    put.next(updates[0]['quote_datetime'])
+    put.next(updates[0])
     assert put.current_value == 10_580.0
 
     put.close_trade(quantity=5)
     assert put.current_value == 5_290.0
 
-    put.next(updates[1]['quote_datetime'])
+    put.next(updates[1])
     assert put.current_value == 2_750.0
 
     put.close_trade(quantity=3)
     assert put.current_value == 1_100.0
 
-    put.next(updates[2]['quote_datetime'])
+    put.next(updates[2])
     assert put.current_value == 284.0
 
     put.close_trade(quantity=2)

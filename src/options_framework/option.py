@@ -91,7 +91,6 @@ class Option(Dispatcher):
     open_interest: Optional[int] = field(default=None, compare=False)
     volume: Optional[int] = field(default=None, compare=False)
     implied_volatility: Optional[float] = field(default=None, compare=False)
-    update_cache: list | None = field(default_factory=list, compare=False)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
@@ -152,57 +151,38 @@ class Option(Dispatcher):
         """
         if OptionStatus.EXPIRED in self.status:
             return True
-        if type(self.quote_datetime) == datetime.datetime or type(self.quote_datetime) == pd.Timestamp:
+        if type(self.quote_datetime) == datetime.datetime:
             quote_date, quote_time = self.quote_datetime.date(), self.quote_datetime.time()
         else:
             message = f"Wrong format for option date. Must be python datetime.datetime. Date was provided in {type(self.quote_datetime)} format."
             raise ValueError(message)
         expiration_date, exp_time = self.expiration, datetime.time(16, 15)
-        #quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
         if ((quote_date > expiration_date) or (quote_date == expiration_date and quote_time >= exp_time)):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)
             #print(f'emit expire {self.option_id}')
-            self.update_cache = None
             return True
         return False
 
     def next(self, updates: dict):
-        if self.is_expired():
-            return
         self.quote_datetime = updates['quote_datetime']
 
-        # try:
-        #     update_values = next(x for x in self.update_cache if x['quote_datetime'] == quote_datetime) #self.update_cache[self.update_cache['quote_datetime'] == quote_datetime]
-        #     #values = list(np.array(update_row)[0])
-        #     # update_fields = [f for f in update_row.columns]
-        #     # update_values = dict(zip(update_fields, values))
-        #     self.update_cache = [x for x in self.update_cache if x['quote_datetime'] > quote_datetime]
-        #     #self.update_cache[self.update_cache['quote_datetime'] > quote_datetime] # drop row after updating
-        # except KeyError as e:
-        #     return
+        if self.is_expired():
+            return
 
         self.spot_price = updates['spot_price']
         self.bid = float(decimalize_2(updates['bid']))
         self.ask = float(decimalize_2(updates['ask']))
         self.price = float(decimalize_2(updates['price']))
 
-        #if 'delta' in update_fields:
-        self.delta = updates['delta']
-        #if 'gamma' in update_fields:
-        self.gamma = updates['gamma']
-        #if 'theta' in update_fields:
-        self.theta = updates['theta']
-        #if 'vega' in update_fields:
-        self.vega = updates['vega']
-        #if 'rho' in update_fields:
-        self.rho = updates['rho']
-        #if 'open_interest' in update_fields:
-        self.open_interest = updates['open_interest']
-        #if 'volume' in update_fields:
-        self.volume = updates['volume']
-        #if 'implied_volatility' in update_fields:
-        self.implied_volatility = updates['implied_volatility']
+        self.delta = updates.get('delta', None)
+        self.gamma = updates.get('gamma', None)
+        self.theta = updates.get('theta', None)
+        self.vega = updates.get('vega', None)
+        self.rho = updates.get('rho', None)
+        self.open_interest = updates.get('open_interest', None)
+        self.volume = updates.get('volume', None)
+        self.implied_volatility = updates.get('implied_volatility')
 
     def open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
         """
