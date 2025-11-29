@@ -1,21 +1,20 @@
 import datetime
-
 from dataclasses import dataclass, field
-from pathlib import Path
 from typing import Optional
 
-from options_framework.option import Option, TradeOpenInfo, TradeCloseInfo
+from pydispatch import Dispatcher
+
+from options_framework.option import TradeOpenInfo, TradeCloseInfo
+from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionStatus, OptionPositionType
 from options_framework.spreads.option_combo import OptionCombination
 from options_framework.utils.helpers import decimalize_2
-from options_framework.config import settings
-from options_framework.option_chain import OptionChain
-from pydispatch import Dispatcher
+
 
 @dataclass(repr=False)
 class OptionPortfolio(Dispatcher):
 
-    _events_ = ['new_position_opened', 'position_closed', 'next', 'position_expired']
+    _events_ = ['position_closed', 'next', 'next_options', 'position_expired']
 
     cash: float | int
     start_date: datetime.datetime
@@ -47,19 +46,7 @@ class OptionPortfolio(Dispatcher):
                      fees_incurred=self.on_fees_incurred) for option in option_position.options]
         option_position.open_trade(quantity=quantity, **kwargs)
         self.positions[option_position.position_id] = option_position
-        self.emit("new_position_opened", option_position.options)
-        # for o in list(option_position.options):
-        #     last_data_date = o.update_cache.iloc[-1].name.to_pydatetime()
-        #     if last_data_date < self.end_date:
-        #         last_data_date = last_data_date.date()
-        #         if last_data_date < o.expiration:
-        #             self.close_position(option_position)
-        #             self.cash += option_position.get_fees()
-        #             raise Exception(f'Missing data for option updates {o.symbol} {o.option_id}')
 
-        # create hook for option update when next quote method is called
-        self.bind(next=option_position.next_quote_date)
-        [self.bind(next=o.next_update) for o in option_position.options]
 
     def close_position(self, option_position: OptionCombination, quantity: int = None, **kwargs: dict):
         quantity = quantity if quantity is not None else option_position.quantity
@@ -84,11 +71,14 @@ class OptionPortfolio(Dispatcher):
         self.closed_positions[option_position.position_id] = option_position
         del self.positions[option_position.position_id]
         self.emit("position_closed", option_position)
-        [option.unbind(self) for option in option_position.options]
+        chain = self.option_chains[option_position.symbol]
+        # [chain.unbind(option.on_next) for option in option_position.options]
 
     def next(self, quote_datetime: datetime.datetime, *args):
         self.current_datetime = quote_datetime
         self.emit('next', quote_datetime)
+        options = [o for pos in self.positions.values() for o in pos.options]
+        self.emit('next_options', options)
         values = [quote_datetime, self.portfolio_value] + list(args)
         self.close_values.append(values)
 
@@ -134,10 +124,8 @@ class OptionPortfolio(Dispatcher):
 
     def initialize_ticker(self, symbol: str, quote_datetime: datetime.datetime) :
         if symbol not in self.option_chains.keys():
-            options_folder = Path(settings['options_directory'], settings['data_fequency'], symbol)
-            option_chain = OptionChain(symbol=symbol, quote_datetime=quote_datetime, end_datetime=self.end_date,
-                                       pickle_folder=options_folder)
+            option_chain = OptionChain(symbol=symbol, quote_datetime=quote_datetime, end_datetime=self.end_date)
             self.bind(next=option_chain.on_next)
-            self.bind(new_position_opened=option_chain.on_options_opened)
-            option_chain.on_next(quote_datetime=quote_datetime)
+            self.bind(next_options=option_chain.on_next_options)
             self.option_chains[symbol] = option_chain
+            option_chain.on_next(quote_datetime=quote_datetime)

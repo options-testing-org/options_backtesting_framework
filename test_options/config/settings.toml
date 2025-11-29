@@ -6,8 +6,8 @@ slippage=0.05
 apply_slippage_entry=false
 apply_slippage_exit=false
 options_directory = 'D:\options_data'
-data_fequency = 'intraday'
-timeslot_filename_format = '%Y_%m_%d_%H_%M'
+data_frequency = 'intraday'
+
 
 
 

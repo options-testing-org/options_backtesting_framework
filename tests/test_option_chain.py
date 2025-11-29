@@ -1,7 +1,7 @@
 import datetime
 import pandas as pd
 import numpy as np
-from mocks import MockIntegrationDataLoader, MockEventDispatcher
+from mocks import MockEventDispatcher
 import pytest
 
 from options_framework.option import Option
@@ -18,11 +18,10 @@ def setup():
     option_chain = OptionChain(symbol, start_date, end_date)
     return symbol, start_date, end_date, option_chain
 
-def test_load_option_chain():
-    quote_date = datetime.datetime.strptime('2016-03-01 10:31', '%Y-%m-%d %H:%M')
+def test_load_option_chain(intraday_file_settings):
+    quote_date = datetime.datetime.strptime('2016-03-01 10:00', '%Y-%m-%d %H:%M')
     end_date = datetime.datetime.strptime('2016-03-02 11:00', '%Y-%m-%d %H:%M')
-    option_chain = OptionChain('SPXW', quote_datetime=quote_date, end_datetime=end_date,
-                               pickle_folder=r'D:\options_data\intraday_pkl')
+    option_chain = OptionChain('SPXW', quote_datetime=quote_date, end_datetime=end_date)
 
     option_chain.on_next(quote_datetime=quote_date)
 
@@ -88,7 +87,7 @@ def test_option_chain_has_new_options_after_next_event_is_emitted(setup):
     next_day = datetime.datetime.strptime('2014-02-06', '%Y-%m-%d')
 
     nexter = MockEventDispatcher()
-    nexter.bind(next=option_chain.on_next)
+    nexter.bind(next=option_chain.next)
     nexter.do_next(next_day)
 
     assert all([x for x in option_chain.option_chain if x.quote_datetime == next_day])
@@ -100,7 +99,7 @@ def test_open_option(setup):
 
     op = option_chain.option_chain[2]
     nexter.bind(new_position_opened=dl.on_options_opened)
-    nexter.bind(next=op.next_update)
+    nexter.bind(next=op.next)
 
     nexter.open_option_position([op])
 

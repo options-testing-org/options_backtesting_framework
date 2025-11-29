@@ -6,8 +6,8 @@ slippage=0.05
 apply_slippage_entry=false
 apply_slippage_exit=false
 
-data_format_settings = "cboe_settings.toml"
-data_loader_type = 'parquet_data_loader'
+options_directory =  "C:\\_code\\options_backtesting_framework\\tests\\test_data\\data_files"
+data_frequency = 'intraday'
 
-test_data_dir = "C:\\_code\\options_backtesting_framework\\tests\\test_data"
+
 

@@ -22,7 +22,7 @@ class OptionCombination(ABC):
     quantity: int = field(default=1)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
     user_defined: dict = field(default_factory=lambda: {})
-    quote_datetime: datetime = field(init=False, default=None)
+    #quote_datetime: datetime = field(init=False, default=None)
     #expiration: datetime.date = field(init=False, default=None)
 
     def __post_init__(self):
@@ -92,8 +92,17 @@ class OptionCombination(ABC):
     def status(self) -> OptionStatus:
         pass
 
-    def next_quote_date(self, quote_datetime: datetime.datetime) -> None:
-        self.quote_datetime = quote_datetime
+    @property
+    @abstractmethod
+    def symbol(self) -> OptionStatus:
+        pass
+
+    @property
+    def quote_datetime(selfself) -> datetime.datetime:
+        return options[0].quote_datetime
+
+    # def next_quote_date(self, quote_datetime: datetime.datetime) -> None:
+        # self.quote_datetime = quote_datetime
 
     def get_profit_loss(self) -> float:
         pnl = sum(o.get_profit_loss() for o in self.options)

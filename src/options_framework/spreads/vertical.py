@@ -33,7 +33,7 @@ class Vertical(OptionCombination):
                 raise ValueError(message)
 
         expiration_strikes = option_chain.expiration_strikes[expiration].copy()
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
+        options = [o for o in option_chain.option_chain if o['option_type'] == option_type and o['expiration'] == expiration].copy()
         try:
             # Find nearest strikes
             if option_type == 'call':
@@ -47,9 +47,11 @@ class Vertical(OptionCombination):
             message = "No matching strike was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        long_option = next(o for o in options if o.strike == long_strike)
+        long_dict = next(o for o in options if o['strike'] == long_strike)
+        long_option = Option(**long_dict)
         long_option.quantity = quantity
-        short_option = next(o for o in options if o.strike == short_strike)
+        short_dict = next(o for o in options if o['strike'] == short_strike)
+        short_option = Option(**short_dict)
         short_option.quantity = quantity * -1
 
         vertical = Vertical(options=[long_option, short_option],
@@ -218,7 +220,6 @@ class Vertical(OptionCombination):
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
-        self.quote_datetime = self.long_option.quote_datetime
         super(Vertical, self).open_trade(quantity=quantity, **kwargs)
 
     def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:

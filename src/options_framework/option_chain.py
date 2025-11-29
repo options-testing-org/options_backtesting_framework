@@ -23,16 +23,15 @@ class OptionChain():
     symbol: str
     quote_datetime: datetime.datetime
     end_datetime: datetime.datetime
-    pickle_folder: Path
-    cache: pd.DataFrame = field(init=False, default=None)
+    pickle_folder: Path = field(init=False, default=None, repr=False)
+    cache: pd.DataFrame = field(init=False, default=None, repr=False)
     datetimes: list = field(init=False, default_factory=lambda: [], repr=False)
     expirations: list = field(init=False, default_factory=lambda: [], repr=False)
     option_chain: list = field(init=False, default_factory=lambda: [], repr=False)
     expiration_strikes: dict = field(init=False, default_factory=lambda: {}, repr=False)
-    _timelost_fn_format: str = field(init=False, default=None)
 
     def __post_init__(self):
-        self._timelost_fn_format = settings['timeslot_filename_format']
+        self.pickle_folder = options_folder = Path(settings['options_directory'], settings['data_frequency'], self.symbol)
         self.datetimes = datetimes = self.get_datetimes_in_date_range(self.pickle_folder, self.quote_datetime, self.end_datetime)
 
     def on_next(self, quote_datetime: datetime.datetime):
@@ -66,16 +65,18 @@ class OptionChain():
         expiration_strikes = {exp: [s for (e, s) in expiration_strikes if e == exp] for exp in expirations}
         self.expiration_strikes = expiration_strikes
 
-    def on_options_opened(self, options: list[Option]) -> None:
-        symbol = options[0].symbol
+    # def on_options_opened(self, options: list[Option]) -> None:
+    #     symbol = options[0].symbol
+    #
+    #     pickle_file_path = Path(self.pickle_folder).parent / 'option_pkl'
+    #     for o in options:
+    #         pickle_file = pickle_file_path / f'{o.option_id}.pkl'
+    #         with open(pickle_file, 'rb') as f:
+    #             o_dict = pickle.load(f)
+    #         updates = [x for x in o_dict if x['quote_datetime'] > o.quote_datetime and x['quote_datetime'] <= self.end_datetime]
+    #         o.update_cache = updates
+    #         self.bind()
 
-        pickle_file_path = Path(self.pickle_folder).parent / 'option_pkl'
-        for o in options:
-            pickle_file = pickle_file_path / f'{o.option_id}.pkl'
-            with open(pickle_file, 'rb') as f:
-                o_dict = pickle.load(f)
-            updates = [x for x in o_dict if x['quote_datetime'] > o.quote_datetime and x['quote_datetime'] <= self.end_datetime]
-            o.update_cache = updates
 
     def load_timeslot(self, quote_datetime: datetime.datetime) -> list[Option]:
         timeslots_root = self.pickle_folder / 'timeslot_pkl'
@@ -95,6 +96,7 @@ class OptionChain():
 
     def get_folder_as_date(self, folder):
         return folder, datetime.datetime.strptime(folder.name, '%Y_%m').date()
+
 
     def get_datetimes_in_date_range(self, folder, start_dt, end_dt):
         timeslot_folder = folder / 'timeslot_pkl'
@@ -116,18 +118,6 @@ class OptionChain():
                 else:
                     break
 
-
-
-                # if start_date <
-                #
-                # if fol_dt < end_date:
-                #     pass
-                # if fol_dt >= start_date and fol_dt <= end_date:
-                #     fol_dts = [datetime.datetime.strptime(f.stem, '%Y_%m_%d_%H_%M') for f in fol.iterdir()]
-                #     datetimes.extend(fol_dts)
-                # if fol_dt > end_date:
-                #     break
-
         datetimes.sort()
         datetimes = [x for x in datetimes if x >= start_dt and x <= end]
         return datetimes
@@ -138,16 +128,14 @@ class OptionChain():
         return dt
 
 
-    def on_options_opened(self, options: list[Option]) -> list[dict] | None:
-        option_pickle_folder = self.pickle_folder / 'option_pkl'
+    def on_next_options(self, options: list[Option]) -> list[dict] | None:
         for option in options:
-            pkl_file = option_pickle_folder / f'{option.option_id}.pkl'
-            if not pkl_file.exists():
-                raise ValueError(f'Cannot find updates for option {option.option_id} : {str(option)}')
-            with open(pkl_file, 'rb') as f:
-                option_dicts = pickle.load(f)
+            try:
+                option_quote = next(q for q in self.option_chain if q['option_id'] == option.option_id)
+                option.next(option_quote)
+            except StopIteration:
+                continue
 
-            # get all updates past the current quote
-            option.update_cache = [d for d in option_dicts if d['quote_datetime'] > self.quote_datetime]
+
 
 

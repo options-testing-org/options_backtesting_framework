@@ -5,14 +5,13 @@ os.environ["OPTIONS_FRAMEWORK_CONFIG_FOLDER"] = os.getcwd() + r'\config'
 import pandas as pd
 import numpy as np
 from options_framework.spreads.vertical import Vertical
-from options_framework.option_portfolio import OptionPortfolio
+from options_framework.portfolio import OptionPortfolio
 
 
 params = {
     'orb_time': datetime.time(10, 30),
     'stop_time': datetime.time(14, 0),
     'eod': datetime.time(15, 59),
-
 }
 
 max_float = sys.float_info.max
