@@ -19,8 +19,8 @@ def setup():
     return symbol, start_date, end_date, option_chain
 
 def test_load_option_chain(intraday_file_settings):
-    quote_date = datetime.datetime.strptime('2016-03-01 10:00', '%Y-%m-%d %H:%M')
-    end_date = datetime.datetime.strptime('2016-03-02 11:00', '%Y-%m-%d %H:%M')
+    quote_date = datetime.datetime.strptime('2016-04-28 10:00', '%Y-%m-%d %H:%M')
+    end_date = datetime.datetime.strptime('2016-04-29 11:00', '%Y-%m-%d %H:%M')
     option_chain = OptionChain('SPXW', quote_datetime=quote_date, end_datetime=end_date)
 
     option_chain.on_next(quote_datetime=quote_date)

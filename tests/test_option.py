@@ -1185,7 +1185,7 @@ def test_current_value_is_updated_when_price_changes(test_values_call, call_upda
     assert call.current_value == new_premium
 
 
-def test_current_value_when_partially_closed_price_changes(test_values_put, put_updates):
+def test_current_value_price_changes_when_partially_closed(test_values_put, put_updates):
     test_values, put = test_values_put
     updates = put_updates
 
