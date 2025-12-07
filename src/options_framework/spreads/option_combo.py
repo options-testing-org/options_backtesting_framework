@@ -30,7 +30,7 @@ class OptionCombination(ABC):
         raise NotImplementedError
 
     def __repr__(self) -> str:
-        return f'<{self.option_combination_type.name}({self.position_id}) Quantity: {len(self.options)} positions>'
+        pass
 
     @property
     def current_value(self) -> float:
@@ -93,8 +93,12 @@ class OptionCombination(ABC):
         pass
 
     @property
-    @abstractmethod
     def symbol(self) -> OptionStatus:
+        return self.options[0].symbol
+
+    @property
+    @abstractmethod
+    def price(self) -> float:
         pass
 
     @property

@@ -11,6 +11,7 @@ from options_framework.utils.helpers import decimalize_0, decimalize_2, decimali
 
 @dataclass(repr=False, slots=True)
 class Single(OptionCombination):
+    option: Option = field(default=None)
 
     @classmethod
     def get_single(cls, option_chain: OptionChain,
@@ -49,41 +50,6 @@ class Single(OptionCombination):
                         option_position_type=option_position_type, quantity=quantity)
         return single
 
-    @classmethod
-    def get_single_by_delta(cls, option_chain: OptionChain, expiration: datetime.date,
-                            option_type: str,
-                            option_position_type: OptionPositionType,
-                            delta: float,
-                            quantity: int = 1) -> OptionCombination:
-
-        # Find nearest matching expiration
-        try:
-            expiration = next(e for e in option_chain.expirations if e >= expiration)
-        except StopIteration:
-            message = "No matching expiration was found in the option chain. Consider changing the selection filter."
-            raise ValueError(message)
-
-        # Find option with the nearest delta
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
-        try:
-            if option_type == 'call':
-                options.sort(key=lambda x: x.delta, reverse=True)
-                option = next(o for o in options if o.delta <= delta)
-            else:
-                options.sort(key=lambda x: x.delta, reverse=False)
-                option = next(o for o in options if o.delta >= delta)
-        except StopIteration:
-            raise ValueError("No matching options were found for the delta value. Consider changing the selection filter.")
-
-        if option.price == 0:
-            raise Exception(f"Option price is zero ({option.symbol}). Cannot open this option.")
-
-        quantity = abs(quantity) if option_position_type == OptionPositionType.LONG else abs(quantity) * -1
-        single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
-                        option_position_type=option_position_type, quantity=quantity)
-        return single
-
-    option: Option = field(default=None)
 
     def __post_init__(self):
         if len(self.options) > 1:
@@ -92,15 +58,11 @@ class Single(OptionCombination):
             raise ValueError("The parameter option_position_type: OptionPositionType must not be None")
 
         self.option = self.options[0]
-        quantity = abs(self.quantity) if self.option_position_type == OptionPositionType.LONG \
-            else abs(self.quantity)*-1
-        self.quantity = quantity
-        self.option.quantity = quantity
         self.option.position_type = self.option_position_type
         self.option_combination_type = OptionCombinationType.SINGLE
 
     def __repr__(self) -> str:
-        s = f'<{self.option_combination_type.name}({self.position_id}), {self.option.symbol}, Strike: {self.strike}, Expiring: {self.expiration}, Quantity: {self.quantity}>'
+        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option.symbol} {self.option_type} {self.strike} {self.expiration} {self.quantity}>'
         return s
 
     @property
@@ -118,10 +80,6 @@ class Single(OptionCombination):
     @property
     def price(self) -> float:
         return self.option.price
-
-    @property
-    def symbol(self) -> str:
-        return self.option.symbol
 
     @property
     def status(self) -> OptionStatus:
@@ -152,20 +110,24 @@ class Single(OptionCombination):
             return round(margin, 2)
 
     def update_quantity(self, quantity: int):
-        quantity = abs(quantity) if self.option_position_type == OptionPositionType.LONG else abs(quantity)*-1
+        if self.option_position_type == OptionPositionType.LONG and quantity < 0:
+            raise ValueError(f'Cannot set a negative quantity on a long position.')
+        elif self.option_position_type == OptionPositionType.SHORT and quantity > 0:
+            raise ValueError(f'Cannot set a positive quantity on a short position.')
+
         self.quantity = quantity
         self.option.quantity = quantity
 
-    def open_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
+    def open_trade(self, quantity: int = 1, **kwargs: dict) -> None:
         self.update_quantity(quantity)
         self.option.open_trade(quantity=self.quantity)
         super(Single, self).open_trade(quantity=quantity, **kwargs)
 
-    def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
+    def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else self.option.quantity
         self.option.close_trade(quantity=quantity)
-        self.quantity -= quantity
-        super(Single, self).close_trade(quantity=quantity, **kwargs)
+        self.update_quantity(self.option.quantity)
+        super(Single, self).close_trade(quantity=quantity, **kwargs) # call super to set any kwargs
 
     def get_trade_price(self):
         if OptionStatus.INITIALIZED ==  self.option.status:
