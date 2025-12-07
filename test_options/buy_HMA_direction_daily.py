@@ -100,7 +100,7 @@ class HullMADirectionalStrategy(bt.Strategy):
 
         if t.hour == 16 and t.minute == 15:
             self.log(
-                f'portfolio value: {self.portfolio.portfolio_value:.2f}  cash: {self.portfolio.cash:.2f}',
+                f'portfolio value: {self.portfolio.current_value:.2f}  cash: {self.portfolio.cash:.2f}',
                 self.dt)
 
 

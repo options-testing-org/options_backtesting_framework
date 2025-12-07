@@ -6,7 +6,6 @@ from options_framework.option_types import OptionPositionType, OptionStatus
 from options_framework.config import settings
 
 from test_data.test_option_data import *
-from test_data.test_options_intraday import *
 
 
 @pytest.fixture

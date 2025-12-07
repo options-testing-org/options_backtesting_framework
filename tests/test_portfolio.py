@@ -3,9 +3,9 @@ import datetime
 import pytest
 import copy
 
-
+from options_framework.option import Option
 from options_framework.portfolio import OptionPortfolio
-from options_framework.option_types import OptionCombinationType, OptionPositionType
+from options_framework.option_types import OptionCombinationType, OptionPositionType, OptionStatus
 from options_framework.spreads.single import Single
 from options_framework.config import settings
 
@@ -19,158 +19,165 @@ def test_create_portfolio_settings():
     assert portfolio.cash == starting_cash
     assert portfolio.start_date == start_date
     assert portfolio.end_date == end_date
+    assert len(portfolio.option_chains.keys()) == 0
     assert str(portfolio) == 'OptionPortfolio(cash=100000.00, portfolio_value=100000.00, open positions: 0)'
 
+def test_initialize_ticker_for_daily_add_option_chain_to_portfolio(daily_file_settings):
+    symbol = 'AAPL'
+    quote_datetime = datetime.datetime(2014, 12, 30, 0, 0)
+    end_datetime = datetime.datetime(2015, 1, 7, 0, 0)
+    cash = 10_000
 
-# def test_open_long_option_position(test_position_1, test_cache):
-#     position, start, end = test_position_1
-#     options_df = test_cache
-#     pf = OptionPortfolio(100_000.0, start, end)
-#
-#     def on_options_opened(portfolio, options: list[Option]) -> None:
-#         nonlocal options_df
-#         for o in options:
-#             cache = options_df[options_df.option_id == o.option_id]
-#             o.update_cache = cache
-#         pass
-#
-#     pf.bind(new_position_opened=on_options_opened)
-#     pf.open_position(option_position=position, quantity=1)
-#     assert pf.cash == 97_849.5
-#     assert pf.portfolio_value == 99_999.5
-#
-# def test_get_portfolio_value_with_open_positions(test_position_1, test_position_2, test_cache):
-#     position1, start, end = test_position_1
-#     position2, start, end = test_position_2
-#     options_df = test_cache
-#     pf = OptionPortfolio(100_000.0, start, end)
-#
-#     def on_options_opened(portfolio, options: list[Option]) -> None:
-#         nonlocal options_df
-#         for o in options:
-#             cache = options_df[options_df.option_id == o.option_id]
-#             o.update_cache = cache
-#         pass
-#
-#     pf.bind(new_position_opened=on_options_opened)
-#     pf.open_position(option_position=position1, quantity=1)
-#     pf.open_position(option_position=position2, quantity=1)
-#
-#     assert pf.cash == 96_224.0
-#     assert pf.portfolio_value == 99_999.0
-#
-# def test_portfolio_updates_when_option_values_are_updated(test_position_1, test_position_2, test_cache):
-#     position1, start, end = test_position_1
-#     position2, start, end = test_position_2
-#     update_date = df_index[-3]
-#
-#     options_df = test_cache
-#     pf = OptionPortfolio(100_000.0, start, end)
-#     def on_options_opened(portfolio, options: list[Option]) -> None:
-#         nonlocal options_df
-#         for o in options:
-#             cache = options_df[options_df.option_id == o.option_id]
-#             o.update_cache = cache
-#         pass
-#
-#     pf.bind(new_position_opened=on_options_opened)
-#     pf.open_position(option_position=position1, quantity=1)
-#     pf.open_position(option_position=position2, quantity=1)
-#
-#     pf.next(update_date)
-#     assert pf.portfolio_value == 99_999.0
-#     assert pf.cash == 96_224.0
-#
-# def test_portfolio_values_when_position_is_closed(test_position_1, test_cache):
-#     position1, start, end = test_position_1
-#     update_date = df_index[-3]
-#     pf = OptionPortfolio(100_000.0, start, end)
-#     options_df = test_cache
-#
-#     def on_options_opened(portfolio, options: list[Option]) -> None:
-#         nonlocal options_df
-#         for o in options:
-#             cache = options_df[options_df.option_id == o.option_id]
-#             o.update_cache = cache
-#         pass
-#
-#     pf.bind(new_position_opened=on_options_opened)
-#
-#     # spend $2150 x 2 + fee to open options worth $4301
-#     pf.open_position(option_position=position1, quantity=2)
-#     assert pf.cash == 95_699.0
-#     assert pf.portfolio_value == 99_999
-#
-#     # options now worth $4_140 Cash remains unchanged
-#     pf.next(update_date)
-#
-#     assert pf.portfolio_value == 99_839.0
-#     assert pf.cash == 95_699.0
-#
-#     # close options. No open options, so worth $0.00. Cash added $2000.00 for selling options
-#     pf.close_position(position1, quantity=2)
-#     assert pf.cash == 99_838.0
-#     assert pf.portfolio_value == 99_838.0
-#
-#
-# def test_portfolio_values_with_multiple_positions(test_position_1, test_position_2, test_cache):
-#     position1, start, end = test_position_1
-#     position2, start, end = test_position_2
-#     update_date = df_index[-3]
-#
-#     options_df = test_cache
-#     pf = OptionPortfolio(100_000.0, start, end)
-#
-#     def on_options_opened(portfolio, options: list[Option]) -> None:
-#         nonlocal options_df
-#         for o in options:
-#             cache = options_df[options_df.option_id == o.option_id]
-#             o.update_cache = cache
-#         pass
-#
-#     pf.bind(new_position_opened=on_options_opened)
-#
-#     # open two positions
-#     pf.open_position(option_position=position1, quantity=1)
-#     pf.open_position(option_position=position2, quantity=1)
-#
-#     assert pf.cash == 96_224.0
-#     assert pf.portfolio_value == 99_999.0
-#
-#     # update both positions
-#     pf.next(update_date)
-#     assert pf.portfolio_value == 99_999.0
-#     assert pf.cash == 96_224.0
-#
-#     # close one position
-#     pf.close_position(position1, quantity=1)
-#     assert pf.cash == 98_293.5
-#     assert pf.portfolio_value == 99_998.5
-#
-# def test_expired_position_closes_position(test_position_1, test_cache):
-#     position1, start, end = test_position_1
-#     options_df = test_cache
-#     exp_quote_date = df_index[-1]
-#     pf = OptionPortfolio(100_000.0, start, end)
-#
-#     def on_options_opened(portfolio, options: list[Option]) -> None:
-#         nonlocal options_df
-#         for o in options:
-#             cache = options_df[options_df.option_id == o.option_id]
-#             o.update_cache = cache
-#         pass
-#
-#     pf.bind(new_position_opened=on_options_opened)
-#
-#     # open position
-#     pf.open_position(option_position=position1, quantity=1)
-#
-#     # position expires
-#     pf.next(exp_quote_date)
-#
-#     assert len(pf.positions) == 0
-#     assert len(pf.closed_positions) == 1
-#
-#
-#
-#
+    portfolio = OptionPortfolio(cash, quote_datetime, end_datetime)
+    portfolio.initialize_ticker(symbol, quote_datetime)
+
+    assert symbol in portfolio.option_chains.keys()
+
+def test_open_long_position_adds_to_open_positions(daily_file_settings):
+    symbol = 'AAPL'
+    quote_datetime = datetime.datetime(2014, 12, 30, 0, 0)
+    end_datetime = datetime.datetime(2015, 1, 7, 0, 0)
+    cash = 10_000
+
+    portfolio = OptionPortfolio(cash, quote_datetime, end_datetime)
+    portfolio.initialize_ticker(symbol, quote_datetime)
+
+    option_data = copy.deepcopy(portfolio.option_chains[symbol].option_chain[0])
+    o = Option(**option_data)
+    single = Single(options=[o], option_combination_type=OptionCombinationType.SINGLE,
+                    option_position_type=OptionPositionType.LONG, quantity=1)
+    portfolio.open_position(single, quantity=5)
+
+    assert len(portfolio.positions.items()) == 1
+
+def test_close_position_removes_from_open_positions_adds_to_closed_positions(daily_file_settings):
+    symbol = 'AAPL'
+    quote_datetime = datetime.datetime(2014, 12, 30, 0, 0)
+    end_datetime = datetime.datetime(2015, 1, 7, 0, 0)
+    cash = 10_000
+
+    portfolio = OptionPortfolio(cash, quote_datetime, end_datetime)
+    portfolio.initialize_ticker(symbol, quote_datetime)
+
+    option_data = copy.deepcopy(portfolio.option_chains[symbol].option_chain[0])
+    o = Option(**option_data)
+    single = Single(options=[o], option_combination_type=OptionCombinationType.SINGLE,
+                    option_position_type=OptionPositionType.LONG, quantity=1)
+    portfolio.open_position(single, quantity=5)
+
+    assert len(portfolio.positions.items()) == 1
+
+    portfolio.close_position(single, quantity=5)
+
+    assert len(portfolio.positions.items()) == 0
+    assert len(portfolio.closed_positions.items()) == 1
+
+def test_portfolio_events_are_emitted(option_chain_data):
+    quote_datetime = datetime.datetime(2014, 12, 30, 0, 0)
+    end_datetime = datetime.datetime(2015, 1, 7, 0, 0)
+    cash = 10_000
+    portfolio = OptionPortfolio(cash, quote_datetime, end_datetime)
+    data = option_chain_data('daily', quote_datetime)
+    option_data = copy.deepcopy(data.option_chain[4])
+    option = Option(**option_data)
+    single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
+                    option_position_type=OptionPositionType.LONG, quantity=1)
+    portfolio.open_position(single, 1)
+    #portfolio.positions[single.position_id] = single
+
+    on_next_fired = None
+    on_options_next_fired = None
+    on_position_closed_fired = None
+    on_position_expired_fired = None
+    class Listener:
+
+        @staticmethod
+        def on_next(quote_datetime):
+            nonlocal on_next_fired
+            on_next_fired = quote_datetime
+
+        @staticmethod
+        def on_options_next(options):
+            nonlocal on_options_next_fired
+            on_options_next_fired = options
+
+        @staticmethod
+        def on_position_closed(position):
+            nonlocal on_position_closed_fired
+            on_position_closed_fired = position
+
+        @staticmethod
+        def on_expired(position):
+            nonlocal on_position_expired_fired
+            on_position_expired_fired = position
+
+    listener = Listener()
+
+    # next event
+    next_quote = quote_datetime + datetime.timedelta(days=1)
+    portfolio.bind(next=listener.on_next)
+    portfolio.next(next_quote)
+    assert on_next_fired == next_quote
+
+    # next_options event
+    portfolio.bind(next_options=listener.on_options_next)
+    portfolio.next(next_quote)
+    assert on_options_next_fired[0] is option
+
+    # position_closed event
+    portfolio.bind(position_closed=listener.on_position_closed)
+    portfolio.close_position(single, 1)
+    assert on_position_closed_fired is single
+
+    # position_expired event
+    option.status = OptionStatus.INITIALIZED
+    portfolio.open_position(single, 1)
+    option.status |= OptionStatus.EXPIRED
+    portfolio.bind(position_expired=listener.on_expired)
+    portfolio.on_option_expired(option.option_id)
+    assert on_position_expired_fired is single
+
+
+def test_portfolio_cash_and_value_with_open_positions(option_chain_data):
+    symbol = 'AAPL'
+    quote_datetime = datetime.datetime(2014, 12, 30, 0, 0)
+    end_datetime = datetime.datetime(2015, 1, 7, 0, 0)
+    starting_cash = 10_000
+
+    portfolio = OptionPortfolio(starting_cash, quote_datetime, end_datetime)
+    portfolio.initialize_ticker(symbol, quote_datetime)
+
+    data = option_chain_data('daily', quote_datetime)
+    option_data = copy.deepcopy(data.option_chain[7])
+    option = Option(**data.option_chain[7])
+    option.incur_fees = False
+    single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
+                    option_position_type=OptionPositionType.LONG, quantity=1)
+    portfolio.open_position(single, 1)
+
+    assert portfolio.cash == 9_875.0
+    assert portfolio.current_value == starting_cash
+
+def test_portfolio_value_when_option_value_changes(daily_file_settings):
+    symbol = 'AAPL'
+    quote_datetime = datetime.datetime(2014, 12, 30, 0, 0)
+    end_datetime = datetime.datetime(2015, 1, 7, 0, 0)
+    starting_cash = 10_000
+
+    portfolio = OptionPortfolio(starting_cash, quote_datetime, end_datetime)
+    portfolio.initialize_ticker(symbol, quote_datetime)
+
+    option_data = portfolio.option_chains[symbol].option_chain[61]
+    option = Option(**option_data)
+    single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
+                    option_position_type=OptionPositionType.LONG, quantity=1)
+
+    portfolio.open_position(single, 1)
+    quote_datetime = quote_datetime + datetime.timedelta(days=1)
+    portfolio.next(quote_datetime)
+
+    unrealized_pnl = single.get_unrealized_profit_loss()
+
+    assert portfolio.current_value == starting_cash + unrealized_pnl
+
+

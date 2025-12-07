@@ -76,7 +76,7 @@ class HullMAOptionStrategy(bt.Strategy):
 
             self.portfolio.open_position(option_position=option, quantity=1)
 
-        self.log(f'portfolio value: {self.portfolio.portfolio_value:.2f}  cash: {self.portfolio.cash:.2f}',  self.dt)
+        self.log(f'portfolio value: {self.portfolio.current_value:.2f}  cash: {self.portfolio.cash:.2f}', self.dt)
 
     def stop(self):
         position_ids = list(self.portfolio.positions.keys())
@@ -84,7 +84,7 @@ class HullMAOptionStrategy(bt.Strategy):
             position = self.portfolio.positions[pos_id]
             self.portfolio.close_position(position, position.quantity)
         self.log(
-            f'portfolio value: {self.portfolio.portfolio_value:.2f}  cash: {self.portfolio.cash:.2f}',
+            f'portfolio value: {self.portfolio.current_value:.2f}  cash: {self.portfolio.cash:.2f}',
             self.dt)
 
 if __name__ == "__main__":

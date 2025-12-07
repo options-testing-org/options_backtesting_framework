@@ -162,7 +162,7 @@ class Option(Dispatcher):
         else:
             message = f"Wrong format for option date. Must be python datetime.datetime. Date was provided in {type(self.quote_datetime)} format."
             raise ValueError(message)
-        expiration_date, exp_time = self.expiration, datetime.time(16, 15)
+        expiration_date, exp_time = self.expiration, datetime.time(16, 00)
         if ((quote_date > expiration_date) or (quote_date == expiration_date and quote_time >= exp_time)):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)

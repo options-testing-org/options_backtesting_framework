@@ -28,7 +28,7 @@ class OptionPortfolio(Dispatcher):
 
 
     def __repr__(self) -> str:
-        return f'OptionPortfolio(cash={self.cash:.2f}, portfolio_value={self.portfolio_value:.2f}, open positions: {len(self.positions)})'
+        return f'OptionPortfolio(cash={self.cash:.2f}, portfolio_value={self.current_value:.2f}, open positions: {len(self.positions)})'
 
     def open_position(self, option_position: OptionCombination, quantity: int, **kwargs: dict):
         option_position.update_quantity(quantity)
@@ -69,7 +69,7 @@ class OptionPortfolio(Dispatcher):
         self.closed_positions[option_position.position_id] = option_position
         del self.positions[option_position.position_id]
         self.emit("position_closed", option_position)
-        chain = self.option_chains[option_position.symbol]
+        #chain = self.option_chains[option_position.symbol]
         # [chain.unbind(option.on_next) for option in option_position.options]
 
     def next(self, quote_datetime: datetime.datetime, *args):
@@ -77,11 +77,11 @@ class OptionPortfolio(Dispatcher):
         self.emit('next', quote_datetime)
         options = [o for pos in self.positions.values() for o in pos.options]
         self.emit('next_options', options)
-        values = [quote_datetime, self.portfolio_value] + list(args)
+        values = [quote_datetime, self.current_value] + list(args)
         self.close_values.append(values)
 
     @property
-    def portfolio_value(self):
+    def current_value(self):
         current_value = sum(option.current_value for option in [option for position in self.positions.values()
                                                                 for option in position.options])
         portfolio_value = decimalize_2(current_value) + decimalize_2(self.cash)

@@ -100,7 +100,7 @@ class SPX_358_OTM_Calls(bt.Strategy):
         # Once per day
         if self.data.datetime.date(0) != self.current_date:
             self.current_date = self.data.datetime.date(0)
-            self.log(f'{self.portfolio.portfolio_value:.2f}')
+            self.log(f'{self.portfolio.current_value:.2f}')
             if len(self.portfolio.positions) > 0:
                 self.trade_today = False
             else:
@@ -142,7 +142,7 @@ class SPX_358_OTM_Calls(bt.Strategy):
                                                          option_position_type=OptionPositionType.LONG,
                                                          option_type=OptionType.CALL, delta=self.p.delta)
 
-                risk_amount = self.portfolio.portfolio_value * self.p.max_risk
+                risk_amount = self.portfolio.current_value * self.p.max_risk
                 qty = int(risk_amount / (price * 100))
                 qty = 1 if qty == 0 else qty
                 target_pnl = call_option.trade_value * self.p.profit_target
