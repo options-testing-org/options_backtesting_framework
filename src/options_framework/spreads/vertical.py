@@ -1,6 +1,6 @@
 from dataclasses import field
 
-from options_framework.option_types import OptionPositionType, OptionType, OptionCombinationType, OptionStatus
+from options_framework.option_types import OptionPositionType, OptionCombinationType, OptionStatus
 from options_framework.option_chain import OptionChain
 from options_framework.spreads.option_combo import OptionCombination
 from options_framework.utils.helpers import decimalize_2
@@ -11,16 +11,16 @@ import datetime
 class Vertical(OptionCombination):
 
     @classmethod
-    def get_vertical(cls, option_chain: OptionChain, expiration: datetime.date, option_type: OptionType,
+    def get_vertical(cls, option_chain: OptionChain, expiration: datetime.date, option_type: str,
                      long_strike: int | float,
                      short_strike: int | float,
                      quantity: int = 1) -> OptionCombination:
 
         if long_strike < short_strike:
-            option_position_type = OptionPositionType.LONG if option_type == OptionType.CALL \
+            option_position_type = OptionPositionType.LONG if option_type == 'call' \
                 else OptionPositionType.SHORT
         elif long_strike > short_strike:
-            option_position_type = OptionPositionType.SHORT if option_type == OptionType.CALL \
+            option_position_type = OptionPositionType.SHORT if option_type == 'call' \
                 else OptionPositionType.LONG
         else:
             raise ValueError("Long and short strikes cannot be the same")
@@ -33,10 +33,10 @@ class Vertical(OptionCombination):
                 raise ValueError(message)
 
         expiration_strikes = option_chain.expiration_strikes[expiration].copy()
-        options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
+        options = [o for o in option_chain.option_chain if o['option_type'] == option_type and o['expiration'] == expiration].copy()
         try:
             # Find nearest strikes
-            if option_type == OptionType.CALL:
+            if option_type == 'call':
                 long_strike = next(s for s in expiration_strikes if s >= long_strike)
                 short_strike = next(s for s in expiration_strikes if s >= short_strike)
             else:
@@ -47,9 +47,11 @@ class Vertical(OptionCombination):
             message = "No matching strike was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        long_option = next(o for o in options if o.strike == long_strike)
+        long_dict = next(o for o in options if o['strike'] == long_strike)
+        long_option = Option(**long_dict)
         long_option.quantity = quantity
-        short_option = next(o for o in options if o.strike == short_strike)
+        short_dict = next(o for o in options if o['strike'] == short_strike)
+        short_option = Option(**short_dict)
         short_option.quantity = quantity * -1
 
         vertical = Vertical(options=[long_option, short_option],
@@ -58,17 +60,17 @@ class Vertical(OptionCombination):
         return vertical
 
     @classmethod
-    def get_vertical_by_delta(cls, option_chain: OptionChain, expiration: datetime.date, option_type: OptionType,
+    def get_vertical_by_delta(cls, option_chain: OptionChain, expiration: datetime.date, option_type: str,
                      long_delta: float,
                      short_delta: float,
                      quantity: int = 1) -> OptionCombination:
 
         long_delta, short_delta = abs(long_delta), abs(short_delta)
         if abs(long_delta) > abs(short_delta):
-            option_position_type = OptionPositionType.LONG if option_type == OptionType.CALL \
+            option_position_type = OptionPositionType.LONG if option_type == 'call' \
                 else OptionPositionType.SHORT
         elif abs(long_delta) < abs(short_delta):
-            option_position_type = OptionPositionType.SHORT if option_type == OptionType.CALL \
+            option_position_type = OptionPositionType.SHORT if option_type == 'call' \
                 else OptionPositionType.LONG
         else:
             raise ValueError("Long and short strikes cannot be the same")
@@ -88,7 +90,7 @@ class Vertical(OptionCombination):
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
         try:
-            if option_type == OptionType.CALL:
+            if option_type == 'call':
                 long_option = next(o for o in options if o.delta <= long_delta)
                 short_option = next(o for o in options if o.delta <= short_delta)
             else:
@@ -108,10 +110,10 @@ class Vertical(OptionCombination):
         short_option.position_type = OptionPositionType.SHORT
 
         if long_option.strike < short_option.strike:
-            option_position_type = OptionPositionType.LONG if option_type == OptionType.CALL \
+            option_position_type = OptionPositionType.LONG if option_type == 'call' \
                 else OptionPositionType.SHORT
         elif long_option.strike > short_option.strike:
-            option_position_type = OptionPositionType.SHORT if option_type == OptionType.CALL \
+            option_position_type = OptionPositionType.SHORT if option_type == 'call' \
                 else OptionPositionType.LONG
         else:
             raise ValueError("Long and short strikes cannot be the same")
@@ -123,7 +125,7 @@ class Vertical(OptionCombination):
 
     @classmethod
     def get_vertical_by_delta_and_spread_width(cls, option_chain: OptionChain, expiration: datetime.date,
-                                               option_type: OptionType,
+                                               option_type: str,
                                                option_position_type: OptionPositionType,
                                                delta: float,
                                                spread_width: int |float,
@@ -139,7 +141,7 @@ class Vertical(OptionCombination):
         options = [o for o in option_chain.option_chain if o.option_type == option_type and o.expiration == expiration].copy()
         strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
         try:
-            if option_type == OptionType.CALL:
+            if option_type == 'call':
                 option = next(o for o in options if o.delta <= delta)
                 target_strike = option.strike + spread_width
                 strike = next(s for s in strikes if s >= target_strike)
@@ -200,11 +202,11 @@ class Vertical(OptionCombination):
 
     def __repr__(self) -> str:
         strikes = [self.long_option.strike, self.short_option.strike]
-        if self.option_type == OptionType.CALL:
+        if self.option_type == 'call':
             strikes.sort()
         else:
             strikes.sort(reverse=True)
-        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option_type.name} {self.option_position_type.name} ' \
+        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option_type.upper()} {self.option_position_type.name} ' \
                 + f'{self.symbol} {strikes[0]}/{strikes[1]} ' \
                 + f'Expiring {self.expiration}>'
         return s
@@ -218,7 +220,6 @@ class Vertical(OptionCombination):
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
-        self.quote_datetime = self.long_option.quote_datetime
         super(Vertical, self).open_trade(quantity=quantity, **kwargs)
 
     def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
@@ -278,7 +279,7 @@ class Vertical(OptionCombination):
         return self.long_option.expiration
 
     @property
-    def option_type(self) -> OptionType:
+    def option_type(self) -> str:
         return self.long_option.option_type
 
     @property

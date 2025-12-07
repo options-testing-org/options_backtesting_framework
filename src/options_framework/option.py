@@ -7,7 +7,7 @@ import numbers
 
 import pandas as pd
 import numpy as np
-from options_framework.option_types import OptionPositionType, OptionType, OptionStatus
+from options_framework.option_types import OptionPositionType, OptionStatus
 from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 from options_framework.config import settings
 
@@ -38,7 +38,7 @@ class Option(Dispatcher):
     """The option strike"""
     expiration: datetime.date = field(compare=True)
     """The expiration date"""
-    option_type: OptionType = field(compare=True)
+    option_type: str = field(compare=True)
     """Put or Call"""
     quote_datetime: datetime.datetime = field(default=None, compare=False)
     """The date of the current price information: spot_price, bid, ask, and price"""
@@ -91,8 +91,9 @@ class Option(Dispatcher):
     open_interest: Optional[int] = field(default=None, compare=False)
     volume: Optional[int] = field(default=None, compare=False)
     implied_volatility: Optional[float] = field(default=None, compare=False)
-    update_cache: pd.DataFrame | None = field(default=None, compare=False)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
+    incur_fees: bool = field(default=True, compare=False)
+    fee_per_contract: float = field(default=0.65, compare=False)
 
     def __post_init__(self):
         # check for required fields
@@ -118,13 +119,17 @@ class Option(Dispatcher):
             raise ValueError("ask cannot be None")
         if self.price is None:
             raise ValueError("price cannot be None")
+        self.price = round(self.price, 2)
+        self.incur_fees = settings.get('incur_fees', True)
+        self.fee_per_contract = settings.get('standard_fee', 0.65)
 
         # make sure the quote date is not past the expiration date
         if self.quote_datetime.date() > self.expiration:
             raise ValueError("Cannot create an option with a quote date past its expiration date")
 
+
     def __repr__(self) -> str:
-        return f'<{self.option_type.name}({self.option_id}) {self.symbol} {self.strike} ' \
+        return f'<{self.option_type.upper()}({self.option_id}) {self.symbol} {self.strike} ' \
             + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}>'
 
     def _incur_fees(self, *, quantity: int | Decimal) -> float:
@@ -133,7 +138,7 @@ class Option(Dispatcher):
         :return: fees that were added to the option
         :rtype: float
         """
-        fee = decimalize_2(settings['standard_fee'])
+        fee = decimalize_2(self.fee_per_contract)
         qty = decimalize_0(quantity)
         fees = fee * abs(qty)
         total_fees = decimalize_2(self.total_fees) + fees
@@ -145,62 +150,45 @@ class Option(Dispatcher):
 
         return fees
 
-    def _check_expired(self) -> bool:
+    def is_expired(self) -> bool:
         """
         Assumes the option is PM settled. Add the status OptionStatus.EXPIRED flag if the
         option is expired.
         """
         if OptionStatus.EXPIRED in self.status:
             return True
-        if type(self.quote_datetime) == datetime.datetime or type(self.quote_datetime) == pd.Timestamp:
+        if type(self.quote_datetime) == datetime.datetime:
             quote_date, quote_time = self.quote_datetime.date(), self.quote_datetime.time()
         else:
             message = f"Wrong format for option date. Must be python datetime.datetime. Date was provided in {type(self.quote_datetime)} format."
             raise ValueError(message)
         expiration_date, exp_time = self.expiration, datetime.time(16, 15)
-        #quote_time, exp_time = self.quote_datetime.time(), datetime.time(16, 15)
         if ((quote_date > expiration_date) or (quote_date == expiration_date and quote_time >= exp_time)):
             self.status |= OptionStatus.EXPIRED
             self.emit("option_expired", self.option_id)
             #print(f'emit expire {self.option_id}')
-            self.update_cache = None
             return True
         return False
 
-    def next_update(self, quote_datetime: datetime.datetime):
-        self.quote_datetime = quote_datetime
-        if self._check_expired():
-            return
-        try:
-            update_row = self.update_cache[self.update_cache['quote_datetime'] == quote_datetime]
-            values = list(np.array(update_row)[0])
-            update_fields = [f for f in update_row.columns]
-            update_values = dict(zip(update_fields, values))
-            self.update_cache = self.update_cache[self.update_cache['quote_datetime'] > quote_datetime] # drop row after updating
-        except KeyError as e:
+    def next(self, updates: dict):
+        self.quote_datetime = updates['quote_datetime']
+
+        if self.is_expired():
             return
 
-        self.spot_price = update_values['spot_price']
-        self.bid = float(decimalize_2(update_values['bid']))
-        self.ask = float(decimalize_2(update_values['ask']))
-        self.price = float(decimalize_2(update_values['price']))
+        self.spot_price = updates['spot_price']
+        self.bid = float(decimalize_2(updates['bid']))
+        self.ask = float(decimalize_2(updates['ask']))
+        self.price = float(decimalize_2(updates['price']))
 
-        if 'delta' in update_fields:
-            self.delta = update_values['delta']
-        if 'gamma' in update_fields:
-            self.gamma = update_values['gamma']
-        if 'theta' in update_fields:
-            self.theta = update_values['theta']
-        if 'vega' in update_fields:
-            self.vega = update_values['vega']
-        if 'rho' in update_fields:
-            self.rho = update_values['rho']
-        if 'open_interest' in update_fields:
-            self.open_interest = update_values['open_interest']
-        if 'volume' in update_fields:
-            self.volume = update_values['volume']
-        if 'implied_volatility' in update_fields:
-            self.implied_volatility = update_values['implied_volatility']
+        self.delta = updates.get('delta', None)
+        self.gamma = updates.get('gamma', None)
+        self.theta = updates.get('theta', None)
+        self.vega = updates.get('vega', None)
+        self.rho = updates.get('rho', None)
+        self.open_interest = updates.get('open_interest', None)
+        self.volume = updates.get('volume', None)
+        self.implied_volatility = updates.get('implied_volatility')
 
     def open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
         """
@@ -233,11 +221,7 @@ class Option(Dispatcher):
         if price == 0:
             raise Exception(f"Option price is zero {self.symbol} ({self.option_id}). Cannot open this option.")
         quantity = decimalize_0(quantity)
-        if settings['apply_slippage_entry']:
-            if quantity > 0:
-                price -= self.slippage
-            else:
-                price += self.slippage
+
         premium = float(price * 100 * quantity)
         price = float(price)
         quantity = int(quantity)
@@ -246,7 +230,7 @@ class Option(Dispatcher):
             self.user_defined[key] = value
 
         fees = 0
-        if settings['incur_fees']:
+        if self.incur_fees:
             fees = self._incur_fees(quantity=quantity)
         trade_open_info = TradeOpenInfo(option_id=self.option_id, date=self.quote_datetime, quantity=quantity,
                                         price=price,
@@ -263,7 +247,7 @@ class Option(Dispatcher):
 
         return trade_open_info
 
-    def close_trade(self, *, quantity: int, **kwargs: dict) -> TradeCloseInfo:
+    def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> TradeCloseInfo:
         """
         Calculates the closing price and sets the close date, price and profit/loss info for the
         quantity closed.
@@ -271,7 +255,7 @@ class Option(Dispatcher):
         :return: the profit/loss of the closed quantity of the trade
         :rtype: float
         """
-        if OptionStatus.TRADE_IS_OPEN not in self.status:
+        if OptionStatus.TRADE_IS_OPEN not in self.status and OptionStatus.EXPIRED not in self.status:
             raise ValueError("Cannot close an option that is not open.")
 
         if quantity is None:
@@ -293,13 +277,6 @@ class Option(Dispatcher):
             quantity = decimalize_0(quantity) * -1
 
         close_price = decimalize_2(self.get_closing_price())
-        if settings['apply_slippage_exit']:
-            if not OptionStatus.EXPIRED in self.status:
-                slippage = settings['slippage']
-                if self.trade_open_info.quantity > 0:
-                    close_price += close_price * decimalize_2(slippage)
-                elif self.trade_open_info.quantity < 0:
-                    close_price -= close_price * decimalize_2(slippage)
 
         open_price = decimalize_2(self.trade_open_info.price)
         premium = decimalize_2(close_price) * 100 * quantity*-1
@@ -308,7 +285,7 @@ class Option(Dispatcher):
         profit_loss_percent = decimalize_4(ratio) * (quantity * -1 / abs(quantity))
 
         fees = 0
-        if settings['incur_fees']:
+        if self.incur_fees:
             fees = self._incur_fees(quantity=abs(quantity))
 
         # date quantity price premium profit_loss fees
@@ -337,6 +314,7 @@ class Option(Dispatcher):
         #print(f'emit close {self.option_id}')
 
         return trade_close_record
+
 
     def get_closing_price(self) -> float:
         """
@@ -369,9 +347,9 @@ class Option(Dispatcher):
 
             # ITM options value is the difference between the spot price and the strike price
             elif self.itm():  # ITM options only have intrinsic value at expiration
-                if self.option_type == OptionType.CALL:
+                if self.option_type == 'call':
                     close_price = spot_price - strike
-                elif self.option_type == OptionType.PUT:
+                elif self.option_type == 'put':
                     close_price = strike - spot_price
 
         # Normally, the option price is assumed to be halfway between the bid and ask
@@ -551,9 +529,9 @@ class Option(Dispatcher):
         :rtype: bool
         """
 
-        if self.option_type == OptionType.CALL:
+        if self.option_type == 'call':
             return True if self.spot_price >= self.strike else False
-        elif self.option_type == OptionType.PUT:
+        elif self.option_type == 'put':
             return True if self.spot_price <= self.strike else False
 
     def otm(self) -> bool:
@@ -564,9 +542,9 @@ class Option(Dispatcher):
         :return: Returns a boolean value indicating whether the option is currently out of the money.
         :rtype: bool
         """
-        if self.option_type == OptionType.CALL:
+        if self.option_type == 'call':
             return True if self.spot_price < self.strike else False
-        elif self.option_type == OptionType.PUT:
+        elif self.option_type == 'put':
             return True if self.spot_price > self.strike else False
 
     def get_fees(self):

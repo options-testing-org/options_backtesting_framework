@@ -1,7 +1,7 @@
 from dataclasses import field
 
 import options_framework.option
-from options_framework.option_types import OptionPositionType, OptionType, OptionTradeType, OptionCombinationType, \
+from options_framework.option_types import OptionPositionType, OptionTradeType, OptionCombinationType, \
     TransactionType, OptionStatus
 from options_framework.option_chain import OptionChain
 from options_framework.spreads.option_combo import OptionCombination
@@ -80,10 +80,10 @@ class IronCondor(OptionCombination):
             raise ValueError("No matching strike was found in the option chain. Consider changing the selection filter.")
 
         try:
-            long_call_option = next(o for o in options if o.option_type == OptionType.CALL and o.strike == long_call_strike)
-            short_call_option = next(o for o in options if o.option_type == OptionType.CALL and o.strike == short_call_strike)
-            long_put_option = next(o for o in options if o.option_type == OptionType.PUT and o.strike == long_put_strike)
-            short_put_option = next(o for o in option_chain.option_chain if o.option_type == OptionType.PUT and o.strike == short_put_strike)
+            long_call_option = next(o for o in options if o.option_type == 'call' and o.strike == long_call_strike)
+            short_call_option = next(o for o in options if o.option_type == 'call' and o.strike == short_call_strike)
+            long_put_option = next(o for o in options if o.option_type == 'put' and o.strike == long_put_strike)
+            short_put_option = next(o for o in option_chain.option_chain if o.option_type == 'put' and o.strike == short_put_strike)
         except StopIteration:
             raise ValueError("No options matching the requirements were found in the option chain. Consider changing the selection filter.")
 
@@ -154,13 +154,13 @@ class IronCondor(OptionCombination):
 
         try:
             long_call_option = next(
-                o for o in options if o.option_type == OptionType.CALL and o.strike == long_call_strike)
+                o for o in options if o.option_type == 'call' and o.strike == long_call_strike)
             short_call_option = next(
-                o for o in options if o.option_type == OptionType.CALL and o.strike == short_call_strike)
+                o for o in options if o.option_type == 'call' and o.strike == short_call_strike)
             long_put_option = next(
-                o for o in options if o.option_type == OptionType.PUT and o.strike == long_put_strike)
+                o for o in options if o.option_type == 'put' and o.strike == long_put_strike)
             short_put_option = next(o for o in options if
-                                    o.option_type == OptionType.PUT and o.strike == short_put_strike)
+                                    o.option_type == 'put' and o.strike == short_put_strike)
         except StopIteration:
             raise ValueError(
                 "No options matching the requirements were found in the option chain. Consider changing the selection filter.")
@@ -211,7 +211,7 @@ class IronCondor(OptionCombination):
         options.sort(key=lambda x: x.delta, reverse=True)
 
         # Find nearest long call matching delta
-        select_options = [o for o in options if o.option_type == OptionType.CALL
+        select_options = [o for o in options if o.option_type == 'call'
                           and o.delta <= long_delta]
         if not select_options:
             raise ValueError(
@@ -220,7 +220,7 @@ class IronCondor(OptionCombination):
         long_call_option.quantity, long_call_option.position_type = quantity, OptionPositionType.LONG
 
         # Find nearest short call matching delta
-        select_options = [o for o in options if o.option_type == OptionType.CALL
+        select_options = [o for o in options if o.option_type == 'call'
                           and o.delta <= short_delta]
         if not select_options:
             raise ValueError(
@@ -230,7 +230,7 @@ class IronCondor(OptionCombination):
 
         options.sort(key=lambda x: x.delta)
         # Find nearest long put matching delta
-        select_options = [o for o in options if o.option_type == OptionType.PUT
+        select_options = [o for o in options if o.option_type == 'put'
                           and o.delta >= -long_delta]
         if not select_options:
             raise ValueError(
@@ -239,7 +239,7 @@ class IronCondor(OptionCombination):
         long_put_option.quantity, long_put_option.position_type = quantity, OptionPositionType.LONG
 
         # Find nearest short put matching delta
-        select_options = [o for o in options if o.option_type == OptionType.PUT
+        select_options = [o for o in options if o.option_type == 'put'
                           and o.delta >= -short_delta]
         if not select_options:
             raise ValueError(
@@ -279,8 +279,8 @@ class IronCondor(OptionCombination):
                 "The long options must have a positive quantity, and the short options must have a negative " \
                 + "quantity.")
 
-        call_qty = sum(o.quantity for o in self.options if o.option_type == OptionType.CALL)
-        put_qty = sum(o.quantity for o in self.options if o.option_type == OptionType.PUT)
+        call_qty = sum(o.quantity for o in self.options if o.option_type == 'call')
+        put_qty = sum(o.quantity for o in self.options if o.option_type == 'put')
         if call_qty + put_qty != 0:
             message = "Invalid quantities. An Iron Condor Spread must have a balanced number of long and short options. " \
                       + " This configuration will have naked options."

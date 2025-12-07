@@ -2,12 +2,6 @@ from dataclasses import dataclass, field
 from enum import Enum, StrEnum, Flag, auto
 import datetime
 
-class OptionType(Enum):
-    """
-    The basic option type is either a put or a call
-    """
-    CALL = 1
-    PUT = 2
 
 
 class TransactionType(Enum):
@@ -63,20 +57,4 @@ class OptionTradeType(Enum):
     DEBIT = 2
 
 
-@dataclass
-class FilterRange:
-    low: float | int = None
-    high: float | int = None
 
-@dataclass
-class SelectFilter:
-    option_type: OptionType = None
-    expiration_dte: FilterRange = field(default_factory=lambda: FilterRange())
-    strike_offset: FilterRange = field(default_factory=lambda: FilterRange())
-    delta_range: FilterRange = field(default_factory=lambda: FilterRange())
-    gamma_range: FilterRange = field(default_factory=lambda: FilterRange())
-    theta_range: FilterRange = field(default_factory=lambda: FilterRange())
-    vega_range: FilterRange = field(default_factory=lambda: FilterRange())
-    rho_range: FilterRange = field(default_factory=lambda: FilterRange())
-    open_interest_range: FilterRange = field(default_factory=lambda: FilterRange())
-    implied_volatility_range: FilterRange = field(default_factory=lambda: FilterRange())

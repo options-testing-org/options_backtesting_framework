@@ -2,6 +2,7 @@ import datetime
 import itertools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Optional
 
 from ..option import Option
 from ..option_types import OptionCombinationType, OptionStatus, OptionPositionType
@@ -18,19 +19,18 @@ class OptionCombination(ABC):
 
     options: list[Option]
     option_combination_type: OptionCombinationType = field(default=None)
-    option_position_type: OptionPositionType = field(default=None)
     quantity: int = field(default=1)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
+    option_position_type: Optional[OptionPositionType] = field(default=None)
     user_defined: dict = field(default_factory=lambda: {})
-    quote_datetime: datetime = field(init=False, default=None)
-    #expiration: datetime.date = field(init=False, default=None)
+
 
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.
         raise NotImplementedError
 
     def __repr__(self) -> str:
-        return f'<{self.option_combination_type.name}({self.position_id}) Quantity: {len(self.options)} positions>'
+        pass
 
     @property
     def current_value(self) -> float:
@@ -92,8 +92,21 @@ class OptionCombination(ABC):
     def status(self) -> OptionStatus:
         pass
 
-    def next_quote_date(self, quote_datetime: datetime.datetime) -> None:
-        self.quote_datetime = quote_datetime
+    @property
+    def symbol(self) -> OptionStatus:
+        return self.options[0].symbol
+
+    @property
+    @abstractmethod
+    def price(self) -> float:
+        pass
+
+    @property
+    def quote_datetime(selfself) -> datetime.datetime:
+        return options[0].quote_datetime
+
+    # def next_quote_date(self, quote_datetime: datetime.datetime) -> None:
+        # self.quote_datetime = quote_datetime
 
     def get_profit_loss(self) -> float:
         pnl = sum(o.get_profit_loss() for o in self.options)

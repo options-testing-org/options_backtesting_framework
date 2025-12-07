@@ -2,9 +2,8 @@ import pandas as pd
 import datetime
 from tempfile import NamedTemporaryFile
 from options_framework.option import Option
-from options_framework.option_types import OptionType
 from options_framework.utils.helpers import *
-from test_data.test_option_daily import daily_option_data
+from test_data.test_option_data import daily_option_data
 
 column_names = ['data_date', 'option_id', 'symbol', 'underlying_price', 'option_type', 'expiration',
                     'strike', 'bid', 'ask', 'mid', 'volume', 'open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega',
@@ -60,7 +59,7 @@ def daily_quote_datetime_to_datetime(x):
     return {**x, 'quote_datetime': datetime.datetime.strptime(x['quote_datetime'], "%Y-%m-%d")}
 
 def daily_option_type_from_str(x):
-    return {**x, 'option_type': OptionType.CALL if x['option_type'] == 'call' else OptionType.PUT}
+    return {**x, 'option_type': 'call' if x['option_type'] == 'call' else 'put'}
 
 def expiration_to_date(x):
     return {**x, 'expiration': datetime.datetime.strptime(x['expiration'], "%Y-%m-%d").date()}
@@ -68,26 +67,7 @@ def expiration_to_date(x):
 def create_option_objects(option_data):
     options = []
     for item in option_data:
-        option_id = item['option_id']
-        option = Option(
-                option_id=option_id,
-                symbol=item['symbol'],
-                expiration=item['expiration'],
-                strike=item['strike'],
-                option_type=item['option_type'],
-                quote_datetime=item['quote_datetime'],
-                spot_price=item['spot_price'],
-                bid=item['bid'],
-                ask=item['ask'],
-                price=item['price'],
-                delta=item['delta'],
-                gamma=item['gamma'],
-                theta=item['theta'],
-                vega=item['vega'],
-                rho=item['rho'],
-                volume=item['volume'],
-                open_interest=item['open_interest'] ,
-                implied_volatility=item['implied_volatility'] )
+        option = Option(**item)
         options.append(option)
     return options
 def get_daily_fields():
@@ -114,17 +94,17 @@ def get_daily_fields():
     }
     fields = [col_mapping[f] for f in column_names if f in col_mapping.keys()]
     return fields
-
-def get_daily_option_chain_items(quote_date):
-    df = get_daily_test_df()
-    df = df[df['quote_datetime'] == quote_date]
-    option_data = get_daily_option_data()
-    option_data = [x for x in option_data if x['quote_datetime'] == quote_date]
-    test_options = create_option_objects(option_data)
-    expirations = [x for x in list(df['expiration'].unique())]
-    exp_str = df[['expiration', 'strike']].drop_duplicates().to_numpy().tolist()
-    expiration_strikes = {exp: [s for (e, s) in exp_str if e == exp] for exp in expirations}
-    return test_options, expirations, expiration_strikes
+#
+# def get_daily_option_chain_items(quote_date):
+#     df = get_daily_test_df()
+#     df = df[df['quote_datetime'] == quote_date]
+#     option_data = get_daily_option_data()
+#     option_data = [x for x in option_data if x['quote_datetime'] == quote_date]
+#     test_options = create_option_objects(option_data)
+#     expirations = [x for x in list(df['expiration'].unique())]
+#     exp_str = df[['expiration', 'strike']].drop_duplicates().to_numpy().tolist()
+#     expiration_strikes = {exp: [s for (e, s) in exp_str if e == exp] for exp in expirations}
+#     return test_options, expirations, expiration_strikes
 
 
 
@@ -132,7 +112,7 @@ def get_daily_option_data():
     data = list(map(lambda x: dict(zip(get_daily_fields(), x)), daily_option_data))
     data = list(map(daily_quote_datetime_to_datetime, data))
     data = list(map(expiration_to_date, data))
-    data = list(map(daily_option_type_from_str, data))
+    #data = list(map(daily_option_type_from_str, data))
     return data
 
 def get_daily_test_df():

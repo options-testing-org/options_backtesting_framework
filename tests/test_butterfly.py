@@ -1,6 +1,6 @@
 import datetime
 
-from options_framework.option_types import OptionType, OptionPositionType
+from options_framework.option_types import  OptionPositionType
 from options_framework.spreads.butterfly import Butterfly
 #
 # def test_open_long_butterfly_position(spx_option_chain_puts):

@@ -56,3 +56,4 @@ def temp_data_dir_cleanup() -> None:
     for x in temp_dir.iterdir():
         if x.is_file():
             os.remove(x)
+

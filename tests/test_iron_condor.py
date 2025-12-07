@@ -1,6 +1,6 @@
 import datetime
 
-from options_framework.option_types import OptionType, OptionPositionType, OptionCombinationType
+from options_framework.option_types import OptionPositionType, OptionCombinationType
 from options_framework.spreads.iron_condor import IronCondor
 
 
