@@ -140,7 +140,7 @@ class MyBacktest:
         for _, qd in datetimes_df.iterrows():
             dt = qd['qd']
             self.portfolio.next(dt.to_pydatetime().date())
-            print(f'{dt} Cash: ${self.portfolio.cash:,.2f}, Value: ${self.portfolio.portfolio_value:,.2f}')
+            print(f'{dt} Cash: ${self.portfolio.cash:,.2f}, Value: ${self.portfolio.current_value:,.2f}')
             dt_datas = [d for d in datas if pd.to_datetime(dt) in d.index]
             for d in dt_datas:
                 symbol = d.iloc[0]['symbol']
@@ -214,7 +214,7 @@ class MyBacktest:
                                                 quantity=-1)
 
                             if vertical.max_profit >= 50.0:
-                                max_risk = self.portfolio.portfolio_value * 0.10
+                                max_risk = self.portfolio.current_value * 0.10
                                 qty = math.ceil(max_risk/vertical.max_loss)
                                 if qty > 0:
                                     self.portfolio.open_position(vertical, quantity=qty)

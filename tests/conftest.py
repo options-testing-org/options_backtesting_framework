@@ -46,12 +46,12 @@ def daily_file_settings():
 
 
 @pytest.fixture
-def option_chain_daily():
-    def get_option_chain_daily_for_date(quote_date):
-        data = daily_option_data
-        end_date = datetime.datetime(2015, 1, 5, 0, 0)
-        option_chain = MockOptionChain(symbol='AAPL', quote_datetime=quote_date)
-        options = [x for x in data if x['quote_datetime'] == quote_date]
+def option_chain_data():
+    def get_option_chain_for_frequency_and_quote(data_frequency, quote_datetime):
+        data = daily_option_data if data_frequency == 'daily' else intraday_option_data
+        symbol = 'AAPL' if data_frequency == 'daily' else 'SPXW'
+        option_chain = MockOptionChain(symbol=symbol, quote_datetime=quote_datetime)
+        options = [x for x in data if x['quote_datetime'] == quote_datetime]
         expirations = list(set([x['expiration'] for x in data]))
         expirations.sort()
         expiration_strikes = [(x['expiration'], x['strike']) for x in options]
@@ -63,5 +63,5 @@ def option_chain_daily():
         option_chain.expirations = expirations
         option_chain.expiration_strikes = expiration_strikes
         return option_chain
-    return get_option_chain_daily_for_date
+    return get_option_chain_for_frequency_and_quote
 

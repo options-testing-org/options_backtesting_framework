@@ -268,7 +268,7 @@ class OTMButterflyStrategy(bt.Strategy):
                 self.portfolio.close_position(current_position, quantity=current_position.quantity)
 
         if t == self.p.end_afternoon:
-            self.log(f'portfolio value: {self.portfolio.portfolio_value:.2f}  cash: {self.portfolio.cash:.2f}', self.dt)
+            self.log(f'portfolio value: {self.portfolio.current_value:.2f}  cash: {self.portfolio.cash:.2f}', self.dt)
             if current_position:
                 self.log('current_positions')
 

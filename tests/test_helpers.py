@@ -5,44 +5,44 @@ from options_framework.option import Option
 from options_framework.utils.helpers import *
 from test_data.test_option_data import daily_option_data
 
-column_names = ['data_date', 'option_id', 'symbol', 'underlying_price', 'option_type', 'expiration',
-                    'strike', 'bid', 'ask', 'mid', 'volume', 'open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega',
-                    'rho']
-daily_col_mapping = {
-        'data_date': 'quote_datetime',
-        'option_id': 'option_id',
-        'symbol': 'symbol',
-        'underlying_price': 'spot_price',
-        'option_type': 'option_type',
-        'expiration': 'expiration',
-        'strike': 'strike',
-        'bid': 'bid',
-        'ask': 'ask',
-        'mid': 'price',
-        'volume': 'volume',
-        'open_interest': 'open_interest',
-        'iv': 'implied_volatility',
-        'delta': 'delta',
-        'gamma': 'gamma',
-        'theta': 'theta',
-        'vega': 'vega',
-        'rho': 'rho',
-    }
+# column_names = ['data_date', 'option_id', 'symbol', 'underlying_price', 'option_type', 'expiration',
+#                     'strike', 'bid', 'ask', 'mid', 'volume', 'open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega',
+#                     'rho']
+# daily_col_mapping = {
+#         'data_date': 'quote_datetime',
+#         'option_id': 'option_id',
+#         'symbol': 'symbol',
+#         'underlying_price': 'spot_price',
+#         'option_type': 'option_type',
+#         'expiration': 'expiration',
+#         'strike': 'strike',
+#         'bid': 'bid',
+#         'ask': 'ask',
+#         'mid': 'price',
+#         'volume': 'volume',
+#         'open_interest': 'open_interest',
+#         'iv': 'implied_volatility',
+#         'delta': 'delta',
+#         'gamma': 'gamma',
+#         'theta': 'theta',
+#         'vega': 'vega',
+#         'rho': 'rho',
+#     }
 
-def test_temp_data_dir_cleanup_removes_existing_files_from_temp_dir():
-    temp_dir = Path.cwd().joinpath('temp_data')
-    if not temp_dir.exists():
-        temp_dir.mkdir()
-
-    # create some temp files
-    for i in range(5):
-        with NamedTemporaryFile(delete=False, dir='./temp_data') as f:
-            x = Path(f.name)
-
-    temp_data_dir_cleanup()
-
-    files = [x for x in temp_dir.iterdir() if x.is_file()]
-    assert len(files) == 0
+# def test_temp_data_dir_cleanup_removes_existing_files_from_temp_dir():
+#     temp_dir = Path.cwd().joinpath('temp_data')
+#     if not temp_dir.exists():
+#         temp_dir.mkdir()
+#
+#     # create some temp files
+#     for i in range(5):
+#         with NamedTemporaryFile(delete=False, dir='./temp_data') as f:
+#             x = Path(f.name)
+#
+#     temp_data_dir_cleanup()
+#
+#     files = [x for x in temp_dir.iterdir() if x.is_file()]
+#     assert len(files) == 0
 
 def dump(o):
     #datetime.date(2016, 3, 2)
@@ -64,36 +64,36 @@ def daily_option_type_from_str(x):
 def expiration_to_date(x):
     return {**x, 'expiration': datetime.datetime.strptime(x['expiration'], "%Y-%m-%d").date()}
 
-def create_option_objects(option_data):
-    options = []
-    for item in option_data:
-        option = Option(**item)
-        options.append(option)
-    return options
-def get_daily_fields():
-
-    col_mapping = {
-        'data_date': 'quote_datetime',
-        'option_id': 'option_id',
-        'symbol': 'symbol',
-        'underlying_price': 'spot_price',
-        'option_type': 'option_type',
-        'expiration': 'expiration',
-        'strike': 'strike',
-        'bid': 'bid',
-        'ask': 'ask',
-        'mid': 'price',
-        'volume': 'volume',
-        'open_interest': 'open_interest',
-        'iv': 'implied_volatility',
-        'delta': 'delta',
-        'gamma': 'gamma',
-        'theta': 'theta',
-        'vega': 'vega',
-        'rho': 'rho',
-    }
-    fields = [col_mapping[f] for f in column_names if f in col_mapping.keys()]
-    return fields
+# def create_option_objects(option_data):
+#     options = []
+#     for item in option_data:
+#         option = Option(**item)
+#         options.append(option)
+#     return options
+# def get_daily_fields():
+#
+#     col_mapping = {
+#         'data_date': 'quote_datetime',
+#         'option_id': 'option_id',
+#         'symbol': 'symbol',
+#         'underlying_price': 'spot_price',
+#         'option_type': 'option_type',
+#         'expiration': 'expiration',
+#         'strike': 'strike',
+#         'bid': 'bid',
+#         'ask': 'ask',
+#         'mid': 'price',
+#         'volume': 'volume',
+#         'open_interest': 'open_interest',
+#         'iv': 'implied_volatility',
+#         'delta': 'delta',
+#         'gamma': 'gamma',
+#         'theta': 'theta',
+#         'vega': 'vega',
+#         'rho': 'rho',
+#     }
+#     fields = [col_mapping[f] for f in column_names if f in col_mapping.keys()]
+#     return fields
 #
 # def get_daily_option_chain_items(quote_date):
 #     df = get_daily_test_df()
@@ -108,18 +108,18 @@ def get_daily_fields():
 
 
 
-def get_daily_option_data():
-    data = list(map(lambda x: dict(zip(get_daily_fields(), x)), daily_option_data))
-    data = list(map(daily_quote_datetime_to_datetime, data))
-    data = list(map(expiration_to_date, data))
-    #data = list(map(daily_option_type_from_str, data))
-    return data
-
-def get_daily_test_df():
-    df = pd.DataFrame(daily_option_data, columns=column_names)
-    df = df.rename(columns=daily_col_mapping)
-    df = df.sort_values(by=['quote_datetime', 'expiration', 'strike'])
-    df['quote_datetime'] = pd.to_datetime(df['quote_datetime'])
-    df['expiration'] = pd.to_datetime(df['expiration']).dt.date
-    return df
+# def get_daily_option_data():
+#     data = list(map(lambda x: dict(zip(get_daily_fields(), x)), daily_option_data))
+#     data = list(map(daily_quote_datetime_to_datetime, data))
+#     data = list(map(expiration_to_date, data))
+#     #data = list(map(daily_option_type_from_str, data))
+#     return data
+#
+# def get_daily_test_df():
+#     df = pd.DataFrame(daily_option_data, columns=column_names)
+#     df = df.rename(columns=daily_col_mapping)
+#     df = df.sort_values(by=['quote_datetime', 'expiration', 'strike'])
+#     df['quote_datetime'] = pd.to_datetime(df['quote_datetime'])
+#     df['expiration'] = pd.to_datetime(df['expiration']).dt.date
+#     return df
 

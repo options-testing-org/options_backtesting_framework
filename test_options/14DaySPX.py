@@ -155,7 +155,7 @@ class SPX14DayPutCredit(bt.Strategy):
                                                                             option_type=OptionType.PUT,
                                                                             delta=self.p.delta,
                                                                             spread_width=self.p.spread_width)
-            risk_amount = self.portfolio.portfolio_value * self.p.max_risk
+            risk_amount = self.portfolio.current_value * self.p.max_risk
             if credit_spread.max_loss > 0:
                 qty = int(risk_amount / credit_spread.max_loss)
                 qty = 1 if qty == 0 else qty

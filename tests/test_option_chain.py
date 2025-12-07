@@ -1,13 +1,9 @@
 import datetime
-import pandas as pd
-import numpy as np
-from mocks import MockEventDispatcher
-import pytest
 
+from mocks import MockEventDispatcher
 from options_framework.option import Option
 from options_framework.option_chain import OptionChain
 
-from options_framework.config import settings
 
 def test_load_option_chain_intraday_sets_chain_expiration_and_strikes(intraday_file_settings):
     quote_date = datetime.datetime.strptime('2016-04-28 10:00', '%Y-%m-%d %H:%M')
