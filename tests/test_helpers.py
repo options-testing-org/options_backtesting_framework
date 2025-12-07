@@ -3,7 +3,7 @@ import datetime
 from tempfile import NamedTemporaryFile
 from options_framework.option import Option
 from options_framework.utils.helpers import *
-from test_data.test_option_daily import daily_option_data
+from test_data.test_option_data import daily_option_data
 
 column_names = ['data_date', 'option_id', 'symbol', 'underlying_price', 'option_type', 'expiration',
                     'strike', 'bid', 'ask', 'mid', 'volume', 'open_interest', 'iv', 'delta', 'gamma', 'theta', 'vega',
@@ -94,17 +94,17 @@ def get_daily_fields():
     }
     fields = [col_mapping[f] for f in column_names if f in col_mapping.keys()]
     return fields
-
-def get_daily_option_chain_items(quote_date):
-    df = get_daily_test_df()
-    df = df[df['quote_datetime'] == quote_date]
-    option_data = get_daily_option_data()
-    option_data = [x for x in option_data if x['quote_datetime'] == quote_date]
-    test_options = create_option_objects(option_data)
-    expirations = [x for x in list(df['expiration'].unique())]
-    exp_str = df[['expiration', 'strike']].drop_duplicates().to_numpy().tolist()
-    expiration_strikes = {exp: [s for (e, s) in exp_str if e == exp] for exp in expirations}
-    return test_options, expirations, expiration_strikes
+#
+# def get_daily_option_chain_items(quote_date):
+#     df = get_daily_test_df()
+#     df = df[df['quote_datetime'] == quote_date]
+#     option_data = get_daily_option_data()
+#     option_data = [x for x in option_data if x['quote_datetime'] == quote_date]
+#     test_options = create_option_objects(option_data)
+#     expirations = [x for x in list(df['expiration'].unique())]
+#     exp_str = df[['expiration', 'strike']].drop_duplicates().to_numpy().tolist()
+#     expiration_strikes = {exp: [s for (e, s) in exp_str if e == exp] for exp in expirations}
+#     return test_options, expirations, expiration_strikes
 
 
 

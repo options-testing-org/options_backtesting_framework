@@ -19,8 +19,8 @@ min_float = sys.float_info.min
 ticker = 'SPXW'
 if __name__ == "__main__":
 
-    start_date = datetime.datetime.strptime("2016-04-15", "%Y-%m-%d")
-    end_date = datetime.datetime.strptime("2016-06-27", "%Y-%m-%d")
+    start_date = datetime.datetime.strptime("2016-03-01", "%Y-%m-%d")
+    end_date = datetime.datetime.strptime("2021-12-31", "%Y-%m-%d")
     starting_cash = 100_000.0
 
     portfolio = OptionPortfolio(cash=starting_cash, start_date=start_date, end_date=end_date)
@@ -55,7 +55,7 @@ if __name__ == "__main__":
                 df['quote_datetime'] < pd.Timestamp(dt + datetime.timedelta(days=1)))]
         for _, row in df_dt.iterrows():
             qd = row['quote_datetime']
-            print(qd)
+            print(qd, portfolio.cash)
             hi = row['high']
             lo = row['low']
             open_ = row['open']
@@ -65,7 +65,7 @@ if __name__ == "__main__":
                 orb_high = hi if (hi > orb_high) else orb_high
                 orb_low = lo if (lo < orb_low) else orb_low
             if tm == params['eod'] and len(portfolio.positions) > 0:
-                portfolio.close_position(portfolio.positions[open_position.position_id])
+                portfolio.close_position(portfolio.positions[position_id])
             if tm > params['orb_time'] and tm < params['stop_time']:
                 if len(portfolio.positions) == 0:
                     if can_open and ((hi > orb_high) or (lo < orb_low)):
@@ -86,25 +86,25 @@ if __name__ == "__main__":
                             long_strike = next(x for x in strikes if x <= short_strike - 10)
                             option_type = 'put'
 
-                        if lo < orb_low:
+                        # if lo < orb_low:
+                        #
+                        #     strikes = option_chain.expiration_strikes[expiration]
+                        #     strikes = [x for x in strikes if x > orb_high]
+                        #     short_strike = strikes[0]
+                        #     long_strike = next(x for x in strikes if x >= short_strike + 10)
+                        #     option_type = 'call'
 
-                            strikes = option_chain.expiration_strikes[expiration]
-                            strikes = [x for x in strikes if x > orb_high]
-                            short_strike = strikes[0]
-                            long_strike = next(x for x in strikes if x >= short_strike + 10)
-                            option_type = 'call'
-
-                        # open credit spread
-                        vertical: Vertical = Vertical.get_vertical(option_chain=option_chain,
-                                                                   expiration=expiration,
-                                                                   option_type=option_type,
-                                                                   long_strike=long_strike,
-                                                                   short_strike=short_strike,
-                                                                   quantity=-1)
-                        if vertical.price > 0.70:
-                            portfolio.open_position(vertical, quantity=-1)
-                            position_id = vertical.position_id
-                            can_open = False
+                            # open credit spread
+                            vertical: Vertical = Vertical.get_vertical(option_chain=option_chain,
+                                                                       expiration=expiration,
+                                                                       option_type=option_type,
+                                                                       long_strike=long_strike,
+                                                                       short_strike=short_strike,
+                                                                       quantity=-1)
+                            if vertical.price > 0.70:
+                                portfolio.open_position(vertical, quantity=-1)
+                                position_id = vertical.position_id
+                                can_open = False
 
                 else:
                     portfolio.next(qd)

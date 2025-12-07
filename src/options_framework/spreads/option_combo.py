@@ -2,6 +2,7 @@ import datetime
 import itertools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
+from typing import Optional
 
 from ..option import Option
 from ..option_types import OptionCombinationType, OptionStatus, OptionPositionType
@@ -18,12 +19,11 @@ class OptionCombination(ABC):
 
     options: list[Option]
     option_combination_type: OptionCombinationType = field(default=None)
-    option_position_type: OptionPositionType = field(default=None)
     quantity: int = field(default=1)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
+    option_position_type: Optional[OptionPositionType] = field(default=None)
     user_defined: dict = field(default_factory=lambda: {})
-    #quote_datetime: datetime = field(init=False, default=None)
-    #expiration: datetime.date = field(init=False, default=None)
+
 
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.

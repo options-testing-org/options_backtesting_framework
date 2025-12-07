@@ -3,21 +3,24 @@ import datetime
 import pytest
 import copy
 
-from conftest import create_update_cache
+
 from options_framework.portfolio import OptionPortfolio
 from options_framework.option_types import OptionCombinationType, OptionPositionType
 from options_framework.spreads.single import Single
 from options_framework.config import settings
-from test_data.test_options_intraday import *
 
+def test_create_portfolio_settings():
+    start_date = datetime.datetime.strptime('2014-12-31 00:00', '%Y-%m-%d %H:%M')
+    end_date = datetime.datetime.strptime('2015-01-05 00:00', '%Y-%m-%d %H:%M')
+    starting_cash = 100_000
 
-# def test_new_portfolio_cash_balance(test_position_1):
-#     position, start, end = test_position_1
-#
-#     pf = OptionPortfolio(100_000.0, start, end)
-#
-#     assert pf.cash == 100_000.0
-#     assert pf.portfolio_value == 100_000.0
+    portfolio = OptionPortfolio(starting_cash, start_date, end_date)
+
+    assert portfolio.cash == starting_cash
+    assert portfolio.start_date == start_date
+    assert portfolio.end_date == end_date
+    assert str(portfolio) == 'OptionPortfolio(cash=100000.00, portfolio_value=100000.00, open positions: 0)'
+
 
 # def test_open_long_option_position(test_position_1, test_cache):
 #     position, start, end = test_position_1

@@ -17,8 +17,7 @@ class Single(OptionCombination):
                    expiration: datetime.date,
                    strike: float | int,
                    option_type: str,
-                   option_position_type: OptionPositionType = OptionPositionType.LONG,
-                    quantity: int = 1) -> OptionCombination:
+                   option_position_type: OptionPositionType) -> OptionCombination:
 
         # Find nearest matching expiration
         try:
@@ -36,16 +35,17 @@ class Single(OptionCombination):
                 strikes.sort(reverse=True)
                 strike = next(s for s in strikes if s <= strike)
 
-            option = next(o for o in option_chain.option_chain if o.option_type == option_type
-                          and o.expiration == expiration and o.strike == strike)
+            option = next(o for o in option_chain.option_chain if o['option_type'] == option_type
+                          and o['expiration'] == expiration and o['strike'] == strike)
         except StopIteration:
             raise ValueError("No matching strike was found in the option chain. Consider changing the selection filter.")
 
-        if option.price == 0:
-            raise Exception(f"Option price is zero ({option.symbol}). Cannot open this option.")
+        if option['price'] == 0:
+            raise Exception(f"Option price is zero ({option['symbol']}). Cannot open this option.")
 
-        quantity = abs(quantity) if option_position_type == OptionPositionType.LONG else abs(quantity) * -1
-        single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
+        single = Option(**option)
+        quantity = 1 if option_position_type == OptionPositionType.LONG else -1
+        single = Single(options=[single], option_combination_type=OptionCombinationType.SINGLE,
                         option_position_type=option_position_type, quantity=quantity)
         return single
 

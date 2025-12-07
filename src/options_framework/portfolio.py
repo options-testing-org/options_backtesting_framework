@@ -26,11 +26,9 @@ class OptionPortfolio(Dispatcher):
     close_values: list = field(init=False, default_factory=lambda: [])
     option_chains: dict = field(default_factory=lambda: {})
 
-    def __post_init__(self):
-        pass
 
     def __repr__(self) -> str:
-        return f'OptionPortfolio(cash={self.cash: .2f}, portfolio_value={self.portfolio_value:.2f} open positions: {len(self.positions)}'
+        return f'OptionPortfolio(cash={self.cash:.2f}, portfolio_value={self.portfolio_value:.2f}, open positions: {len(self.positions)})'
 
     def open_position(self, option_position: OptionCombination, quantity: int, **kwargs: dict):
         option_position.update_quantity(quantity)

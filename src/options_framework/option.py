@@ -92,6 +92,8 @@ class Option(Dispatcher):
     volume: Optional[int] = field(default=None, compare=False)
     implied_volatility: Optional[float] = field(default=None, compare=False)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
+    incur_fees: bool = field(default=True, compare=False)
+    fee_per_contract: float = field(default=0.65, compare=False)
 
     def __post_init__(self):
         # check for required fields
@@ -117,10 +119,14 @@ class Option(Dispatcher):
             raise ValueError("ask cannot be None")
         if self.price is None:
             raise ValueError("price cannot be None")
+        self.price = round(self.price, 2)
+        self.incur_fees = settings.get('incur_fees', True)
+        self.fee_per_contract = settings.get('standard_fee', 0.65)
 
         # make sure the quote date is not past the expiration date
         if self.quote_datetime.date() > self.expiration:
             raise ValueError("Cannot create an option with a quote date past its expiration date")
+
 
     def __repr__(self) -> str:
         return f'<{self.option_type.upper()}({self.option_id}) {self.symbol} {self.strike} ' \
@@ -132,7 +138,7 @@ class Option(Dispatcher):
         :return: fees that were added to the option
         :rtype: float
         """
-        fee = decimalize_2(settings['standard_fee'])
+        fee = decimalize_2(self.fee_per_contract)
         qty = decimalize_0(quantity)
         fees = fee * abs(qty)
         total_fees = decimalize_2(self.total_fees) + fees
@@ -215,11 +221,7 @@ class Option(Dispatcher):
         if price == 0:
             raise Exception(f"Option price is zero {self.symbol} ({self.option_id}). Cannot open this option.")
         quantity = decimalize_0(quantity)
-        if settings['apply_slippage_entry']:
-            if quantity > 0:
-                price -= self.slippage
-            else:
-                price += self.slippage
+
         premium = float(price * 100 * quantity)
         price = float(price)
         quantity = int(quantity)
@@ -228,7 +230,7 @@ class Option(Dispatcher):
             self.user_defined[key] = value
 
         fees = 0
-        if settings['incur_fees']:
+        if self.incur_fees:
             fees = self._incur_fees(quantity=quantity)
         trade_open_info = TradeOpenInfo(option_id=self.option_id, date=self.quote_datetime, quantity=quantity,
                                         price=price,
@@ -245,7 +247,7 @@ class Option(Dispatcher):
 
         return trade_open_info
 
-    def close_trade(self, *, quantity: int, **kwargs: dict) -> TradeCloseInfo:
+    def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> TradeCloseInfo:
         """
         Calculates the closing price and sets the close date, price and profit/loss info for the
         quantity closed.
@@ -253,7 +255,7 @@ class Option(Dispatcher):
         :return: the profit/loss of the closed quantity of the trade
         :rtype: float
         """
-        if OptionStatus.TRADE_IS_OPEN not in self.status:
+        if OptionStatus.TRADE_IS_OPEN not in self.status and OptionStatus.EXPIRED not in self.status:
             raise ValueError("Cannot close an option that is not open.")
 
         if quantity is None:
@@ -275,13 +277,6 @@ class Option(Dispatcher):
             quantity = decimalize_0(quantity) * -1
 
         close_price = decimalize_2(self.get_closing_price())
-        if settings['apply_slippage_exit']:
-            if not OptionStatus.EXPIRED in self.status:
-                slippage = settings['slippage']
-                if self.trade_open_info.quantity > 0:
-                    close_price += close_price * decimalize_2(slippage)
-                elif self.trade_open_info.quantity < 0:
-                    close_price -= close_price * decimalize_2(slippage)
 
         open_price = decimalize_2(self.trade_open_info.price)
         premium = decimalize_2(close_price) * 100 * quantity*-1
@@ -290,7 +285,7 @@ class Option(Dispatcher):
         profit_loss_percent = decimalize_4(ratio) * (quantity * -1 / abs(quantity))
 
         fees = 0
-        if settings['incur_fees']:
+        if self.incur_fees:
             fees = self._incur_fees(quantity=abs(quantity))
 
         # date quantity price premium profit_loss fees
@@ -319,6 +314,7 @@ class Option(Dispatcher):
         #print(f'emit close {self.option_id}')
 
         return trade_close_record
+
 
     def get_closing_price(self) -> float:
         """

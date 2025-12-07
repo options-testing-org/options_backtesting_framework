@@ -1,57 +1,84 @@
 import datetime
+import pickle
+from pathlib import Path
 
 import pytest
 
+from options_framework.option import Option
+from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
 from options_framework.spreads.single import Single
-from tests.mocks import *
+from options_framework.config import settings
 
 @pytest.fixture
-def quote_date():
-    return datetime.datetime.strptime('2014-02-05', '%Y-%m-%d')
+def option():
+    timeslots_folder = Path(settings['options_directory'], 'daily', 'AAPL', 'timeslots', '2014_12')
+    data_file = timeslots_folder.joinpath('2014_12_31_00_00.pkl')
+    with open(data_file, 'rb') as f:
+        data = pickle.load(f)
 
-def test_get_single_option_with_exact_values(option_chain_daily, quote_date):
-    test_option_chain = option_chain_daily(quote_date)
-    expiration = datetime.date(2014, 2, 7)
-    strike = 515
-    single_option = Single.get_single(option_chain=test_option_chain, expiration=expiration,
-                                      option_type='call',
-                                      option_position_type=OptionPositionType.LONG,
-                                      strike=strike)
+    option_data = data[3]
+    option = Option(**option_data)
+    return option
 
-    assert single_option.option_combination_type == OptionCombinationType.SINGLE
-    assert single_option.expiration == expiration
-    assert single_option.option_type == 'call'
-    assert single_option.strike ==strike
+@pytest.fixture
+def option_chain():
+    symbol = 'AAPL'
+    start_date = datetime.datetime.strptime('2014-12-30', '%Y-%m-%d')
+    end_date = datetime.datetime.strptime('2014-12-31', '%Y-%m-%d')
+    option_chain = OptionChain(symbol, start_date, end_date)
+    option_chain.on_next(start_date)
+    return option_chain
 
-def test_get_single_option_next_expiration(option_chain_daily, quote_date):
-    test_option_chain = option_chain_daily(quote_date)
-    expiration = datetime.date(2014, 2, 8)
-    strike = 519
-    single_option = Single.get_single(option_chain=test_option_chain,
-                                      expiration=expiration,
-                                      option_position_type=OptionPositionType.LONG,
-                                      option_type='call',
-                                      strike=strike,
-                                      quantity=5)
-
-    assert single_option.expiration == datetime.date(2014, 2, 14)
-    assert single_option.quantity == 5
-    assert single_option.strike == 520
-
-
-
-def test_naked_put_margin_requirement_otm(option_chain_daily, quote_date):
+def test_what(option_chain_daily, option):
+    quote_date = datetime.datetime.strptime('2015-01-06', '%Y-%m-%d')
     option_chain = option_chain_daily(quote_date)
-    expiration = option_chain.expirations[0]
-    strike = 510
-    qty = -1
+    pass
+
+def test_get_single_option_with_exact_values(option_chain_daily):
+    quote_date = datetime.datetime(2014, 12, 30, 0, 0)
+    option_chain = option_chain_daily(quote_date)
+
+    expiration = datetime.date(2015, 1, 2)
+    strike = 100
+    option_type = 'call'
+    quantity = 1
+
+    single: Single = Single.get_single(option_chain, expiration, strike, option_type,
+                                       option_position_type=OptionPositionType.LONG)
+
+    assert single.option_combination_type == OptionCombinationType.SINGLE
+    assert single.expiration == expiration
+    assert single.option_type == 'call'
+    assert single.strike == strike
+
+def test_get_single_option_next_expiration(option_chain_daily):
+    quote_date = datetime.datetime(2014, 12, 30, 0, 0)
+    option_chain = option_chain_daily(quote_date)
+
+    expiration = datetime.date(2015, 1, 15)
+    strike = 110
+    option_type = 'call'
+    quantity = 1
+
+    single: Single = Single.get_single(option_chain, expiration, strike, option_type,
+                                       option_position_type=OptionPositionType.LONG)
+
+    assert single.expiration == datetime.date(2015, 1, 17)
+    assert single.quantity == quantity
+
+
+def test_naked_put_margin_requirement_otm(option_chain_daily):
+    quote_date = datetime.datetime(2014, 12, 30, 0, 0)
+    option_chain = option_chain_daily(quote_date)
+    expiration = datetime.date(2015, 1, 17)
+    strike = 100
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
                                       option_type='put',
                                       option_position_type=OptionPositionType.SHORT,
                                       strike=strike)
-    single_option.open_trade(quantity=qty)
+    single_option.open_trade(quantity=-1)
 
     assert single_option.required_margin ==  10_360.8
 

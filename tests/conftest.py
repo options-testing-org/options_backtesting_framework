@@ -6,10 +6,10 @@ import os
 
 os.environ["OPTIONS_FRAMEWORK_CONFIG_FOLDER"] = r'C:\_code\options_backtesting_framework\tests\config'
 from mocks import *
-#from test_data.test_option_daily import daily_test_options, daily_test_df
+from test_data.test_option_data import *
+
 from pprint import pprint as pp
 
-from test_helpers import get_daily_option_chain_items, create_option_objects, get_daily_test_df, get_daily_option_data
 from options_framework.config import settings, load_settings
 
 
@@ -46,20 +46,19 @@ def daily_file_settings():
 
 
 @pytest.fixture
-def allow_slippage():
-    settings.apply_slippage_entry=True
-    settings.apply_slippage_exit=True
-    yield
-    settings.apply_slippage_entry = False
-    settings.apply_slippage_exit = False
-
-
-@pytest.fixture
 def option_chain_daily():
     def get_option_chain_daily_for_date(quote_date):
+        data = daily_option_data
+        end_date = datetime.datetime(2015, 1, 5, 0, 0)
+        option_chain = MockOptionChain(symbol='AAPL', quote_datetime=quote_date)
+        options = [x for x in data if x['quote_datetime'] == quote_date]
+        expirations = list(set([x['expiration'] for x in data]))
+        expirations.sort()
+        expiration_strikes = [(x['expiration'], x['strike']) for x in options]
+        expiration_strikes = list(set(expiration_strikes))
+        expiration_strikes = sorted(expiration_strikes, key=lambda x: (x[0], x[1]))
+        expiration_strikes = {exp: [s for (e, s) in expiration_strikes if e == exp] for exp in expirations}
 
-        option_chain = MockOptionChain(symbol='AAPL',quote_datetime=quote_date)
-        options, expirations, expiration_strikes = get_daily_option_chain_items(quote_date)
         option_chain.option_chain = options
         option_chain.expirations = expirations
         option_chain.expiration_strikes = expiration_strikes

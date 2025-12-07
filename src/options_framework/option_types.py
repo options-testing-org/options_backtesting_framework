@@ -2,12 +2,6 @@ from dataclasses import dataclass, field
 from enum import Enum, StrEnum, Flag, auto
 import datetime
 
-# class OptionType(Enum):
-#     """
-#     The basic option type is either a put or a call
-#     """
-#     CALL = 1
-#     PUT = 2
 
 
 class TransactionType(Enum):
