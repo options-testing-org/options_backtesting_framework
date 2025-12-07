@@ -9,7 +9,6 @@ from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
 from options_framework.spreads.single import Single
 from options_framework.config import settings
-from tests.mocks import MockEventDispatcher
 
 
 @pytest.fixture
@@ -131,7 +130,7 @@ def test_get_single_option_gets_next_expiration_when_expiration_is_not_in_chain(
 
     single_option = Single.get_single(option_chain=option_chain, expiration=expiration,
                                       option_type='call',
-                                      option_position_type=OptionPositionType.SHORT,
+                                      option_position_type=OptionPositionType.LONG,
                                       strike=strike)
     single_option.open_trade(quantity=qty)
 
