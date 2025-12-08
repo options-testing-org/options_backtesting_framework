@@ -135,7 +135,7 @@ class SPXSpotGammaExpectedMoveReversionCreditSpread(bt.Strategy):
                 if len(opened_today) > 0:
                     return
                 self.p.test_manager.get_current_option_chain(self.dt.to_pydatetime())
-                chain = self.p.test_manager.option_chain.option_chain
+                chain = self.p.test_manager.options.options
                 credit_spread = None
                 if price <= self.sg_high:
                     option_candidates = [o for o in chain if

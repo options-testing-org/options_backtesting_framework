@@ -42,7 +42,7 @@ def test_open_long_position_adds_to_open_positions(daily_file_settings):
     portfolio = OptionPortfolio(cash, quote_datetime, end_datetime)
     portfolio.initialize_ticker(symbol, quote_datetime)
 
-    option_data = copy.deepcopy(portfolio.option_chains[symbol].option_chain[0])
+    option_data = copy.deepcopy(portfolio.option_chains[symbol].options[0])
     o = Option(**option_data)
     single = Single(options=[o], option_combination_type=OptionCombinationType.SINGLE,
                     option_position_type=OptionPositionType.LONG, quantity=1)
@@ -59,7 +59,7 @@ def test_close_position_removes_from_open_positions_adds_to_closed_positions(dai
     portfolio = OptionPortfolio(cash, quote_datetime, end_datetime)
     portfolio.initialize_ticker(symbol, quote_datetime)
 
-    option_data = copy.deepcopy(portfolio.option_chains[symbol].option_chain[0])
+    option_data = copy.deepcopy(portfolio.option_chains[symbol].options[0])
     o = Option(**option_data)
     single = Single(options=[o], option_combination_type=OptionCombinationType.SINGLE,
                     option_position_type=OptionPositionType.LONG, quantity=1)
@@ -78,7 +78,7 @@ def test_portfolio_events_are_emitted(option_chain_data):
     cash = 10_000
     portfolio = OptionPortfolio(cash, quote_datetime, end_datetime)
     data = option_chain_data('daily', quote_datetime)
-    option_data = copy.deepcopy(data.option_chain[4])
+    option_data = copy.deepcopy(data.options[4])
     option = Option(**option_data)
     single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
                     option_position_type=OptionPositionType.LONG, quantity=1)
@@ -148,8 +148,8 @@ def test_portfolio_cash_and_value_with_open_positions(option_chain_data):
     portfolio.initialize_ticker(symbol, quote_datetime)
 
     data = option_chain_data('daily', quote_datetime)
-    option_data = copy.deepcopy(data.option_chain[7])
-    option = Option(**data.option_chain[7])
+    option_data = copy.deepcopy(data.options[7])
+    option = Option(**data.options[7])
     option.incur_fees = False
     single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
                     option_position_type=OptionPositionType.LONG, quantity=1)
@@ -167,7 +167,7 @@ def test_portfolio_value_when_option_value_changes(daily_file_settings):
     portfolio = OptionPortfolio(starting_cash, quote_datetime, end_datetime)
     portfolio.initialize_ticker(symbol, quote_datetime)
 
-    option_data = portfolio.option_chains[symbol].option_chain[61]
+    option_data = portfolio.option_chains[symbol].options[61]
     option = Option(**option_data)
     single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
                     option_position_type=OptionPositionType.LONG, quantity=1)

@@ -26,7 +26,7 @@ class OptionChain():
     timeslots_folder: Path = field(init=False, default=None, repr=False)
     datetimes: list = field(init=False, default_factory=lambda: [], repr=False)
     expirations: list = field(init=False, default_factory=lambda: [], repr=False)
-    option_chain: list = field(init=False, default_factory=lambda: [], repr=False)
+    options: list = field(init=False, default_factory=lambda: [], repr=False)
     expiration_strikes: dict = field(init=False, default_factory=lambda: {}, repr=False)
 
     def __post_init__(self):
@@ -40,7 +40,7 @@ class OptionChain():
             dt = next(d for d in self.datetimes if d == quote_datetime)
         except StopIteration:
             # There are no matching timeslots for the quote given
-            self.option_chain = []
+            self.options = []
             self.expirations = []
             self.expiration_strikes = {}
             return
@@ -52,7 +52,7 @@ class OptionChain():
         idx_quote = self.datetimes.index(quote_datetime)
         if len(self.datetimes) > 1:
             self.datetimes = self.datetimes[idx_quote + 1:]
-        self.option_chain = options
+        self.options = options
 
         expirations = [x['expiration'] for x in options]
         expirations = list(set(expirations))
@@ -113,7 +113,7 @@ class OptionChain():
     def on_next_options(self, options: list[Option]) -> list[dict] | None:
         for option in options:
             try:
-                option_quote = next(q for q in self.option_chain if q['option_id'] == option.option_id)
+                option_quote = next(q for q in self.options if q['option_id'] == option.option_id)
                 option.next(option_quote)
             except StopIteration:
                 continue

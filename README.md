@@ -4,9 +4,6 @@ This library is a framework for testing stock options strategies. It works along
 However, testing options trading strategies is much more complicated. This
 framework will work with backtrader to test your options trading strategies.
 
-## The Test Manager class
-The test manager class basically organizes the different components. On init, it instantiates the correct data loader, a new portfolio and a new options chain. It also binds the portfolio and data loader so the loading of any new data can be coordinated.
-
 ## The Options Chain class
 The options chain class receives the raw data from the data loader and creates option objects that can be used by the rest of the library.
 
@@ -19,40 +16,32 @@ This is the base class for any options position, even a single option. It can ho
 ## Option Spreads
 Several common option spread classes are available for convenience. Of course, you can also create any kind of option position with the "custom" type option spread class.
 
-## Event Driven
+## Events
 
-To avoid getting data when it isn't needed, the architecture is event-driven. There is a lot of data in the options chain, so we want to avoid getting data when we don't
-need it. It also allows a much simpler architecture because it eliminates the need for direct references to objects following the "loose coupling" paradigm. 
+To make coordinating the different modules easier, events cause changes in modules as a result of the timeslot advancing and all the value changes for each advance. There are also events to assure that the portfolio value accurately reflects anything that changes its value, such as option price changes and fees.
 
-## Dispatchers
+### Dispatchers
 
-### The following classes emit events
+#### The following classes implement the Dispatcher class and emit events
 
-* DataLoader and inheriting classes
-  * events: option_chain_loaded
 * OptionsPortfolio
-  * events: new_position_opened, position_closed, next, position_expired
+  * events: new_position_opened, position_closed, next, next_options position_expired
 * Option
   * open_transaction_completed, close_transaction_completed, option_expired, fees_incurred
 
 ### Event Handling
 
-#### option_chain_loaded
-
-* Emitted by DataLoader class when an option chain has been loaded from the data
-* Handled by the "on_option_chain_loaded" method of the OptionChain class. This method converts the raw pandas dataframe rows into Option objects that can be used by the rest of the program.
-
 #### next
 
-* Emitted by the OptionPortfolio. The "next" method is called externally when options being held by the portfolio need to have their data updated with a new time slot's data. It then emits the "next" event to let objects know they need to update thier data.
-* Handled by both the OptionCombination and Option objects.
-  * OptionCombination handler: next_quote_date - updates date to the new time slot
-  * Option handler: next_update - updates price and other values for the new time slot
+* Emitted by the OptionPortfolio. The "next" method is called externally when time advances. The option chain needs to get updates with a new time slot's data. 
+* Handled by OptionChain.
 
-#### new_position_opened
+  * OptionChain handler: on_next - updates all the option data for the given timeslot
 
-* Emitted by OptionPortfolio. The external program executes the "open_position" method on the portfolio object. The event lets the data loader know to go and get all the updates for the options so they are available throughout the life of the option position.
-* Handled by DataLoaders. The data loader gets the options data up until expiration. It then attaches the data to each option passed in to the event so the option can update itself when "next" is called on it
+#### next_options
+
+* Emitted by OptionPortfolio. The "next_options" method emits all the open options. The OptionChain updates each option using the current quote data
+* Handled by OptionChain. 
 
 #### position_closed
 

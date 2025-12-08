@@ -9,7 +9,7 @@ authors = [
 ]
 description = "Options testing framework that works with the Backtrader library to back test options trading strategies"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 keywords = ["backtrader", "options", "backtesting", "trading"]
 license = { file = "LICENSE" }
 classifiers = [

@@ -211,10 +211,10 @@ class TradingNewHighsStrategy(bt.Strategy):
                                     select_strikes = select_strikes[3:]
                                 for strike in select_strikes:
                                     try:
-                                        option = Single.get_single(option_chain=option_chain, expiration=exp,
-                                                                   option_type=OptionType.CALL,
-                                                                   option_position_type=OptionPositionType.SHORT,
-                                                                   strike=strike)
+                                        option = Single.create(option_chain=option_chain, expiration=exp,
+                                                               option_type=OptionType.CALL,
+                                                               option_position_type=OptionPositionType.SHORT,
+                                                               strike=strike)
                                         if option.option.bid >= target_option_price:
                                             quantity = size / 100
                                             # check if there is enough cash to buy underlying stock

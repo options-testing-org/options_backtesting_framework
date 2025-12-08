@@ -16,6 +16,15 @@ def get_data():
         return select_data
     return get_options_data
 
+@pytest.fixture
+def get_intraday_data():
+    def get_options_data(option_id):
+        all_data = intraday_option_data
+        select_data = [x for x in all_data if x['option_id'] == option_id]
+        return select_data
+
+    return get_options_data
+
 
 def test_option_init_with_quote_data(get_data):
     option_id = 'AAPL20150117C00010000'
@@ -718,21 +727,26 @@ def test_expired_for_daily_data_next_day(get_data):
 
     assert OptionStatus.EXPIRED in option.status
 
+def test_check_expired_sets_expired_flag_correctly(get_intraday_data):
+    option_id = 'SPXW20160429C00208000'
+    data = get_intraday_data(option_id)
+    option_data = copy.deepcopy(data[0])
+    option = Option(**option_data)
 
-# @pytest.mark.parametrize("test_quote_datetime, expected_result", [
-#     (datetime.datetime(2016, 3, 9, 9, 45), False),
-#     (datetime.datetime(2016, 3, 10, 9, 31), True),
-#     (datetime.datetime(2016, 3, 9, 16, 14), False),
-#     (datetime.datetime(2016, 3, 9, 16, 15), True),
-# ])
-# def test_check_expired_sets_expired_flag_correctly(call_intraday_option, test_quote_datetime, expected_result):
-#     call, updates = call_intraday_option
-#
-#     assert OptionStatus.EXPIRED not in call.status
-#     call.quote_datetime = test_quote_datetime
-#     call.is_expired()
-#
-#     assert (OptionStatus.EXPIRED in call.status) == expected_result
+    next_update = copy.deepcopy(data[1])
+    option.next(next_update)
+
+    assert OptionStatus.EXPIRED not in option.status
+
+    next_update = copy.deepcopy(data[-2])
+    tm = next_update['quote_datetime'].time()
+
+    assert next_update['expiration'] == option.expiration
+    assert tm == datetime.time(16,0)
+
+    option.next(next_update) # This should mark option as expired
+
+    assert OptionStatus.EXPIRED in option.status
 
 
 def test_no_trade_is_open_status_if_trade_was_not_opened(get_data):
@@ -905,19 +919,24 @@ def test_get_unrealized_profit_loss_percent_value(get_data,
     assert actual_profit_loss == expected_profit_loss_pct
 
 
-# @pytest.mark.parametrize("quote_date, expected_days_in_trade", [
-#     (datetime.datetime.strptime("2016-03-08 09:45", "%Y-%m-%d %H:%M"), 0),
-#     (datetime.datetime.strptime("2016-03-08 16:15", "%Y-%m-%d %H:%M"), 0),
-#     (datetime.datetime.strptime("2016-03-09 09:55", "%Y-%m-%d %H:%M"), 1),
-# ])
-# def test_get_days_in_trade(call_intraday_option, quote_date, expected_days_in_trade):
-#     call, updates = call_intraday_option
-#     call.open_trade(quantity=1)
-#
-#     update = next(x for x in updates if x['quote_datetime'] == quote_date)
-#     call.next(update)
-#     days_in_trade = call.get_days_in_trade()
-#     assert days_in_trade == expected_days_in_trade
+def test_get_days_in_trade(get_data):
+    option_id = 'AAPL20150117C00010000'
+    data = get_data(option_id)
+    option_data = copy.deepcopy(data[0])
+    option = Option(**option_data)
+
+    option.open_trade(quantity=1)
+    assert option.get_days_in_trade() == 0
+
+    next_update = copy.deepcopy(data[1])
+    option.next(next_update)
+
+    assert option.get_days_in_trade() == 1
+
+    last_update = copy.deepcopy(data[-1])
+    option.next(last_update)
+
+    assert option.get_days_in_trade() == 8
 
 
 def test_get_profit_loss_raises_exception_if_not_traded(get_data):
@@ -1384,3 +1403,60 @@ def test_put_get_closing_price_for_expiring_itm(get_data):
     assert closing_price == 10.67
 
 
+def test_option_emits_events(get_intraday_data):
+    option_id = 'SPXW20160429P00208000'
+    data = get_intraday_data(option_id)
+    option_data = copy.deepcopy(data[0])
+    option = Option(**option_data)
+
+    open_trx_fired = None
+    close_trx_fired = None
+    apply_fees_fired = 0
+    option_expired_fired = None
+
+    class Listener():
+
+        @staticmethod
+        def on_option_opened(info):
+            nonlocal open_trx_fired
+            open_trx_fired = info
+
+        @staticmethod
+        def on_option_closed(info):
+            nonlocal close_trx_fired
+            close_trx_fired = info
+
+        @staticmethod
+        def on_fees_applied(fees):
+            nonlocal apply_fees_fired
+            apply_fees_fired = fees
+
+        @staticmethod
+        def on_expired(_id):
+            nonlocal option_expired_fired
+            option_expired_fired = _id
+
+    listener = Listener()
+
+    # open_transaction_completed event
+    option.bind(open_transaction_completed=listener.on_option_opened)
+    option.open_trade(quantity=1)
+
+    # close_transaction_completed event
+    option.bind(close_transaction_completed=listener.on_option_closed)
+    option.close_trade(quantity=1)
+    assert close_trx_fired is not None
+
+    # fees_incurred event
+    option = Option(**option_data)
+    option.bind(fees_incurred=listener.on_fees_applied)
+    option.incur_fees = True
+    option.fee_per_contract = 0.5
+    option.open_trade(quantity=1)
+    assert apply_fees_fired > 0
+
+    # option_expired event
+    option.bind(option_expired=listener.on_expired)
+    next_update = copy.deepcopy(data[-2])
+    option.next(next_update)
+    assert option_expired_fired == option.option_id

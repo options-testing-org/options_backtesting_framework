@@ -95,7 +95,7 @@ class SPX14DayPutCredit(bt.Strategy):
         self.trade_today = None
         self.portfolio = self.p.test_manager.portfolio
         self.portfolio.bind(position_expired=self.expired)
-        self.option_chain = self.p.test_manager.option_chain
+        self.option_chain = self.p.test_manager.options
         print('init complete')
 
     def next(self):

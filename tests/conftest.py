@@ -59,7 +59,7 @@ def option_chain_data():
         expiration_strikes = sorted(expiration_strikes, key=lambda x: (x[0], x[1]))
         expiration_strikes = {exp: [s for (e, s) in expiration_strikes if e == exp] for exp in expirations}
 
-        option_chain.option_chain = options
+        option_chain.options = options
         option_chain.expirations = expirations
         option_chain.expiration_strikes = expiration_strikes
         return option_chain

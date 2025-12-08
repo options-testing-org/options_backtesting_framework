@@ -126,7 +126,7 @@ class OTMButterflyStrategy(bt.Strategy):
 
         # self.p.options_manager.get_current_option_chain(self.dt.to_pydatetime())
         self.portfolio = self.p.options_manager.portfolio
-        self.option_chain = self.p.options_manager.option_chain
+        self.option_chain = self.p.options_manager.options
         self.dt = pd.to_datetime(f'{self.data.datetime.date(1)} {self.data.datetime.time(1)}')
         self.log(f'init complete - Starting cash: {self.p.starting_cash:.2f}', self.dt)
         self.portfolio.bind(position_closed=self.on_close_position)
