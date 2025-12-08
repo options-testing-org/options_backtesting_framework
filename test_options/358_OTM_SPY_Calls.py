@@ -89,7 +89,7 @@ class SPX_358_OTM_Calls(bt.Strategy):
         self.current_date = None
         self.trade_today = None
         self.portfolio = self.p.test_manager.portfolio
-        self.option_chain = self.p.test_manager.option_chain
+        self.option_chain = self.p.test_manager.options
         print('init complete')
 
     def next(self):

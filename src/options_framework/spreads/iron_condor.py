@@ -67,7 +67,7 @@ class IronCondor(OptionCombination):
             raise ValueError(message)
 
         exp_strikes = option_chain.expiration_strikes[expiration].copy()
-        options = [o for o in option_chain.option_chain if o.expiration == expiration].copy()
+        options = [o for o in option_chain.options if o.expiration == expiration].copy()
         # Find strikes
         try:
             long_call_strike = next(s for s in exp_strikes if s >= long_call_strike)
@@ -83,7 +83,7 @@ class IronCondor(OptionCombination):
             long_call_option = next(o for o in options if o.option_type == 'call' and o.strike == long_call_strike)
             short_call_option = next(o for o in options if o.option_type == 'call' and o.strike == short_call_strike)
             long_put_option = next(o for o in options if o.option_type == 'put' and o.strike == long_put_strike)
-            short_put_option = next(o for o in option_chain.option_chain if o.option_type == 'put' and o.strike == short_put_strike)
+            short_put_option = next(o for o in option_chain.options if o.option_type == 'put' and o.strike == short_put_strike)
         except StopIteration:
             raise ValueError("No options matching the requirements were found in the option chain. Consider changing the selection filter.")
 
@@ -129,7 +129,7 @@ class IronCondor(OptionCombination):
             raise ValueError(message)
 
         exp_strikes = option_chain.expiration_strikes[expiration].copy()
-        options = [o for o in option_chain.option_chain if o.expiration == expiration].copy()
+        options = [o for o in option_chain.options if o.expiration == expiration].copy()
 
         # Define strike targest
         long_call_strike, short_call_strike = (inner_call_strike, inner_call_strike + spread_width) \
@@ -207,7 +207,7 @@ class IronCondor(OptionCombination):
             message = "No matching expiration was found in the option chain. Consider changing the selection filter."
             raise ValueError(message)
 
-        options = [o for o in option_chain.option_chain if o.expiration == expiration]
+        options = [o for o in option_chain.options if o.expiration == expiration]
         options.sort(key=lambda x: x.delta, reverse=True)
 
         # Find nearest long call matching delta
@@ -234,7 +234,7 @@ class IronCondor(OptionCombination):
                           and o.delta >= -long_delta]
         if not select_options:
             raise ValueError(
-                "No matching options were found for the long put delta value. Consider changing the selection filter.")
+                "No matching options were found for the long put delta value.")
         long_put_option = select_options[0]
         long_put_option.quantity, long_put_option.position_type = quantity, OptionPositionType.LONG
 
@@ -243,7 +243,7 @@ class IronCondor(OptionCombination):
                           and o.delta >= -short_delta]
         if not select_options:
             raise ValueError(
-                "No matching options were found for the short put delta value. Consider changing the selection filter.")
+                "No matching options were found for the short put delta value.")
         short_put_option = select_options[0]
         short_put_option.quantity, short_put_option.position_type = quantity * -1, OptionPositionType.SHORT
 

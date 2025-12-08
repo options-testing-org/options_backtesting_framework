@@ -71,8 +71,8 @@ class HullMAOptionStrategy(bt.Strategy):
                 strikes.sort(reverse=True)
                 strike = [s for s in strikes if s < self.data.close[0]][0]
 
-            option = Single.get_single(option_chain=self.option_chain.spx_option_chain_puts, expiration=exp,
-                                       option_type=option_type, strike=strike)
+            option = Single.create(option_chain=self.option_chain.spx_option_chain_puts, expiration=exp,
+                                   option_type=option_type, strike=strike)
 
             self.portfolio.open_position(option_position=option, quantity=1)
 

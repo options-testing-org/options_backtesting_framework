@@ -29,7 +29,7 @@ class MockOptionChain:
     timeslots_folder: Path = field(init=False, default=None, repr=False)
     datetimes: list = field(init=False, default_factory=lambda: [], repr=False)
     expirations: list = field(init=False, default_factory=lambda: [], repr=False)
-    option_chain: list = field(init=False, default_factory=lambda: [], repr=False)
+    options: list = field(init=False, default_factory=lambda: [], repr=False)
     expiration_strikes: dict = field(init=False, default_factory=lambda: {}, repr=False)
 
 

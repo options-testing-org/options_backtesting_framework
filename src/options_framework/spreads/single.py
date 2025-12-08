@@ -2,6 +2,7 @@ import datetime
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
+from typing import Self
 
 from options_framework.option import Option
 from options_framework.option_chain import OptionChain
@@ -14,17 +15,17 @@ class Single(OptionCombination):
     option: Option = field(default=None)
 
     @classmethod
-    def get_single(cls, option_chain: OptionChain,
-                   expiration: datetime.date,
-                   strike: float | int,
-                   option_type: str,
-                   option_position_type: OptionPositionType) -> OptionCombination:
+    def create(cls, option_chain: OptionChain,
+               expiration: datetime.date,
+               strike: float | int,
+               option_type: str,
+               option_position_type: OptionPositionType) -> Self:
 
         # Find nearest matching expiration
         try:
             expiration = next(e for e in option_chain.expirations if e >= expiration)
         except StopIteration:
-            message = "No matching expiration was found in the option chain. Consider changing the selection filter."
+            message = "No matching expiration was found in the option chain."
             raise ValueError(message)
 
         # Find nearest matching strike for this expiration
@@ -36,10 +37,10 @@ class Single(OptionCombination):
                 strikes.sort(reverse=True)
                 strike = next(s for s in strikes if s <= strike)
 
-            option = next(o for o in option_chain.option_chain if o['option_type'] == option_type
+            option = next(o for o in option_chain.options if o['option_type'] == option_type
                           and o['expiration'] == expiration and o['strike'] == strike)
         except StopIteration:
-            raise ValueError("No matching strike was found in the option chain. Consider changing the selection filter.")
+            raise ValueError("No matching strike was found in the option chain.")
 
         if option['price'] == 0:
             raise Exception(f"Option price is zero ({option['symbol']}). Cannot open this option.")
@@ -62,7 +63,7 @@ class Single(OptionCombination):
         self.option_combination_type = OptionCombinationType.SINGLE
 
     def __repr__(self) -> str:
-        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option.symbol} {self.option_type} {self.strike} {self.expiration} {self.quantity}>'
+        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option.symbol} {self.option_type.upper()} {self.strike} {self.expiration} {self.quantity}>'
         return s
 
     @property

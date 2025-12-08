@@ -2,7 +2,7 @@ import datetime
 import itertools
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Optional
+from typing import Optional, Self
 
 from ..option import Option
 from ..option_types import OptionCombinationType, OptionStatus, OptionPositionType
@@ -17,19 +17,23 @@ class OptionCombination(ABC):
     custom class, or just pass a list of options that make up the trade
     """
 
-    options: list[Option]
+    options: list[Option] = field(default=None)
     option_combination_type: OptionCombinationType = field(default=None)
     quantity: int = field(default=1)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
     option_position_type: Optional[OptionPositionType] = field(default=None)
     user_defined: dict = field(default_factory=lambda: {})
 
-
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.
         raise NotImplementedError
 
     def __repr__(self) -> str:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def create(cls, *args) -> Self:
         pass
 
     @property

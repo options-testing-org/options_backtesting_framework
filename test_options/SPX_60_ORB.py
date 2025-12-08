@@ -95,12 +95,11 @@ if __name__ == "__main__":
                         #     option_type = 'call'
 
                             # open credit spread
-                            vertical: Vertical = Vertical.get_vertical(option_chain=option_chain,
+                            vertical = Vertical.create(option_chain=option_chain,
                                                                        expiration=expiration,
                                                                        option_type=option_type,
                                                                        long_strike=long_strike,
-                                                                       short_strike=short_strike,
-                                                                       quantity=-1)
+                                                                       short_strike=short_strike)
                             if vertical.price > 0.70:
                                 portfolio.open_position(vertical, quantity=-1)
                                 position_id = vertical.position_id

@@ -192,13 +192,13 @@ class MyBacktest:
                             continue
                         min_price = close * 0.02
                         short_option = next(
-                            o for o in option_chain.option_chain if o.expiration == exp and o.strike == strike)
+                            o for o in option_chain.options if o.expiration == exp and o.strike == strike)
                         if short_option.price < min_price:
                             continue
 
                         short_option.quantity = -1
 
-                        options = [o for o in option_chain.option_chain if o.expiration == exp and o.strike
+                        options = [o for o in option_chain.options if o.expiration == exp and o.strike
                                    < strike and o.delta >= -.10 and o.delta <= 0.0].copy()
                         if not options:
                             continue

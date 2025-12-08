@@ -14,7 +14,7 @@ def test_load_option_chain_intraday_sets_chain_expiration_and_strikes(intraday_f
 
     assert option_chain.quote_datetime == quote_date
     assert option_chain.end_datetime == end_date
-    assert len(option_chain.option_chain) > 0
+    assert len(option_chain.options) > 0
     assert len(option_chain.expirations) > 0
     assert len(option_chain.expiration_strikes) > 0
     assert len(option_chain.expiration_strikes[option_chain.expirations[0]]) > 0
@@ -29,7 +29,7 @@ def test_load_option_chain_daily_sets_chain_expiration_and_strikes(daily_file_se
 
     assert option_chain.quote_datetime == start_date
     assert option_chain.end_datetime == end_date
-    assert len(option_chain.option_chain) > 0
+    assert len(option_chain.options) > 0
     assert len(option_chain.expirations) > 0
     assert len(option_chain.expiration_strikes) > 0
     assert len(option_chain.expiration_strikes[option_chain.expirations[0]]) > 0
@@ -86,7 +86,7 @@ def test_option_chain_has_new_options_after_on_next_event_is_emitted(daily_file_
     nexter.bind(next=option_chain.on_next)
     nexter.do_next(next_day)
 
-    assert all([x for x in option_chain.option_chain if x['quote_datetime'] == next_day])
+    assert all([x for x in option_chain.options if x['quote_datetime'] == next_day])
 
 def test_on_next_options(daily_file_settings):
     quote_date = datetime.datetime.strptime('2014-12-31 00:00', '%Y-%m-%d %H:%M')
@@ -95,7 +95,7 @@ def test_on_next_options(daily_file_settings):
     option_chain.on_next(quote_date)
 
     # get test option
-    option = Option(**option_chain.option_chain[2])
+    option = Option(**option_chain.options[2])
     assert option.price == 35.42
 
     # wire up events
