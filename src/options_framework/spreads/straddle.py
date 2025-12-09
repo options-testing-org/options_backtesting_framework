@@ -1,4 +1,5 @@
 import datetime
+from dataclasses import dataclass, field
 from typing import Self
 
 from .option_combo import OptionCombination
@@ -6,10 +7,11 @@ from ..option import Option
 from ..option_chain import OptionChain
 from ..option_types import OptionCombinationType, OptionStatus, OptionPositionType
 
-
+@dataclass(repr=False, slots=True)
 class Straddle(OptionCombination):
 
-
+    call: Option = field(default=None)
+    put: Option = field(default=None)
 
     @classmethod
     def create(cls, option_chain: OptionChain, strike: int | float, expiration: datetime.date,
@@ -46,15 +48,55 @@ class Straddle(OptionCombination):
         
         return straddle
 
+    def __post_init__(self):
+        if len(self.options) != 2:
+            raise ValueError("A Straddle must have two options.")
+        if self.options[0].option_type == self.options[1].option_type:
+            raise ValueError("A Straddle must have one put and one call option.")
+        call_option = next(o for o in self.options if o.option_type == 'call')
+        put_option = next(o for o in self.options if o.option_type == 'put')
+        if call_option.strike != put_option.strike:
+            raise ValueError("Straddle options must have the same strike.")
+        if call_option.quantity != put_option.quantity:
+            raise ValueError("Straddle options must have the same quantity")
+        if self.quantity == 0:
+            raise ValueError("Quantity cannot be zero.")
+        if self.quantity < 0 and self.option_position_type == OptionPositionType.LONG:
+            raise ValueError("Quantity must be positive for a long position")
+        if self.quantity > 0 and self.option_position_type == OptionPositionType.SHORT:
+            raise ValueError("Quantity must be negative for a short position")
+        if call_option.symbol != put_option.symbol:
+            raise ValueError("Straddle options must be for the same equity")
+        if call_option.expiration != put_option.expiration:
+            raise ValueError("Straddle options must have the same expiration")
 
-    def update_quantity(self, quantity: int):
-        pass
+        self.call = call_option
+        self.put = put_option
+
+    def __repr__(self):
+        return 'x'
+
+    def _update_quantity(self, quantity: int):
+        if self.option_position_type == OptionPositionType.LONG and quantity < 0:
+            raise ValueError(f'Cannot set a negative quantity on a long position.')
+        elif self.option_position_type == OptionPositionType.SHORT and quantity > 0:
+            raise ValueError(f'Cannot set a positive quantity on a short position.')
+        self.quantity = quantity
+        self.call.quantity = quantity
+        self.put.quantity = quantity
+
 
     def open_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
-        pass
+        self._update_quantity(quantity)
+        self.call.open_trade(quantity=quantity)
+        self.put.open_trade(quantity=quantity)
+        super(Straddle, self).open_trade(quantity=quantity, **kwargs)
 
     def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
-        pass
+        quantity = quantity if quantity is not None else self.call.quantity
+        self.call.close_trade(quantity=quantity)
+        self.put.close_trade(quantity=quantity)
+        self._update_quantity(quantity=quantity)
 
     @property
     def required_margin(self) -> float:
@@ -62,15 +104,26 @@ class Straddle(OptionCombination):
 
     @property
     def status(self) -> OptionStatus:
-        pass
+        return self.call.status
 
     @property
-    def symbol(self) -> OptionStatus:
-        pass
+    def symbol(self) -> str:
+        return self.call.symbol
 
     @property
     def price(self) -> float:
-        pass
+        return self.call.price + self.put.price
 
     def get_trade_price(self) -> float | None:
-        pass
+        if OptionStatus.INITIALIZED == self.option.status:
+            return None
+        else:
+            return self.call.trade_open_info.price + self.put.trade_open_info.price
+
+    @property
+    def strike(self) -> int | float:
+        return self.call.strike
+
+    @property
+    def expiration(self) -> datetime.date:
+        return self.call.expiration

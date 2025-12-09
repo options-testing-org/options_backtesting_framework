@@ -1,4 +1,4 @@
-from dataclasses import field
+from dataclasses import dataclass, field
 
 from options_framework.option_types import OptionPositionType, OptionCombinationType, OptionStatus
 from options_framework.option_chain import OptionChain
@@ -8,8 +8,11 @@ from options_framework.option import Option
 import datetime
 from typing import Self
 
-
+@dataclass(slots=True)
 class Vertical(OptionCombination):
+
+    long_option: Option = field(default=None)
+    short_option: Option = field(default=None)
 
     @classmethod
     def create(cls, option_chain: OptionChain, expiration: datetime.date, option_type: str,
@@ -90,7 +93,7 @@ class Vertical(OptionCombination):
                 + f'{self.expiration}>'
         return s
 
-    def update_quantity(self, quantity: int):
+    def _update_quantity(self, quantity: int):
         self.quantity = quantity
         self.long_option.quantity = abs(quantity)
         self.short_option.quantity = abs(quantity) * -1

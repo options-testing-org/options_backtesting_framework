@@ -31,7 +31,7 @@ class OptionPortfolio(Dispatcher):
         return f'OptionPortfolio(cash={self.cash:.2f}, portfolio_value={self.current_value:.2f}, open positions: {len(self.positions)})'
 
     def open_position(self, option_position: OptionCombination, quantity: int, **kwargs: dict):
-        option_position.update_quantity(quantity)
+        option_position._update_quantity(quantity)
         if option_position.option_position_type == OptionPositionType.SHORT:
             # check to see if we have enough margin to open this position
             new_margin = option_position.required_margin + self.portfolio_margin_allocation

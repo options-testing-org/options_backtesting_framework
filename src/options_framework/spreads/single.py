@@ -86,6 +86,9 @@ class Single(OptionCombination):
     def status(self) -> OptionStatus:
         return self.option.status
 
+    def symbol(self) -> str:
+        return self.option.symbol
+
     @property
     def required_margin(self) -> float:
         if self.option_position_type == OptionPositionType.LONG:
@@ -110,7 +113,7 @@ class Single(OptionCombination):
             margin = float(margin) * 100 * abs(self.quantity)
             return round(margin, 2)
 
-    def update_quantity(self, quantity: int):
+    def _update_quantity(self, quantity: int):
         if self.option_position_type == OptionPositionType.LONG and quantity < 0:
             raise ValueError(f'Cannot set a negative quantity on a long position.')
         elif self.option_position_type == OptionPositionType.SHORT and quantity > 0:
@@ -120,18 +123,18 @@ class Single(OptionCombination):
         self.option.quantity = quantity
 
     def open_trade(self, quantity: int = 1, **kwargs: dict) -> None:
-        self.update_quantity(quantity)
+        self._update_quantity(quantity)
         self.option.open_trade(quantity=self.quantity)
         super(Single, self).open_trade(quantity=quantity, **kwargs)
 
     def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else self.option.quantity
         self.option.close_trade(quantity=quantity)
-        self.update_quantity(self.option.quantity)
+        self._update_quantity(self.option.quantity)
         super(Single, self).close_trade(quantity=quantity, **kwargs) # call super to set any kwargs
 
     def get_trade_price(self):
-        if OptionStatus.INITIALIZED ==  self.option.status:
+        if OptionStatus.INITIALIZED == self.option.status:
             return None
         else:
             return self.option.trade_open_info.price

@@ -1,7 +1,7 @@
 import datetime
 import itertools
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 from typing import Optional, Self
 
 from ..option import Option
@@ -55,7 +55,7 @@ class OptionCombination(ABC):
             return None
 
     @abstractmethod
-    def update_quantity(self, quantity: int):
+    def _update_quantity(self, quantity: int):
         pass
 
     @abstractmethod
@@ -97,7 +97,7 @@ class OptionCombination(ABC):
         pass
 
     @property
-    def symbol(self) -> OptionStatus:
+    def symbol(self) -> str:
         return self.options[0].symbol
 
     @property
@@ -108,9 +108,6 @@ class OptionCombination(ABC):
     @property
     def quote_datetime(selfself) -> datetime.datetime:
         return options[0].quote_datetime
-
-    # def next_quote_date(self, quote_datetime: datetime.datetime) -> None:
-        # self.quote_datetime = quote_datetime
 
     def get_profit_loss(self) -> float:
         pnl = sum(o.get_profit_loss() for o in self.options)

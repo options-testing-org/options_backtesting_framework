@@ -166,7 +166,7 @@ def test_update_quantity_sets_quantity(option_chain_data):
                            strike=strike)
     assert single.quantity == 1
 
-    single.update_quantity(10)
+    single._update_quantity(10)
 
     assert single.quantity == 10
 
@@ -183,7 +183,7 @@ def test_update_long_position_to_negative_quantity_raises_error(option_chain_dat
     assert single.quantity == 1
 
     with pytest.raises(ValueError, match='Cannot set a negative quantity on a long position.'):
-        single.update_quantity(-10)
+        single._update_quantity(-10)
 
 def test_update_short_position_to_positive_quantity_raises_error(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
@@ -198,7 +198,7 @@ def test_update_short_position_to_positive_quantity_raises_error(option_chain_da
     assert single.quantity == -1
 
     with pytest.raises(ValueError, match='Cannot set a positive quantity on a short position.'):
-        single.update_quantity(10)
+        single._update_quantity(10)
 
 def test_open_trade_sets_quantity_and_status(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
