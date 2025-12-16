@@ -2,14 +2,14 @@ from dataclasses import dataclass, field
 
 from options_framework.option_types import OptionPositionType, OptionCombinationType, OptionStatus
 from options_framework.option_chain import OptionChain
-from options_framework.spreads.option_combo import OptionCombination
+from options_framework.spreads.spread_base import SpreadBase
 from options_framework.utils.helpers import decimalize_2
 from options_framework.option import Option
 import datetime
 from typing import Self
 
 @dataclass(slots=True)
-class Vertical(OptionCombination):
+class Vertical(SpreadBase):
 
     long_option: Option = field(default=None)
     short_option: Option = field(default=None)
@@ -17,7 +17,8 @@ class Vertical(OptionCombination):
     @classmethod
     def create(cls, option_chain: OptionChain, expiration: datetime.date, option_type: str,
                      long_strike: int | float,
-                     short_strike: int | float) -> Self:
+                     short_strike: int | float,
+                     **kwargs) -> Self:
 
         if long_strike < short_strike:
             option_position_type = OptionPositionType.LONG if option_type == 'call' \
@@ -60,6 +61,7 @@ class Vertical(OptionCombination):
         vertical = Vertical(options=[long_option, short_option],
                             option_combination_type=OptionCombinationType.VERTICAL,
                             option_position_type=option_position_type, quantity=1)
+        super(Vertical, vertical)._save_user_defined_values(vertical, **kwargs)
         return vertical
 
 
@@ -102,14 +104,14 @@ class Vertical(OptionCombination):
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
-        super(Vertical, self).open_trade(quantity=quantity, **kwargs)
+        super(Vertical, self)._save_user_defined_values(self, **kwargs)
 
     def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else quantity == self.long_option.quantity
         self.long_option.close_trade(quantity=quantity)
         self.short_option.close_trade(quantity=quantity * -1)
         self.quantity -= quantity
-        super(Vertical, self).close_trade(quantity=quantity, **kwargs)
+        super(Vertical, self)._save_user_defined_values(selfty, **kwargs)
 
     @property
     def max_profit(self) -> float | None:

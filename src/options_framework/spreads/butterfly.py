@@ -3,11 +3,11 @@ import datetime
 from options_framework.utils.helpers import decimalize_0, decimalize_2
 from options_framework.option import Option
 from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
-from options_framework.spreads.option_combo import OptionCombination
+from options_framework.spreads.spread_base import SpreadBase
 
 
 @dataclass(repr=False, slots=True)
-class Butterfly(OptionCombination):
+class Butterfly(SpreadBase):
 
     @classmethod
     def get_balanced_butterfly(cls, *, option_chain: list[Option], expiration: datetime.date, option_type: str,

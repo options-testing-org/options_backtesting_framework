@@ -9,7 +9,7 @@ from ..option_types import OptionCombinationType, OptionStatus, OptionPositionTy
 
 
 @dataclass(repr=False, slots=True)
-class OptionCombination(ABC):
+class SpreadBase(ABC):
     """
     OptionCombination is a base class an options trade that is constructed with one or more option types,
     quantities, and expirations.
@@ -22,19 +22,27 @@ class OptionCombination(ABC):
     quantity: int = field(default=1)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
     option_position_type: Optional[OptionPositionType] = field(default=None)
-    user_defined: dict = field(default_factory=lambda: {})
+    user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.
         raise NotImplementedError
 
     def __repr__(self) -> str:
-        pass
+        raise NotImplementedError
 
     @classmethod
     @abstractmethod
     def create(cls, *args) -> Self:
-        pass
+        raise NotImplementedError
+
+    @abstractmethod
+    def open_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
+        raise NotImplementedError
 
     @property
     def current_value(self) -> float:
@@ -49,52 +57,39 @@ class OptionCombination(ABC):
     @property
     def closed_value(self) -> float | None:
         if all(o for o in self.options if o.trade_close_info is not None):
-            closed_value = sum(o.trade_close_info.premium for o in self.options)
+            closed_value = sum(o.trade_close_info.premium for o in self.options if o.trade_close_info is not None)
             return closed_value
         else:
             return None
 
     @abstractmethod
     def _update_quantity(self, quantity: int):
-        pass
+        raise NotImplementedError
 
-    @abstractmethod
-    def open_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
+    @classmethod
+    def _save_user_defined_values(cls, obj, **kwargs: dict) -> None:
         for arg, val in kwargs.items():
-            self.user_defined[arg] = val
-
-    @abstractmethod
-    def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
-        for arg, val in kwargs.items():
-            self.user_defined[arg] = val
+            obj.user_defined[arg] = val
 
     @property
+    @abstractmethod
     def max_profit(self) -> float | None:
-        """
-        If there is a determinate max profit, that is returned by the parent class.
-        If there is an infinite max profit, as is the case for a naked option type, returns None
-        :return: None or the max profit of the spread
-        """
-        return None
+        raise NotImplementedError
 
     @property
+    @abstractmethod
     def max_loss(self) -> float | None:
-        """
-        If there is a determinate max loss, that is returned by the parent class.
-        If there is an infinite max loss, as is the case for a naked option type, returns None
-        :return: None or the max loss of the spread
-        """
-        return None
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def required_margin(self) -> float:
-        pass
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def status(self) -> OptionStatus:
-        pass
+        raise NotImplementedError
 
     @property
     def symbol(self) -> str:
@@ -103,11 +98,11 @@ class OptionCombination(ABC):
     @property
     @abstractmethod
     def price(self) -> float:
-        pass
+        raise NotImplementedError
 
     @property
-    def quote_datetime(selfself) -> datetime.datetime:
-        return options[0].quote_datetime
+    def quote_datetime(self) -> datetime.datetime:
+        return self.options[0].quote_datetime
 
     def get_profit_loss(self) -> float:
         pnl = sum(o.get_profit_loss() for o in self.options)
@@ -125,9 +120,21 @@ class OptionCombination(ABC):
         else:
             return None
 
+    def get_profit_loss_percent(self) -> float:
+        pass
+
+    def get_unrealized_profit_loss_percent(self) -> float:
+        pass
+
+    def get_days_in_trade(self) -> int:
+        pass
+
+    def get_dte(self) -> int:
+        pass
+
     @abstractmethod
     def get_trade_price(self) -> float | None:
-        pass
+        raise NotImplementedError
 
     def get_open_datetime(self) -> datetime.datetime | None:
         first_option = self.options[0]

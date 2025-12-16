@@ -1,4 +1,4 @@
-from option_combo import OptionCombination
+from spread_base import SpreadBase
 
-class CustomOptionSpread(OptionCombination):
+class CustomOptionSpread(SpreadBase):
     pass

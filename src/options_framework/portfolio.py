@@ -7,7 +7,7 @@ from pydispatch import Dispatcher
 from options_framework.option import TradeOpenInfo, TradeCloseInfo
 from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionStatus, OptionPositionType
-from options_framework.spreads.option_combo import OptionCombination
+from options_framework.spreads.spread_base import SpreadBase
 from options_framework.utils.helpers import decimalize_2
 
 
@@ -30,7 +30,7 @@ class OptionPortfolio(Dispatcher):
     def __repr__(self) -> str:
         return f'OptionPortfolio(cash={self.cash:.2f}, portfolio_value={self.current_value:.2f}, open positions: {len(self.positions)})'
 
-    def open_position(self, option_position: OptionCombination, quantity: int, **kwargs: dict):
+    def open_position(self, option_position: SpreadBase, quantity: int, **kwargs: dict):
         option_position._update_quantity(quantity)
         if option_position.option_position_type == OptionPositionType.SHORT:
             # check to see if we have enough margin to open this position
@@ -46,7 +46,7 @@ class OptionPortfolio(Dispatcher):
         self.positions[option_position.position_id] = option_position
 
 
-    def close_position(self, option_position: OptionCombination, quantity: int = None, **kwargs: dict):
+    def close_position(self, option_position: SpreadBase, quantity: int = None, **kwargs: dict):
         quantity = quantity if quantity is not None else option_position.quantity
         option_position.close_trade(quantity=quantity, **kwargs)
         closing_value = sum(o.trade_close_records[-1].premium for o in option_position.options)

@@ -1,5 +1,5 @@
-from .option_combo import OptionCombination
+from .spread_base import SpreadBase
 from ..option_types import OptionCombinationType
 
-class Collar(OptionCombination):
+class Collar(SpreadBase):
     pass

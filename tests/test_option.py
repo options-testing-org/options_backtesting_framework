@@ -214,7 +214,7 @@ def test_update_sets_expiration_status_if_quote_date_is_greater_than_expiration(
     option_data = copy.deepcopy(call_data[0])
     call = Option(**option_data)
     update = copy.deepcopy(call_data[1])
-    update['quote_datetime'] = update['quote_datetime'] + datetime.timedelta(days=call.dte() + 1)
+    update['quote_datetime'] = update['quote_datetime'] + datetime.timedelta(days=call.get_dte() + 1)
 
     call.next(update)
 
@@ -638,7 +638,7 @@ def test_dte_when_option_has_quote_data(get_data):
     option = Option(**option_data)
 
     expected_dte = 18
-    actual_dte = option.dte()
+    actual_dte = option.get_dte()
     assert actual_dte == expected_dte
 
 
@@ -648,13 +648,13 @@ def test_dte_is_updated_when_quote_date_is_updated(get_data):
     option_data = copy.deepcopy(call_data[0])
     option = Option(**option_data)
 
-    assert option.dte() == 18
+    assert option.get_dte() == 18
 
     next_update = copy.deepcopy(call_data[1])
     option.next(next_update)
 
     expected_dte = 17
-    assert option.dte() == expected_dte
+    assert option.get_dte() == expected_dte
 
 
 def test_dte_is_zero_on_expiration_day(get_data):
@@ -667,7 +667,7 @@ def test_dte_is_zero_on_expiration_day(get_data):
     option.next(next_update)
 
     expected_dte = 0
-    assert option.dte() == expected_dte
+    assert option.get_dte() == expected_dte
 
 
 @pytest.mark.parametrize("option_type, spot_price, expected_value", [
@@ -1360,7 +1360,7 @@ def test_current_value_price_changes_when_partially_closed(get_data):
 
 def test_call_get_closing_price_for_expiring_itm(get_data):
     option_id = 'AAPL20150102C00010000'
-    call_data = get_data('AAPL20150102C00010000')
+    call_data = get_data(option_id)
     option_data = copy.deepcopy(call_data[0])
     option = Option(**option_data)
 
@@ -1460,3 +1460,20 @@ def test_option_emits_events(get_intraday_data):
     next_update = copy.deepcopy(data[-2])
     option.next(next_update)
     assert option_expired_fired == option.option_id
+
+def test_update_is_from_same_option(get_data):
+    option_id = 'AAPL20150102P00012000'
+    data = get_data(option_id)
+    option_data = copy.deepcopy(data[0])
+    option = Option(**option_data)
+
+    other_option_id = 'AAPL20150102C00012000'
+    data = get_data(other_option_id)
+    other_option_data = copy.deepcopy(data[0])
+
+    option.open_trade(quantity=1)
+
+    # update with data from the other option
+    with pytest.raises(ValueError, match='Option ID mismatch'):
+        other_option_data['option_id'] = other_option_id
+        option.next(other_option_data)

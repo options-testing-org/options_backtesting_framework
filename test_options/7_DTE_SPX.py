@@ -158,7 +158,7 @@ class SPX_7_Day_Put_Credit(bt.Strategy):
 
             # Look for trade
             if (price > sma_20) and (sma_3 > sma_8):
-                expiration = self.current_date + datetime.timedelta(days=self.p.dte)
+                expiration = self.current_date + datetime.timedelta(days=self.p.get_dte)
                 self.p.test_manager.get_current_option_chain(self.dt.to_pydatetime())
                 try:
                     credit_spread = Vertical.get_vertical_by_delta_and_spread_width(option_chain=self.option_chain,

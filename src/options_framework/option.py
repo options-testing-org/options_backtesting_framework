@@ -171,6 +171,9 @@ class Option(Dispatcher):
         return False
 
     def next(self, updates: dict):
+        if self.option_id != updates['option_id']:
+            raise ValueError("Option ID mismatch")
+
         self.quote_datetime = updates['quote_datetime']
 
         if self.is_expired():
@@ -398,7 +401,7 @@ class Option(Dispatcher):
 
         self.trade_close_info = trade_close
 
-    def dte(self) -> int:
+    def get_dte(self) -> int:
         """
         DTE is "days to expiration"
         :return: The number of days to the expiration for the current quote

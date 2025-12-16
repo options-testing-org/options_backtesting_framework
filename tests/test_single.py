@@ -1,53 +1,30 @@
 import datetime
-import pickle
-from pathlib import Path
 
 import pytest
 
-from options_framework.option import Option
-from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
 from options_framework.spreads.single import Single
-from options_framework.config import settings
 
-
-# @pytest.fixture
-# def option():
-#     timeslots_folder = Path(settings['options_directory'], 'intraday', 'SPXW', 'timeslots', '2016_04')
-#     dt = datetime.datetime.strptime('2016-04-29 09:45', '%Y-%m-%d %H:%M')
-#     while True:
-#         fn = datetime.datetime.strftime(dt, '%Y_%m_%d_%H_%M.pkl')
-#         data_file = timeslots_folder.joinpath(fn)
-#         with open(data_file, 'rb') as f:
-#             data = pickle.load(f)
-#         dt = dt + datetime.timedelta(minutes=15)
-#
-
-# def test_what(option_chain_daily, option):
-#     quote_date = datetime.datetime.strptime('2015-01-06', '%Y-%m-%d')
-#     option_chain = option_chain_daily(quote_date)
-#     pass
-
-@pytest.mark.parametrize("option_type, strike, quantity, expected_repr", [('call', 110.0, 5, '<SINGLE(0) AAPL CALL 110.0 2015-01-17 5>'),
-                                                                          ('call', 120.0, -5, '<SINGLE(1) AAPL CALL 120.0 2015-01-17 -5>'),
-                                                                          ('put', 130.0, 5, '<SINGLE(2) AAPL PUT 130.0 2015-01-17 5>'),
-                                                                          ('put', 100.0, -5, '<SINGLE(3) AAPL PUT 100.0 2015-01-17 -5>')
+@pytest.mark.parametrize("option_type, strike, position_type, expected_repr", [('call', 110.0, OptionPositionType.LONG, '<SINGLE({0}) AAPL CALL 110.0 2015-01-17 LONG>'),
+                                                                          ('call', 120.0, OptionPositionType.SHORT, '<SINGLE({0}) AAPL CALL 120.0 2015-01-17 SHORT>'),
+                                                                          ('put', 130.0, OptionPositionType.LONG, '<SINGLE({0}) AAPL PUT 130.0 2015-01-17 LONG>'),
+                                                                          ('put', 100.0, OptionPositionType.SHORT, '<SINGLE({0}) AAPL PUT 100.0 2015-01-17 SHORT>')
                                                                           ])
-def test_repr(option_chain_data, option_type, strike, quantity, expected_repr):
+def test_repr(option_chain_data, option_type, strike, position_type, expected_repr):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
     option_chain = option_chain_data('daily', quote_date)
     expiration = datetime.date(2015, 1, 17)
     strike = strike
-    quantity = quantity
 
-    single_option = Single.create(option_chain=option_chain, expiration=expiration,
+    single = Single.create(option_chain=option_chain, expiration=expiration,
                                   option_type=option_type,
-                                  option_position_type=OptionPositionType.SHORT,
+                                  option_position_type=position_type,
                                   strike=strike)
-    single_option.quantity = quantity
-    repr = str(single_option)
-    assert repr.startswith('<SINGLE')
-    assert repr[10:] == expected_repr[10:] # skip the position id since it is different depending on how many positions were created in testing
+
+    expected_repr = expected_repr.format(single.position_id)
+    repr_ = single.__repr__()
+    assert repr_ == expected_repr
+
 
 def test_get_single_option_with_exact_values(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
@@ -273,3 +250,14 @@ def test_get_trade_price_returns_open_price_after_option_is_updated(option_chain
 
     assert single.price != open_price
     assert single.get_trade_price() == open_price
+
+def test_open_trade_with_user_defined_args_set_args_on_single(option_chain_data):
+    quote_date = datetime.datetime(2014, 12, 30, 0, 0)
+    option_chain = option_chain_data('daily', quote_date)
+    expiration = datetime.date(2015, 1, 17)
+    strike = 110.0
+
+    single = Single.create(option_chain=option_chain, expiration=expiration,
+                           option_type='call',
+                           option_position_type=OptionPositionType.LONG,
+                           strike=strike)

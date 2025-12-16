@@ -1,14 +1,17 @@
 import datetime
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Self
 
-from .option_combo import OptionCombination
+from .spread_base import SpreadBase
 from ..option import Option
 from ..option_chain import OptionChain
 from ..option_types import OptionCombinationType, OptionStatus, OptionPositionType
+from ..utils.helpers import decimalize_4, decimalize_2, decimalize_0
+
 
 @dataclass(repr=False, slots=True)
-class Straddle(OptionCombination):
+class Straddle(SpreadBase):
 
     call: Option = field(default=None)
     put: Option = field(default=None)
@@ -27,7 +30,7 @@ class Straddle(OptionCombination):
         strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
         try:
             strike = next(s for s in strikes if s >= strike)
-            options = next(o for o in option_chain.options if o['expiration'] == expiration and o['strike'] == strike)
+            options = [o for o in option_chain.options if o['expiration'] == expiration and o['strike'] == strike]
         except StopIteration:
             raise ValueError(
                 "No matching strike was found in the option chain.")
@@ -74,7 +77,7 @@ class Straddle(OptionCombination):
         self.put = put_option
 
     def __repr__(self):
-        return 'x'
+        return f'<{self.option_combination_type.name}({self.position_id}) {self.symbol} {self.strike} {self.expiration} {self.option_position_type.name}>'
 
     def _update_quantity(self, quantity: int):
         if self.option_position_type == OptionPositionType.LONG and quantity < 0:
@@ -100,7 +103,31 @@ class Straddle(OptionCombination):
 
     @property
     def required_margin(self) -> float:
-        pass
+        if self.option_position_type == OptionPositionType.LONG:
+            return 0
+        elif self.option_position_type == OptionPositionType.SHORT:
+            """
+            Short options:
+            20% of the spot price minus the out-of-money amount plus the option premium
+            10% of the spot price plus the option premium
+            $1 + option premium
+            """
+            margin = 0
+            for option in self.options:
+                pct_20 = decimalize_4(option.spot_price * 0.2)
+                pct_10 = decimalize_4(option.spot_price * 0.1)
+                otm_amount = decimalize_4(
+                    option.spot_price - option.strike) if option.otm() else decimalize_0(0)
+                price = decimalize_2(option.trade_open_info.price)
+
+                # three calculations - take the largest value
+                calc1 = (pct_20 - otm_amount + price)
+                calc2 = (pct_10 + price)
+                calc3 = (Decimal(1) + price)
+                _margin = max(calc1, calc2, calc3)
+                _margin = float(margin) * 100 * abs(self.quantity)
+                margin += _margin
+            return round(margin, 2)
 
     @property
     def status(self) -> OptionStatus:
@@ -127,3 +154,17 @@ class Straddle(OptionCombination):
     @property
     def expiration(self) -> datetime.date:
         return self.call.expiration
+
+    @property
+    def max_profit(self) -> float | None:
+        if self.option_position_type == OptionPositionType.SHORT:
+            return self.get_trade_price()
+        else:
+            return None
+
+    @property
+    def max_loss(self) -> float | None:
+        if self.option_position_type == OptionPositionType.LONG:
+            return self.get_trade_premium()
+        else:
+            return None

@@ -7,11 +7,11 @@ from typing import Self
 from options_framework.option import Option
 from options_framework.option_chain import OptionChain
 from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
-from options_framework.spreads.option_combo import OptionCombination
+from options_framework.spreads.spread_base import SpreadBase
 from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 
 @dataclass(repr=False, slots=True)
-class Single(OptionCombination):
+class Single(SpreadBase):
     option: Option = field(default=None)
 
     @classmethod
@@ -19,7 +19,8 @@ class Single(OptionCombination):
                expiration: datetime.date,
                strike: float | int,
                option_type: str,
-               option_position_type: OptionPositionType) -> Self:
+               option_position_type: OptionPositionType,
+               **kwargs) -> Self:
 
         # Find nearest matching expiration
         try:
@@ -49,6 +50,10 @@ class Single(OptionCombination):
         quantity = 1 if option_position_type == OptionPositionType.LONG else -1
         single = Single(options=[single], option_combination_type=OptionCombinationType.SINGLE,
                         option_position_type=option_position_type, quantity=quantity)
+
+        # save any kwargs that were sent to user_defined
+        super(Single, single)._save_user_defined_values(single, **kwargs)
+
         return single
 
 
@@ -63,7 +68,7 @@ class Single(OptionCombination):
         self.option_combination_type = OptionCombinationType.SINGLE
 
     def __repr__(self) -> str:
-        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option.symbol} {self.option_type.upper()} {self.strike} {self.expiration} {self.quantity}>'
+        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option.symbol} {self.option_type.upper()} {self.strike} {self.expiration} {self.option_position_type.name}>'
         return s
 
     @property
@@ -125,13 +130,13 @@ class Single(OptionCombination):
     def open_trade(self, quantity: int = 1, **kwargs: dict) -> None:
         self._update_quantity(quantity)
         self.option.open_trade(quantity=self.quantity)
-        super(Single, self).open_trade(quantity=quantity, **kwargs)
+        super(Single, self)._save_user_defined_values(self, **kwargs)
 
     def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else self.option.quantity
         self.option.close_trade(quantity=quantity)
         self._update_quantity(self.option.quantity)
-        super(Single, self).close_trade(quantity=quantity, **kwargs) # call super to set any kwargs
+        super(Single, self)._save_user_defined_values(self, **kwargs) # call super to set any kwargs
 
     def get_trade_price(self):
         if OptionStatus.INITIALIZED == self.option.status:
@@ -139,3 +144,16 @@ class Single(OptionCombination):
         else:
             return self.option.trade_open_info.price
 
+    @property
+    def max_profit(self) -> float | None:
+        if self.option_position_type == OptionPositionType.SHORT:
+            return self.get_trade_price()
+        else:
+            return None
+
+    @property
+    def max_loss(self) -> float | None:
+        if self.option_position_type == OptionPositionType.LONG:
+            return self.get_trade_premium()
+        else:
+            return None
