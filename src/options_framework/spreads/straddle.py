@@ -141,6 +141,9 @@ class Straddle(SpreadBase):
     def price(self) -> float:
         return self.call.price + self.put.price
 
+    def get_dte(self) -> int | None:
+        return self.call.get_dte()
+
     def get_trade_price(self) -> float | None:
         if OptionStatus.INITIALIZED == self.option.status:
             return None

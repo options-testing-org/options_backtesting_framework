@@ -157,3 +157,6 @@ class Single(SpreadBase):
             return self.get_trade_premium()
         else:
             return None
+
+    def get_dte(self) -> int | None:
+        return self.option.get_dte()

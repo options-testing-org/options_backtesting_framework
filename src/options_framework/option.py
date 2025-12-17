@@ -177,6 +177,7 @@ class Option(Dispatcher):
         self.quote_datetime = updates['quote_datetime']
 
         if self.is_expired():
+            self.close_trade(quantity=self.quantity)
             return
 
         self.spot_price = updates['spot_price']
@@ -243,7 +244,7 @@ class Option(Dispatcher):
         self.trade_open_info = trade_open_info
         self.position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
         self.quantity = quantity
-        self.status |= OptionStatus.TRADE_IS_OPEN
+        self.status = OptionStatus.TRADE_IS_OPEN
 
         self.emit("open_transaction_completed", trade_open_info)
         #print(f'emit open {self.option_id}')
@@ -258,7 +259,12 @@ class Option(Dispatcher):
         :return: the profit/loss of the closed quantity of the trade
         :rtype: float
         """
-        if OptionStatus.TRADE_IS_OPEN not in self.status and OptionStatus.EXPIRED not in self.status:
+
+        # if trade has already been closed, just return the close info
+        if OptionStatus.TRADE_IS_CLOSED in self.status:
+            return self.trade_close_info
+
+        if OptionStatus.TRADE_IS_OPEN not in self.status:
             raise ValueError("Cannot close an option that is not open.")
 
         if quantity is None:
@@ -307,6 +313,7 @@ class Option(Dispatcher):
 
         if self.quantity == 0:
             self.status &= ~OptionStatus.TRADE_IS_OPEN
+            self.status &= ~OptionStatus.TRADE_PARTIALLY_CLOSED
             self.status |= OptionStatus.TRADE_IS_CLOSED
             self.price = float(close_price)
         else:
@@ -489,7 +496,8 @@ class Option(Dispatcher):
         current_price = decimalize_4(self.price)
         open_quantity = decimalize_0(self.quantity)
         percent = ((current_price - trade_price) / trade_price) * (open_quantity / abs(open_quantity))
-        return float(decimalize_4(percent))
+        percent = float(decimalize_4(percent))
+        return percent
 
     def get_profit_loss_percent(self) -> float:
         if OptionStatus.TRADE_IS_OPEN not in self.status and OptionStatus.TRADE_IS_CLOSED not in self.status:
@@ -506,7 +514,9 @@ class Option(Dispatcher):
         if self.position_type == OptionPositionType.SHORT:
             profit_loss_percent *= -1
 
-        return float(profit_loss_percent)
+        profit_loss_percent = float(profit_loss_percent)
+
+        return round(profit_loss_percent, 4)
 
     def get_days_in_trade(self) -> int:
 

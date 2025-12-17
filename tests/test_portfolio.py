@@ -169,6 +169,7 @@ def test_portfolio_value_when_option_value_changes(daily_file_settings):
 
     option_data = portfolio.option_chains[symbol].options[61]
     option = Option(**option_data)
+    option.incur_fees = False
     single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
                     option_position_type=OptionPositionType.LONG, quantity=1)
 

@@ -106,13 +106,11 @@ class SpreadBase(ABC):
 
     def get_profit_loss(self) -> float:
         pnl = sum(o.get_profit_loss() for o in self.options)
-        fees = self.get_fees()
-        return pnl - fees
+        return pnl
 
     def get_unrealized_profit_loss(self) -> float:
         pnl = sum(o.get_unrealized_profit_loss() for o in self.options)
-        fees = self.get_fees()
-        return pnl - fees
+        return pnl
 
     def get_trade_premium(self) -> float | None:
         if all((OptionStatus.TRADE_IS_OPEN & OptionStatus.TRADE_IS_CLOSED) in o.status for o in self.options):
@@ -121,16 +119,24 @@ class SpreadBase(ABC):
             return None
 
     def get_profit_loss_percent(self) -> float:
-        pass
+        pnl_pct = sum(o.get_profit_loss_percent() for o in self.options)
+        return round(pnl_pct, 4)
+
 
     def get_unrealized_profit_loss_percent(self) -> float:
-        pass
+        pnl_pct = sum(o.get_unrealized_profit_loss_percent() for o in self.options)
+        return round(pnl_pct, 4)
 
-    def get_days_in_trade(self) -> int:
-        pass
+    def get_days_in_trade(self) -> int | None:
+        if all(x.status == OptionStatus.INITIALIZED for x in self.options):
+            return None
+        options_days = [x.get_days_in_trade() for x in self.options]
+        days_in_trade = max(options_days)
+        return days_in_trade
 
-    def get_dte(self) -> int:
-        pass
+    @abstractmethod
+    def get_dte(self) -> int | None:
+        return NotImplementedError
 
     @abstractmethod
     def get_trade_price(self) -> float | None:
@@ -144,10 +150,14 @@ class SpreadBase(ABC):
         return open_date
 
     def get_close_datetime(self):
-        first_option = self.options[0]
-        if OptionStatus.TRADE_IS_CLOSED not in first_option.status:
-            return None
-        return first_option.trade_close_info.date
+        closed_options = [x for x in self.options if OptionStatus.TRADE_IS_CLOSED in x.status]
+        if len(closed_options) > 0:
+            close_dates = [x.trade_close_info.date for x in closed_options]
+            max_close = max(close_dates)
+        else:
+            max_close = None
+
+        return max_close
 
     def get_fees(self):
         fees = 0

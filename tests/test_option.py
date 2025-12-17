@@ -212,13 +212,15 @@ def test_update_sets_expiration_status_if_quote_date_is_greater_than_expiration(
     option_id = 'AAPL20150117C00010000'
     call_data = get_data(option_id)
     option_data = copy.deepcopy(call_data[0])
-    call = Option(**option_data)
+    option = Option(**option_data)
+    option.open_trade(quantity=10)
+
     update = copy.deepcopy(call_data[1])
-    update['quote_datetime'] = update['quote_datetime'] + datetime.timedelta(days=call.get_dte() + 1)
+    update['quote_datetime'] = update['quote_datetime'] + datetime.timedelta(days=option.get_dte() + 1)
 
-    call.next(update)
+    option.next(update)
 
-    assert OptionStatus.EXPIRED in call.status
+    assert OptionStatus.EXPIRED in option.status
 
 
 def test_open_trade_sets_correct_trade_open_info_values(get_data):
@@ -602,7 +604,6 @@ def test_option_update_skips_date_has_correct_quote_datetime(get_data):
     assert option.quote_datetime == next_update['quote_datetime']
 
 
-
 @pytest.mark.parametrize("option_type, closing_price", [
     ('call', 99.99), ('put', 100.01)
 ])
@@ -624,10 +625,14 @@ def test_option_get_close_price_is_zero_when_option_expires_otm(get_data,option_
     next_update = copy.deepcopy(data[2])
     next_update['quote_datetime'] = quote_date
 
+    # option is expiring otm, but data claims it has non-zero price, which is incorrect
+    assert next_update['price'] != 0.0
     option.next(next_update)
     otm = option.otm()
+
+    # option expired OTM. Closing price should be zero.
+    assert OptionStatus.EXPIRED in option.status
     assert otm == True
-    assert option.price != 0.0
     assert option.get_closing_price() == 0.0
 
 
@@ -733,6 +738,7 @@ def test_check_expired_sets_expired_flag_correctly(get_intraday_data):
     option_data = copy.deepcopy(data[0])
     option = Option(**option_data)
 
+    option.open_trade(quantity=1)
     next_update = copy.deepcopy(data[1])
     option.next(next_update)
 
@@ -1230,6 +1236,7 @@ def test_update_to_expired_date_emits_option_expired_event(get_data):
     option_data = copy.deepcopy(call_data[0])
     option = Option(**option_data)
 
+    option.open_trade(quantity=1)
     expired_option_id = None
 
     # Create handler method and get option id of expiring option
@@ -1477,3 +1484,53 @@ def test_update_is_from_same_option(get_data):
     with pytest.raises(ValueError, match='Option ID mismatch'):
         other_option_data['option_id'] = other_option_id
         option.next(other_option_data)
+
+def test_option_status_changes(get_data):
+    option_id = 'AAPL20150102C00010000'
+    data = get_data(option_id)
+    option_data = copy.deepcopy(data[0])
+    option = Option(**option_data)
+
+    # option was just created
+    # there have been no trades opened or closed
+    assert option.status == OptionStatus.INITIALIZED
+
+    option.open_trade(quantity=2)
+
+    # trade is open
+    assert OptionStatus.INITIALIZED not in option.status
+    assert option.status == OptionStatus.TRADE_IS_OPEN
+
+    # close part of trade
+    option.close_trade(quantity=1)
+
+    assert OptionStatus.TRADE_PARTIALLY_CLOSED in option.status
+    assert OptionStatus.TRADE_IS_OPEN in option.status
+    assert OptionStatus.TRADE_IS_CLOSED not in option.status
+
+    # close the rest of the trade
+    option.close_trade(quantity=1)
+    assert option.status == OptionStatus.TRADE_IS_CLOSED
+
+    # create option, open trade, and close trade with one transaction
+    option = Option(**option_data)
+    option.open_trade(quantity=1)
+    option.close_trade(quantity=1)
+    assert option.status == OptionStatus.TRADE_IS_CLOSED
+
+    # create option, open trade, and advance to expiration
+    option = Option(**option_data)
+    option.open_trade(quantity=1)
+    option_data = copy.deepcopy(data[-1])
+
+    # advance to expiration
+    option_data['quote_datetime'] = option_data['quote_datetime'] + datetime.timedelta(days=1)
+    option.next(option_data)
+    assert OptionStatus.EXPIRED in option.status
+
+
+
+
+
+
+

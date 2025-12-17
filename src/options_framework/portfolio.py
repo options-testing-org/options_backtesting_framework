@@ -111,7 +111,7 @@ class OptionPortfolio(Dispatcher):
         if ids:
             position = self.positions[ids[0]]
             if all([OptionStatus.EXPIRED in option.status for option in position.options]):
-                self.close_position(position, position.quantity)
+                #self.close_position(position, position.quantity)
                 self.emit('position_expired', position)
 
     def on_fees_incurred(self, fees):

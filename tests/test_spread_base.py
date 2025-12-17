@@ -56,6 +56,9 @@ class TestOption(SpreadBase):
     def get_trade_price(self) -> float | None:
         pass
 
+    def get_dte(self) -> int | None:
+        pass
+
 
 def test_create_option_base_fails():
 
@@ -395,7 +398,8 @@ def test_get_trade_premium(option_chain_data):
     option2.open_trade(quantity=-10)
 
     test_spread = TestOption.create([option1, option2])
-    assert False
+
+    assert test_spread.get_trade_premium() == option1.trade_open_info.premium + option2.trade_open_info.premium
 
 def test_get_open_datetime(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
@@ -451,9 +455,60 @@ def test_get_close_datetime(option_chain_data):
     option2.open_trade(quantity=-10)
 
     test_spread = TestOption.create([option1, option2])
-    assert False
+
+    # Nothing has been closed yet
+    assert test_spread.get_close_datetime() is None
+
+    option1.close_trade(quantity=5)
+
+    # partial close - both options still have open quantity
+    assert test_spread.get_close_datetime() is None
+
+    # close all of one option
+    option1.close_trade(quantity=5)
+    assert test_spread.get_close_datetime() == quote_date
+
+    # advance date and update options
+    quote_date2 = datetime.datetime(2014, 12, 31, 0, 0)
+    option_chain = option_chain_data('daily', quote_date2)
+
+    option_2 = next(x for x in option_chain.options if
+                    x['strike'] == 120.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+    option2.next(option_2)
+
+    # close other option
+    option2.close_trade(quantity=-10)
+
+    assert test_spread.get_close_datetime() == quote_date2
+
 
 def test_get_fees(option_chain_data):
+    quote_date = datetime.datetime(2014, 12, 30, 0, 0)
+    option_chain = option_chain_data('daily', quote_date)
+    expiration = datetime.date(2015, 1, 17)
+
+    option_1 = next(x for x in option_chain.options if
+                    x['strike'] == 110.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+    option_2 = next(x for x in option_chain.options if
+                    x['strike'] == 120.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+
+    option_data = copy.deepcopy(option_1)
+    option1 = Option(**option_data)
+    option1.incur_fees = True
+    option1.fee_per_contract = 0.55
+    option_data = copy.deepcopy(option_2)
+    option2 = Option(**option_data)
+    option2.incur_fees = True
+    option2.fee_per_contract = 0.55
+
+    option1.open_trade(quantity=10)
+    option2.open_trade(quantity=-10)
+
+    test_spread = TestOption.create([option1, option2])
+
+    assert test_spread.get_fees() == 0.55 * 20
+
+def test_get_profit_loss_percent(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
     option_chain = option_chain_data('daily', quote_date)
     expiration = datetime.date(2015, 1, 17)
@@ -472,4 +527,151 @@ def test_get_fees(option_chain_data):
     option2.open_trade(quantity=-10)
 
     test_spread = TestOption.create([option1, option2])
-    assert False
+
+    # no updates to options since open
+    assert test_spread.get_profit_loss_percent() == 0.0
+
+    # advance date and update options
+    quote_date2 = datetime.datetime(2015, 1, 5, 0, 0)
+    option_chain = option_chain_data('daily', quote_date2)
+
+    option_1 = next(x for x in option_chain.options if
+                    x['strike'] == 110.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+    option_2 = next(x for x in option_chain.options if
+                    x['strike'] == 120.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+    option_data = copy.deepcopy(option_1)
+    option1.next(option_data)
+    option_data = copy.deepcopy(option_2)
+    option2.next(option_data)
+
+    returns = round(option1.get_profit_loss_percent() + option2.get_profit_loss_percent(), 4)
+
+    assert test_spread.get_profit_loss_percent() == returns
+
+    # closing one options should not change returns
+    option1.close_trade(quantity=10)
+
+    assert test_spread.get_profit_loss_percent() == returns
+
+
+def test_get_unrealized_profit_loss_percent(option_chain_data):
+    quote_date = datetime.datetime(2014, 12, 30, 0, 0)
+    option_chain = option_chain_data('daily', quote_date)
+    expiration = datetime.date(2015, 1, 17)
+
+    option_1 = next(x for x in option_chain.options if
+                    x['strike'] == 110.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+    option_2 = next(x for x in option_chain.options if
+                    x['strike'] == 120.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+
+    option_data = copy.deepcopy(option_1)
+    option1 = Option(**option_data)
+    option_data = copy.deepcopy(option_2)
+    option2 = Option(**option_data)
+
+    option1.open_trade(quantity=10)
+    option2.open_trade(quantity=-10)
+
+    test_spread = TestOption.create([option1, option2])
+
+    # no price changes
+    assert test_spread.get_unrealized_profit_loss_percent() == 0.0
+
+    # advance date and update options
+    quote_date2 = datetime.datetime(2015, 1, 5, 0, 0)
+    option_chain = option_chain_data('daily', quote_date2)
+
+    option_1 = next(x for x in option_chain.options if
+                    x['strike'] == 110.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+    option_2 = next(x for x in option_chain.options if
+                    x['strike'] == 120.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+    option_data = copy.deepcopy(option_1)
+    option1.next(option_data)
+    option_data = copy.deepcopy(option_2)
+    option2.next(option_data)
+
+    # all returns are unrealized
+    returns = round(option1.get_profit_loss_percent() + option2.get_profit_loss_percent(), 4)
+
+    assert test_spread.get_unrealized_profit_loss_percent() == returns
+
+    # close one option
+    option1.close_trade(quantity=10)
+
+    returns = option2.get_profit_loss_percent()
+    assert test_spread.get_unrealized_profit_loss_percent() == returns
+
+
+def test_get_days_in_trade(option_chain_data):
+    quote_date = datetime.datetime(2014, 12, 30, 0, 0)
+    option_chain = option_chain_data('daily', quote_date)
+    expiration = datetime.date(2015, 1, 17)
+
+    option_1 = next(x for x in option_chain.options if x['option_id'] == 'AAPL20150117C00010000')
+    option_2 = next(x for x in option_chain.options if x['option_id'] == 'AAPL20150117P00010000')
+
+    option_data = copy.deepcopy(option_1)
+    option1 = Option(**option_data)
+    option_data = copy.deepcopy(option_2)
+    option2 = Option(**option_data)
+
+    test_spread = TestOption.create([option1, option2])
+
+    # No options have been opened, so this cannot be calculated
+    assert test_spread.get_days_in_trade() is None
+
+    option1.open_trade(quantity=10)
+    option2.open_trade(quantity=-10)
+
+    # open trade, but date hasn't advanced
+    assert test_spread.get_days_in_trade() is 0
+
+    # advance date and update options
+    quote_date = datetime.datetime(2014, 12, 31, 0, 0)
+    option_chain = option_chain_data('daily', quote_date)
+
+    option_1 = next(x for x in option_chain.options if x['option_id'] == 'AAPL20150117C00010000')
+    option_2 = next(x for x in option_chain.options if x['option_id'] == 'AAPL20150117P00010000')
+    option_data = copy.deepcopy(option_1)
+    option1.next(option_data)
+    option_data = copy.deepcopy(option_2)
+    option2.next(option_data)
+
+    # open trade, advance one day
+    assert test_spread.get_days_in_trade() == 1
+
+    # advance date and update options
+    quote_date = datetime.datetime(2015, 1, 2, 0, 0)
+    option_chain = option_chain_data('daily', quote_date)
+
+    option_1 = next(x for x in option_chain.options if x['option_id'] == 'AAPL20150117C00010000')
+    option_2 = next(x for x in option_chain.options if x['option_id'] == 'AAPL20150117P00010000')
+    option_data = copy.deepcopy(option_1)
+    option1.next(option_data)
+    option_data = copy.deepcopy(option_2)
+    option2.next(option_data)
+
+    # days in trade increases
+    assert test_spread.get_days_in_trade() == 3
+
+    # close trade
+    option1.close_trade(quantity=10)
+    option2.close_trade(quantity=-10)
+
+    # days in trade should still be the same when closed
+    assert test_spread.get_days_in_trade() == 3
+
+    # advance next date and update options
+    quote_date = datetime.datetime(2015, 1, 6, 0, 0)
+    option_chain = option_chain_data('daily', quote_date)
+
+    option_1 = next(x for x in option_chain.options if x['option_id'] == 'AAPL20150117C00010000')
+    option_2 = next(x for x in option_chain.options if x['option_id'] == 'AAPL20150117P00010000')
+    option_data = copy.deepcopy(option_1)
+    option1.next(option_data)
+    option_data = copy.deepcopy(option_2)
+    option2.next(option_data)
+
+    # closed trade never advances, so days in trade never changes
+    assert test_spread.get_days_in_trade() == 3
+

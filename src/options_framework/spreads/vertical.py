@@ -174,6 +174,9 @@ class Vertical(SpreadBase):
     def status(self) -> OptionStatus:
         return self.long_option.status
 
+    def get_dte(self) -> int | None:
+        return self.long_option.get_dte()
+
     def get_trade_price(self) -> float | None:
         if OptionStatus.INITIALIZED ==  self.long_option.status:
             return None
