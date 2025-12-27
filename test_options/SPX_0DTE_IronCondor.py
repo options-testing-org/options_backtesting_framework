@@ -22,7 +22,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from pprint import pprint as pp
 from options_framework.config import settings
-from options_framework.option_types import OptionType, SelectFilter, FilterRange, OptionCombinationType, \
+from options_framework.option_types import OptionType, SelectFilter, FilterRange, OptionSpreadType, \
     OptionPositionType
 from options_framework.spreads.iron_condor import IronCondor
 from options_framework.test_manager import OptionTestManager

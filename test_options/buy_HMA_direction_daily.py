@@ -90,10 +90,10 @@ class HullMADirectionalStrategy(bt.Strategy):
                 strikes.sort(reverse=True)
                 strike = [s for s in strikes if s < self.data.close[0]][0]
 
-            option = Single.create(option_chain=self.option_chain.options, expiration=exp,
-                                   option_type=option_type, strike=strike)
+            option = Single.create(option_chain=self.option_chain.options, expiration=exp, strike=strike,
+                                   option_type=option_type, option_position_type=)
 
-            self.portfolio.open_position(option_position=option, quantity=1)
+            self.portfolio.open_position(option_spread=option, quantity=1)
 
         if current_position and t.hour == 15 and t.minute == 50:
             self.portfolio.close_position(current_position, quantity=1)

@@ -6,7 +6,7 @@ from typing import Self
 import pytest
 
 from options_framework.option import Option
-from options_framework.option_types import OptionCombinationType, OptionPositionType, OptionStatus
+from options_framework.option_types import OptionSpreadType, OptionPositionType, OptionStatus
 from options_framework.spreads.spread_base import SpreadBase
 
 @dataclass(repr=False, slots=True)
@@ -14,7 +14,7 @@ class TestOption(SpreadBase):
 
     @classmethod
     def create(cls, options: list[Option], *args, **kwargs) -> Self:
-        test_option = TestOption(options, OptionCombinationType.CUSTOM)
+        test_option = TestOption(options, OptionSpreadType.CUSTOM)
         super(TestOption, test_option)._save_user_defined_values(test_option, **kwargs)
         return test_option
 
@@ -60,10 +60,11 @@ class TestOption(SpreadBase):
         pass
 
 
-def test_create_option_base_fails():
-
+def test_create_option_base_fails(option_chain_data):
+    quote_date = datetime.datetime(2014, 12, 30, 0, 0)
+    option_chain = option_chain_data('daily', quote_date)
     with pytest.raises(NotImplementedError):
-        SpreadBase.create()
+        SpreadBase.create(option_chain=option_chain)
 
 def test_instantiate_child_class_succeeds(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
@@ -79,8 +80,8 @@ def test_instantiate_child_class_succeeds(option_chain_data):
     option2 = Option(**option_data)
 
     test_spread = TestOption.create([option1, option2], 'a value', what='so what')
-    assert test_spread.option_combination_type == OptionCombinationType.CUSTOM
-    assert test_spread.quantity == 1 == 1 # default quantity
+    assert test_spread.spread_type == OptionSpreadType.CUSTOM
+    assert test_spread.quantity == 0 # default quantity
     assert test_spread.position_id is not None # position id is set
 
 def test_current_value_is_sum_of_options_current_values(option_chain_data):
@@ -390,16 +391,39 @@ def test_get_trade_premium(option_chain_data):
                     x['strike'] == 120.0 and x['expiration'] == expiration and x['option_type'] == 'call')
 
     option_data = copy.deepcopy(option_1)
+    call_price = option_data['price']
     option1 = Option(**option_data)
+    option1.incur_fees = False
     option_data = copy.deepcopy(option_2)
+    put_price = option_data['price']
     option2 = Option(**option_data)
+    option2.incur_fees = False
+
+    test_spread = TestOption.create([option1, option2])
+
+    # premium should be none if no position was ever opened
+    assert test_spread.get_trade_premium() is None
 
     option1.open_trade(quantity=10)
     option2.open_trade(quantity=-10)
 
-    test_spread = TestOption.create([option1, option2])
+    premium = (call_price * 10 * 100) + (put_price * -10 * 100)
+    assert test_spread.get_trade_premium() == premium
 
-    assert test_spread.get_trade_premium() == option1.trade_open_info.premium + option2.trade_open_info.premium
+    # advance date and update options
+    quote_date2 = datetime.datetime(2014, 12, 31, 0, 0)
+    option_chain = option_chain_data('daily', quote_date2)
+
+    option_1 = next(x for x in option_chain.options if
+                    x['strike'] == 110.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+    option_2 = next(x for x in option_chain.options if
+                    x['strike'] == 120.0 and x['expiration'] == expiration and x['option_type'] == 'call')
+    option_data = copy.deepcopy(option_1)
+    option1.next(option_data)
+    option_data = copy.deepcopy(option_2)
+    option2.next(option_data)
+
+    assert test_spread.get_trade_premium() == premium
 
 def test_get_open_datetime(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)

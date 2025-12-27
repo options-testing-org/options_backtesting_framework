@@ -5,7 +5,7 @@ import copy
 
 from options_framework.option import Option
 from options_framework.portfolio import OptionPortfolio
-from options_framework.option_types import OptionCombinationType, OptionPositionType, OptionStatus
+from options_framework.option_types import OptionSpreadType, OptionPositionType, OptionStatus
 from options_framework.spreads.single import Single
 from options_framework.config import settings
 
@@ -20,7 +20,7 @@ def test_create_portfolio_settings():
     assert portfolio.start_date == start_date
     assert portfolio.end_date == end_date
     assert len(portfolio.option_chains.keys()) == 0
-    assert str(portfolio) == 'OptionPortfolio(cash=100000.00, portfolio_value=100000.00, open positions: 0)'
+    assert str(portfolio) == '<OptionPortfolio cash=$100,000.00 portfolio_value=$100,000.00>'
 
 def test_initialize_ticker_for_daily_add_option_chain_to_portfolio(daily_file_settings):
     symbol = 'AAPL'
@@ -44,11 +44,10 @@ def test_open_long_position_adds_to_open_positions(daily_file_settings):
 
     option_data = copy.deepcopy(portfolio.option_chains[symbol].options[0])
     o = Option(**option_data)
-    single = Single(options=[o], option_combination_type=OptionCombinationType.SINGLE,
-                    option_position_type=OptionPositionType.LONG, quantity=1)
-    portfolio.open_position(single, quantity=5)
+    single = Single(options=[o], spread_type=OptionSpreadType.SINGLE)
+    portfolio.open_position(single, quantity=10)
 
-    assert len(portfolio.positions.items()) == 1
+    assert len(portfolio.positions) == 1
 
 def test_close_position_removes_from_open_positions_adds_to_closed_positions(daily_file_settings):
     symbol = 'AAPL'
@@ -61,16 +60,16 @@ def test_close_position_removes_from_open_positions_adds_to_closed_positions(dai
 
     option_data = copy.deepcopy(portfolio.option_chains[symbol].options[0])
     o = Option(**option_data)
-    single = Single(options=[o], option_combination_type=OptionCombinationType.SINGLE,
-                    option_position_type=OptionPositionType.LONG, quantity=1)
+    single = Single(options=[o], spread_type=OptionSpreadType.SINGLE)
     portfolio.open_position(single, quantity=5)
 
-    assert len(portfolio.positions.items()) == 1
+    assert len(portfolio.positions) == 1
+    assert len(portfolio.closed_positions) == 0
 
-    portfolio.close_position(single, quantity=5)
+    portfolio.close_position(single.position_id, quantity=5)
 
-    assert len(portfolio.positions.items()) == 0
-    assert len(portfolio.closed_positions.items()) == 1
+    assert len(portfolio.positions) == 0
+    assert len(portfolio.closed_positions) == 1
 
 def test_portfolio_events_are_emitted(option_chain_data):
     quote_datetime = datetime.datetime(2014, 12, 30, 0, 0)
@@ -80,8 +79,7 @@ def test_portfolio_events_are_emitted(option_chain_data):
     data = option_chain_data('daily', quote_datetime)
     option_data = copy.deepcopy(data.options[4])
     option = Option(**option_data)
-    single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
-                    option_position_type=OptionPositionType.LONG, quantity=1)
+    single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
     portfolio.open_position(single, 1)
     #portfolio.positions[single.position_id] = single
 
@@ -126,7 +124,7 @@ def test_portfolio_events_are_emitted(option_chain_data):
 
     # position_closed event
     portfolio.bind(position_closed=listener.on_position_closed)
-    portfolio.close_position(single, 1)
+    portfolio.close_position(single.position_id, 1)
     assert on_position_closed_fired is single
 
     # position_expired event
@@ -151,8 +149,7 @@ def test_portfolio_cash_and_value_with_open_positions(option_chain_data):
     option_data = copy.deepcopy(data.options[7])
     option = Option(**data.options[7])
     option.incur_fees = False
-    single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
-                    option_position_type=OptionPositionType.LONG, quantity=1)
+    single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
     portfolio.open_position(single, 1)
 
     assert portfolio.cash == 9_875.0
@@ -170,8 +167,7 @@ def test_portfolio_value_when_option_value_changes(daily_file_settings):
     option_data = portfolio.option_chains[symbol].options[61]
     option = Option(**option_data)
     option.incur_fees = False
-    single = Single(options=[option], option_combination_type=OptionCombinationType.SINGLE,
-                    option_position_type=OptionPositionType.LONG, quantity=1)
+    single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
 
     portfolio.open_position(single, 1)
     quote_datetime = quote_datetime + datetime.timedelta(days=1)

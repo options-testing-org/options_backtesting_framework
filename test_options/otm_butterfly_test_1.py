@@ -206,7 +206,7 @@ class OTMButterflyStrategy(bt.Strategy):
                                                                  center_strike=center_strike, wing_width=wing_width)
                     actual_r2r = butterfly.risk_to_reward if butterfly.max_loss > 0 else 0
                     if actual_r2r >= self.p.target_risk_to_reward:
-                        self.portfolio.open_position(option_position=butterfly, quantity=1)
+                        self.portfolio.open_position(option_spread=butterfly, quantity=1)
                         butterfly.user_defined["highest_profit"] = {"profit": 0.0, "time": t}
                         butterfly.user_defined["vix"] = vix
                         butterfly.user_defined["open_time"] = self.dt

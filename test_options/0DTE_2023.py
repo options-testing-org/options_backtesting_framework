@@ -23,7 +23,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.sql import text
 from pprint import pprint as pp
 from options_framework.config import settings
-from options_framework.option_types import OptionType, SelectFilter, FilterRange, OptionCombinationType, \
+from options_framework.option_types import OptionType, SelectFilter, FilterRange, OptionSpreadType, \
     OptionPositionType
 from options_framework.spreads.vertical import Vertical
 from options_framework.spreads.single import Single
@@ -123,14 +123,12 @@ class SPX0DTE(bt.Strategy):
                                                           option_type=OptionType.CALL,
                                                           option_position_type=OptionPositionType.SHORT,
                                                           delta=self.p.delta)
-                long_option = Single.create(option_chain=self.option_chain,
-                                            expiration=self.current_date,
-                                            option_type=OptionType.CALL,
-                                            option_position_type=OptionPositionType.LONG,
-                                            strike=short_option.strike + self.p.spread_width)
+                long_option = Single.create(option_chain=self.option_chain, expiration=self.current_date,
+                                            strike=short_option.strike + self.p.spread_width,
+                                            option_type=OptionType.CALL, option_position_type=OptionPositionType.LONG)
                 credit_spread = Vertical(options=[long_option.option, short_option.option],
-                                         option_combination_type=OptionCombinationType.VERTICAL,
-                                         option_position_type=OptionPositionType.SHORT, quantity=-1)
+                                         spread_type=OptionSpreadType.VERTICAL,
+                                         position_type=OptionPositionType.SHORT, quantity=-1)
                 risk_amount = self.portfolio.cash * self.p.max_risk
                 if credit_spread.max_loss > 0:
                     qty = int(risk_amount / credit_spread.max_loss)
@@ -153,14 +151,12 @@ class SPX0DTE(bt.Strategy):
                                                           option_type=OptionType.PUT,
                                                           option_position_type=OptionPositionType.SHORT,
                                                           delta=put_delta)
-                long_option = Single.create(option_chain=self.option_chain,
-                                            expiration=self.current_date,
-                                            option_type=OptionType.PUT,
-                                            option_position_type=OptionPositionType.LONG,
-                                            strike=short_option.strike - self.p.spread_width)
+                long_option = Single.create(option_chain=self.option_chain, expiration=self.current_date,
+                                            strike=short_option.strike - self.p.spread_width,
+                                            option_type=OptionType.PUT, option_position_type=OptionPositionType.LONG)
                 credit_spread = Vertical(options=[long_option.option, short_option.option],
-                                         option_combination_type=OptionCombinationType.VERTICAL,
-                                         option_position_type=OptionPositionType.SHORT, quantity=-1)
+                                         spread_type=OptionSpreadType.VERTICAL,
+                                         position_type=OptionPositionType.SHORT, quantity=-1)
 
                 risk_amount = self.portfolio.cash * self.p.max_risk
                 if credit_spread.max_loss > 0:

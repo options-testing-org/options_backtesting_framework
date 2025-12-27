@@ -1,5 +1,5 @@
 from .spread_base import SpreadBase
-from ..option_types import OptionCombinationType, OptionStatus
+from ..option_types import OptionSpreadType, OptionStatus
 
 
 class Strangle(SpreadBase):

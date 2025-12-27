@@ -173,16 +173,22 @@ def test_option_update_quote_datetime_raises_error_if_is_not_datetime_or_timesta
         call.next(update)
 
 
-@pytest.mark.parametrize("option_type, expected_repr", [
-    ('call', '<CALL(AAPL20150117C00010000) AAPL 100.0 2015-01-17>'),
-    ('put', '<PUT(AAPL20150117P00010000) AAPL 100.0 2015-01-17>')])
-def test_string_representation(get_data, option_type, expected_repr):
-    option_id = 'AAPL20150117C00010000' if option_type == 'call' else 'AAPL20150117P00010000'
+@pytest.mark.parametrize("option_type, option_id, expected_repr", [
+    ('call', 'AAPL20150117C00010000', '<CALL(AAPL20150117C00010000) AAPL 100.0 2015-01-17{0}>'),
+    ('put', 'AAPL20150117P00010000', '<PUT(AAPL20150117P00010000) AAPL 100.0 2015-01-17{0}>')])
+def test_repr(get_data, option_type, option_id, expected_repr):
     data = get_data(option_id)
     option_data = copy.deepcopy(data[0])
     option = Option(**option_data)
 
-    assert str(option) == expected_repr
+    test_repr = expected_repr.format('')
+    repr = option.__repr__()
+    assert test_repr == repr
+
+    option.open_trade(quantity=1)
+    repr = option.__repr__()
+    test_repr = expected_repr.format(' LONG')
+    assert test_repr == repr
 
 
 def test_update_sets_correct_values(get_data):

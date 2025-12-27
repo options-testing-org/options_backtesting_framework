@@ -25,7 +25,7 @@ def test_get_call_debit_spread(option_chain_data):
     assert repr[repr.index(')'):] == ") CALL LONG AAPL 100.0/110.0 2015-01-17>" # skip position id bc it can change when tests run
     assert vertical.long_option.strike == long_strike
     assert vertical.short_option.strike == short_strike
-    assert vertical.option_position_type == OptionPositionType.LONG
+    assert vertical.position_type == OptionPositionType.LONG
 
 def test_get_call_credit_spread(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
@@ -44,7 +44,7 @@ def test_get_call_credit_spread(option_chain_data):
         ')'):] == ") CALL SHORT AAPL 110.0/100.0 2015-01-17>"  # skip position id bc it can change when tests run
     assert vertical.long_option.strike == long_strike
     assert vertical.short_option.strike == short_strike
-    assert vertical.option_position_type == OptionPositionType.SHORT
+    assert vertical.position_type == OptionPositionType.SHORT
 
 def test_get_put_debit_spread(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
@@ -63,7 +63,7 @@ def test_get_put_debit_spread(option_chain_data):
         ')'):] == ") PUT LONG AAPL 110.0/100.0 2015-01-17>"  # skip position id bc it can change when tests run
     assert vertical.long_option.strike == long_strike
     assert vertical.short_option.strike == short_strike
-    assert vertical.option_position_type == OptionPositionType.LONG
+    assert vertical.position_type == OptionPositionType.LONG
 
 def test_get_put_credit_spread(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)
@@ -82,5 +82,5 @@ def test_get_put_credit_spread(option_chain_data):
         ')'):] == ") PUT SHORT AAPL 100.0/110.0 2015-01-17>"  # skip position id bc it can change when tests run
     assert vertical.long_option.strike == long_strike
     assert vertical.short_option.strike == short_strike
-    assert vertical.option_position_type == OptionPositionType.SHORT
+    assert vertical.position_type == OptionPositionType.SHORT
 

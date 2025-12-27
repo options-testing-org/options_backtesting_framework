@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 import itertools
 from abc import ABC, abstractmethod
@@ -5,7 +7,8 @@ from dataclasses import dataclass, field, InitVar
 from typing import Optional, Self
 
 from ..option import Option
-from ..option_types import OptionCombinationType, OptionStatus, OptionPositionType
+from ..option_chain import OptionChain
+from ..option_types import OptionSpreadType, OptionStatus, OptionPositionType
 
 
 @dataclass(repr=False, slots=True)
@@ -18,10 +21,10 @@ class SpreadBase(ABC):
     """
 
     options: list[Option] = field(default=None)
-    option_combination_type: OptionCombinationType = field(default=None)
-    quantity: int = field(default=1)
+    spread_type: OptionSpreadType = field(default=None)
+    quantity: int = field(default=0)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
-    option_position_type: Optional[OptionPositionType] = field(default=None)
+    position_type: Optional[OptionPositionType] = field(default=None)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
@@ -33,15 +36,15 @@ class SpreadBase(ABC):
 
     @classmethod
     @abstractmethod
-    def create(cls, *args) -> Self:
+    def create(cls, option_chain: OptionChain, *args, **kwargs) -> Self:
         raise NotImplementedError
 
     @abstractmethod
-    def open_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
+    def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
+    def close_trade(self, quantity: int | None = None, *args, **kwargs: dict) -> None:
         raise NotImplementedError
 
     @property
@@ -61,10 +64,6 @@ class SpreadBase(ABC):
             return closed_value
         else:
             return None
-
-    @abstractmethod
-    def _update_quantity(self, quantity: int):
-        raise NotImplementedError
 
     @classmethod
     def _save_user_defined_values(cls, obj, **kwargs: dict) -> None:
@@ -113,10 +112,10 @@ class SpreadBase(ABC):
         return pnl
 
     def get_trade_premium(self) -> float | None:
-        if all((OptionStatus.TRADE_IS_OPEN & OptionStatus.TRADE_IS_CLOSED) in o.status for o in self.options):
-            return sum(o.trade_open_info.premium for o in self.options)
-        else:
+        if any(OptionStatus.INITIALIZED in o.status for o in self.options):
             return None
+        else:
+            return sum(o.trade_open_info.premium for o in self.options)
 
     def get_profit_loss_percent(self) -> float:
         pnl_pct = sum(o.get_profit_loss_percent() for o in self.options)

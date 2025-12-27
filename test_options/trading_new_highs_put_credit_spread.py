@@ -210,7 +210,7 @@ class MyBacktest:
 
                         try:
                             vertical = Vertical([long_option, short_option],
-                                                option_position_type=OptionPositionType.SHORT,
+                                                position_type=OptionPositionType.SHORT,
                                                 quantity=-1)
 
                             if vertical.max_profit >= 50.0:

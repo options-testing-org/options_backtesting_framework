@@ -135,7 +135,7 @@ class SPX14DayPutCredit(bt.Strategy):
 
             try:
                 call_option = Single.create(self.p.test_manager.options, expiration=self.target_expiration,
-                                            option_type=OptionType.CALL, strike=strike)
+                                            strike=strike, option_type=OptionType.CALL, option_position_type=)
             except Exception as e:
                 self.log(e)
                 return
