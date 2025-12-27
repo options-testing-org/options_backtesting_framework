@@ -1,16 +1,16 @@
 from dataclasses import field
 
 import options_framework.option
-from options_framework.option_types import OptionPositionType, OptionTradeType, OptionCombinationType, \
+from options_framework.option_types import OptionPositionType, OptionTradeType, OptionSpreadType, \
     TransactionType, OptionStatus
 from options_framework.option_chain import OptionChain
-from options_framework.spreads.option_combo import OptionCombination
+from options_framework.spreads.spread_base import SpreadBase
 from options_framework.utils.helpers import decimalize_0, decimalize_2
 from options_framework.option import Option
 import datetime
 
 
-class IronCondor(OptionCombination):
+class IronCondor(SpreadBase):
     """
     An Iron Condor is created with 4 options: A long call option, a short call option, a long put option, and a short
     put option.
@@ -33,7 +33,7 @@ class IronCondor(OptionCombination):
                                   short_call_strike: int | float,
                                   long_put_strike: int | float,
                                   short_put_strike: int | float,
-                                  quantity: int = 1) -> OptionCombination:
+                                  quantity: int = 1) -> SpreadBase:
         """
         Create an iron condor by supplying the expiration and strikes. If the exact strikes or expiration are not found,
         the nearest one will be selected.
@@ -95,8 +95,8 @@ class IronCondor(OptionCombination):
         spread_options = [long_call_option, short_call_option, long_put_option, short_put_option]
         option_position_type = OptionPositionType.LONG if long_call_option.strike < short_call_option.strike \
             else OptionPositionType.SHORT
-        iron_condor = IronCondor(options=spread_options, option_combination_type=OptionCombinationType.IRON_CONDOR,
-                                 option_position_type=option_position_type, quantity=quantity)
+        iron_condor = IronCondor(options=spread_options, spread_type=OptionSpreadType.IRON_CONDOR,
+                                 position_type=option_position_type, quantity=quantity)
         return iron_condor
 
     @classmethod
@@ -105,7 +105,7 @@ class IronCondor(OptionCombination):
                                             inner_call_strike: int | float,
                                             inner_put_strike: int | float,
                                             spread_width: int | float,
-                                            quantity: int = 1) -> OptionCombination:
+                                            quantity: int = 1) -> SpreadBase:
         """
         Create an iron condor by specifying the inner strikes, and then selecting the wings with a minimum spread
         width
@@ -173,15 +173,15 @@ class IronCondor(OptionCombination):
         spread_options = [long_call_option, short_call_option, long_put_option, short_put_option]
         option_position_type = OptionPositionType.LONG if long_call_option.strike < short_call_option.strike \
             else OptionPositionType.SHORT
-        iron_condor = IronCondor(options=spread_options, option_combination_type=OptionCombinationType.IRON_CONDOR,
-                                 option_position_type=option_position_type, quantity=quantity)
+        iron_condor = IronCondor(options=spread_options, spread_type=OptionSpreadType.IRON_CONDOR,
+                                 position_type=option_position_type, quantity=quantity)
         return iron_condor
 
     @classmethod
     def get_iron_condor_by_delta(cls, option_chain: OptionChain, expiration: datetime.date,
                                  long_delta: float,
                                  short_delta: float,
-                                 quantity: int = 1) -> OptionCombination:
+                                 quantity: int = 1) -> SpreadBase:
         """
                 Create an iron condor by supplying the expiration and deltas. If the exact deltas or expiration are not found,
                 the next one will be selected.
@@ -250,8 +250,8 @@ class IronCondor(OptionCombination):
         spread_options = [long_call_option, short_call_option, long_put_option, short_put_option]
         option_position_type = OptionPositionType.LONG if long_call_option.strike < short_call_option.strike \
             else OptionPositionType.SHORT
-        iron_condor = IronCondor(options=spread_options, option_combination_type=OptionCombinationType.IRON_CONDOR,
-                                 option_position_type=option_position_type, quantity=quantity)
+        iron_condor = IronCondor(options=spread_options, spread_type=OptionSpreadType.IRON_CONDOR,
+                                 position_type=option_position_type, quantity=quantity)
         return iron_condor
 
     short_call_option: Option = field(init=False, default=None)
@@ -295,9 +295,9 @@ class IronCondor(OptionCombination):
         self.short_call_option = short_call_option
         self.long_put_option = long_put_option
         self.short_put_option = short_put_option
-        self.option_position_type = OptionPositionType.LONG if long_call_option.strike < short_call_option.strike \
+        self.position_type = OptionPositionType.LONG if long_call_option.strike < short_call_option.strike \
             else OptionPositionType.SHORT
-        self.option_combination_type = OptionCombinationType.IRON_CONDOR
+        self.spread_type = OptionSpreadType.IRON_CONDOR
 
     def update_quantity(self, quantity: int):
         self.quantity = abs(quantity) if self.option_position_type == OptionPositionType.LONG else abs(quantity)*-1

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import datetime
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -6,20 +8,20 @@ from typing import Self
 
 from options_framework.option import Option
 from options_framework.option_chain import OptionChain
-from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
-from options_framework.spreads.option_combo import OptionCombination
+from options_framework.option_types import OptionSpreadType, OptionStatus, OptionPositionType
+from options_framework.spreads.spread_base import SpreadBase
 from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 
 @dataclass(repr=False, slots=True)
-class Single(OptionCombination):
+class Single(SpreadBase):
     option: Option = field(default=None)
 
     @classmethod
     def create(cls, option_chain: OptionChain,
-               expiration: datetime.date,
-               strike: float | int,
-               option_type: str,
-               option_position_type: OptionPositionType) -> Self:
+               expiration: datetime.date = None,
+               strike: float | int = None,
+               option_type: str = None,
+               *args, **kwargs) -> Self:
 
         # Find nearest matching expiration
         try:
@@ -46,25 +48,27 @@ class Single(OptionCombination):
             raise Exception(f"Option price is zero ({option['symbol']}). Cannot open this option.")
 
         single = Option(**option)
-        quantity = 1 if option_position_type == OptionPositionType.LONG else -1
-        single = Single(options=[single], option_combination_type=OptionCombinationType.SINGLE,
-                        option_position_type=option_position_type, quantity=quantity)
+
+        single = Single(options=[single], spread_type=OptionSpreadType.SINGLE)
+
+        # save any kwargs that were sent to user_defined
+        super(Single, single)._save_user_defined_values(single, **kwargs)
+
         return single
 
 
     def __post_init__(self):
         if len(self.options) > 1:
             raise ValueError("Single position can only have one option. Multiple options were given.")
-        if self.option_position_type is None:
-            raise ValueError("The parameter option_position_type: OptionPositionType must not be None")
+        if self.spread_type != OptionSpreadType.SINGLE:
+            raise ValueError("Single must have spread type of SINGLE")
 
         self.option = self.options[0]
-        self.option.position_type = self.option_position_type
-        self.option_combination_type = OptionCombinationType.SINGLE
+
 
     def __repr__(self) -> str:
-        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option.symbol} {self.option_type.upper()} {self.strike} {self.expiration} {self.quantity}>'
-        return s
+        long_short = '' if self.position_type is None else f' {self.position_type.name}'
+        return f'<{self.spread_type.name}({self.position_id}) {self.option.symbol} {self.option_type.upper()} {self.strike} {self.expiration}{long_short}>'
 
     @property
     def expiration(self) -> datetime.date:
@@ -86,11 +90,11 @@ class Single(OptionCombination):
     def status(self) -> OptionStatus:
         return self.option.status
 
+
     @property
     def required_margin(self) -> float:
-        if self.option_position_type == OptionPositionType.LONG:
-            return 0
-        elif self.option_position_type == OptionPositionType.SHORT:
+        margin = 0
+        if self.position_type == OptionPositionType.SHORT:
             """
             Short options:
             20% of the spot price minus the out-of-money amount plus the option premium
@@ -108,31 +112,43 @@ class Single(OptionCombination):
             calc3 = (Decimal(1) + price)
             margin = max(calc1, calc2, calc3)
             margin = float(margin) * 100 * abs(self.quantity)
-            return round(margin, 2)
+            margin = round(margin, 2)
 
-    def update_quantity(self, quantity: int):
-        if self.option_position_type == OptionPositionType.LONG and quantity < 0:
-            raise ValueError(f'Cannot set a negative quantity on a long position.')
-        elif self.option_position_type == OptionPositionType.SHORT and quantity > 0:
-            raise ValueError(f'Cannot set a positive quantity on a short position.')
+        return margin
 
-        self.quantity = quantity
-        self.option.quantity = quantity
+    def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
+        self.option.open_trade(quantity=quantity)
+        self.position_type = self.option.position_type
+        self.quantity = self.option.quantity
 
-    def open_trade(self, quantity: int = 1, **kwargs: dict) -> None:
-        self.update_quantity(quantity)
-        self.option.open_trade(quantity=self.quantity)
-        super(Single, self).open_trade(quantity=quantity, **kwargs)
+        super(Single, self)._save_user_defined_values(self, **kwargs)
 
     def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else self.option.quantity
         self.option.close_trade(quantity=quantity)
-        self.update_quantity(self.option.quantity)
-        super(Single, self).close_trade(quantity=quantity, **kwargs) # call super to set any kwargs
+        self.quantity = self.option.quantity
+
+        super(Single, self)._save_user_defined_values(self, **kwargs) # call super to set any kwargs
 
     def get_trade_price(self):
-        if OptionStatus.INITIALIZED ==  self.option.status:
+        if OptionStatus.INITIALIZED == self.option.status:
             return None
         else:
             return self.option.trade_open_info.price
 
+    @property
+    def max_profit(self) -> float | None:
+        if self.position_type == OptionPositionType.SHORT:
+            return self.get_trade_price()
+        else:
+            return None
+
+    @property
+    def max_loss(self) -> float | None:
+        if self.position_type == OptionPositionType.LONG:
+            return self.get_trade_premium()
+        else:
+            return None
+
+    def get_dte(self) -> int | None:
+        return self.option.get_dte()

@@ -28,7 +28,7 @@ class OptionStatus(Flag):
     EXPIRED = auto()
 
 
-class OptionCombinationType(StrEnum):
+class OptionSpreadType(StrEnum):
     """
     This is the type of predefined option combinations used.
     """

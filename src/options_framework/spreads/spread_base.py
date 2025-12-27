@@ -1,15 +1,18 @@
+from __future__ import annotations
+
 import datetime
 import itertools
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, InitVar
 from typing import Optional, Self
 
 from ..option import Option
-from ..option_types import OptionCombinationType, OptionStatus, OptionPositionType
+from ..option_chain import OptionChain
+from ..option_types import OptionSpreadType, OptionStatus, OptionPositionType
 
 
 @dataclass(repr=False, slots=True)
-class OptionCombination(ABC):
+class SpreadBase(ABC):
     """
     OptionCombination is a base class an options trade that is constructed with one or more option types,
     quantities, and expirations.
@@ -18,23 +21,31 @@ class OptionCombination(ABC):
     """
 
     options: list[Option] = field(default=None)
-    option_combination_type: OptionCombinationType = field(default=None)
-    quantity: int = field(default=1)
+    spread_type: OptionSpreadType = field(default=None)
+    quantity: int = field(default=0)
     position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
-    option_position_type: Optional[OptionPositionType] = field(default=None)
-    user_defined: dict = field(default_factory=lambda: {})
+    position_type: Optional[OptionPositionType] = field(default=None)
+    user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
         # The OptionCombination object should not be instantiated directly, but only through subclasses.
         raise NotImplementedError
 
     def __repr__(self) -> str:
-        pass
+        raise NotImplementedError
 
     @classmethod
     @abstractmethod
-    def create(cls, *args) -> Self:
-        pass
+    def create(cls, option_chain: OptionChain, *args, **kwargs) -> Self:
+        raise NotImplementedError
+
+    @abstractmethod
+    def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
+        raise NotImplementedError
+
+    @abstractmethod
+    def close_trade(self, quantity: int | None = None, *args, **kwargs: dict) -> None:
+        raise NotImplementedError
 
     @property
     def current_value(self) -> float:
@@ -49,88 +60,86 @@ class OptionCombination(ABC):
     @property
     def closed_value(self) -> float | None:
         if all(o for o in self.options if o.trade_close_info is not None):
-            closed_value = sum(o.trade_close_info.premium for o in self.options)
+            closed_value = sum(o.trade_close_info.premium for o in self.options if o.trade_close_info is not None)
             return closed_value
         else:
             return None
 
-    @abstractmethod
-    def update_quantity(self, quantity: int):
-        pass
-
-    @abstractmethod
-    def open_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
+    @classmethod
+    def _save_user_defined_values(cls, obj, **kwargs: dict) -> None:
         for arg, val in kwargs.items():
-            self.user_defined[arg] = val
-
-    @abstractmethod
-    def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
-        for arg, val in kwargs.items():
-            self.user_defined[arg] = val
+            obj.user_defined[arg] = val
 
     @property
+    @abstractmethod
     def max_profit(self) -> float | None:
-        """
-        If there is a determinate max profit, that is returned by the parent class.
-        If there is an infinite max profit, as is the case for a naked option type, returns None
-        :return: None or the max profit of the spread
-        """
-        return None
+        raise NotImplementedError
 
     @property
+    @abstractmethod
     def max_loss(self) -> float | None:
-        """
-        If there is a determinate max loss, that is returned by the parent class.
-        If there is an infinite max loss, as is the case for a naked option type, returns None
-        :return: None or the max loss of the spread
-        """
-        return None
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def required_margin(self) -> float:
-        pass
+        raise NotImplementedError
 
     @property
     @abstractmethod
     def status(self) -> OptionStatus:
-        pass
+        raise NotImplementedError
 
     @property
-    def symbol(self) -> OptionStatus:
+    def symbol(self) -> str:
         return self.options[0].symbol
 
     @property
     @abstractmethod
     def price(self) -> float:
-        pass
+        raise NotImplementedError
 
     @property
-    def quote_datetime(selfself) -> datetime.datetime:
-        return options[0].quote_datetime
-
-    # def next_quote_date(self, quote_datetime: datetime.datetime) -> None:
-        # self.quote_datetime = quote_datetime
+    def quote_datetime(self) -> datetime.datetime:
+        return self.options[0].quote_datetime
 
     def get_profit_loss(self) -> float:
         pnl = sum(o.get_profit_loss() for o in self.options)
-        fees = self.get_fees()
-        return pnl - fees
+        return pnl
 
     def get_unrealized_profit_loss(self) -> float:
         pnl = sum(o.get_unrealized_profit_loss() for o in self.options)
-        fees = self.get_fees()
-        return pnl - fees
+        return pnl
 
     def get_trade_premium(self) -> float | None:
-        if all((OptionStatus.TRADE_IS_OPEN & OptionStatus.TRADE_IS_CLOSED) in o.status for o in self.options):
-            return sum(o.trade_open_info.premium for o in self.options)
-        else:
+        if any(OptionStatus.INITIALIZED in o.status for o in self.options):
             return None
+        else:
+            return sum(o.trade_open_info.premium for o in self.options)
+
+    def get_profit_loss_percent(self) -> float:
+        pnl_pct = sum(o.get_profit_loss_percent() for o in self.options)
+        return round(pnl_pct, 4)
+
+
+    def get_unrealized_profit_loss_percent(self) -> float:
+        pnl_pct = sum(o.get_unrealized_profit_loss_percent() for o in self.options)
+        return round(pnl_pct, 4)
+
+    def get_days_in_trade(self) -> int | None:
+        if all(x.status == OptionStatus.INITIALIZED for x in self.options):
+            return None
+        options_days = [x.get_days_in_trade() for x in self.options]
+        days_in_trade = max(options_days)
+        return days_in_trade
+
+    @abstractmethod
+    def get_dte(self) -> int | None:
+        return NotImplementedError
 
     @abstractmethod
     def get_trade_price(self) -> float | None:
-        pass
+        raise NotImplementedError
 
     def get_open_datetime(self) -> datetime.datetime | None:
         first_option = self.options[0]
@@ -140,10 +149,14 @@ class OptionCombination(ABC):
         return open_date
 
     def get_close_datetime(self):
-        first_option = self.options[0]
-        if OptionStatus.TRADE_IS_CLOSED not in first_option.status:
-            return None
-        return first_option.trade_close_info.date
+        closed_options = [x for x in self.options if OptionStatus.TRADE_IS_CLOSED in x.status]
+        if len(closed_options) > 0:
+            close_dates = [x.trade_close_info.date for x in closed_options]
+            max_close = max(close_dates)
+        else:
+            max_close = None
+
+        return max_close
 
     def get_fees(self):
         fees = 0

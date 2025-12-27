@@ -2,12 +2,12 @@ from dataclasses import dataclass, field
 import datetime
 from options_framework.utils.helpers import decimalize_0, decimalize_2
 from options_framework.option import Option
-from options_framework.option_types import OptionCombinationType, OptionStatus, OptionPositionType
-from options_framework.spreads.option_combo import OptionCombination
+from options_framework.option_types import OptionSpreadType, OptionStatus, OptionPositionType
+from options_framework.spreads.spread_base import SpreadBase
 
 
 @dataclass(repr=False, slots=True)
-class Butterfly(OptionCombination):
+class Butterfly(SpreadBase):
 
     @classmethod
     def get_balanced_butterfly(cls, *, option_chain: list[Option], expiration: datetime.date, option_type: str,
@@ -31,7 +31,7 @@ class Butterfly(OptionCombination):
             upper_wing = upper_wing_candidates[0]
         position_options = [lower_wing, center_option, upper_wing]
 
-        butterfly = Butterfly(position_options, option_combination_type=OptionCombinationType.BUTTERFLY,
+        butterfly = Butterfly(position_options, spread_type=OptionSpreadType.BUTTERFLY,
                               quantity=quantity)
         return butterfly
 
@@ -70,7 +70,7 @@ class Butterfly(OptionCombination):
         user_defined = {'center_quantity_multiple': center_quantity_multiple,
                         'lower_quantity_multiple': lower_quantity_multiple,
                         'upper_quantity_multiple': upper_quantity_multiple}
-        butterfly = Butterfly(position_options, option_combination_type=OptionCombinationType.BUTTERFLY,
+        butterfly = Butterfly(position_options, spread_type=OptionSpreadType.BUTTERFLY,
                               quantity=quantity, user_defined=user_defined)
         return butterfly
 
@@ -100,7 +100,7 @@ class Butterfly(OptionCombination):
             else OptionPositionType.SHORT
 
     def __repr__(self) -> str:
-        return f'<{self.option_combination_type.name}({self.position_id}) {self.option_type.name}  {self.lower_option.strike}/{self.center_option.strike}/{self.upper_option.strike}>'
+        return f'<{self.spread_type.name}({self.position_id}) {self.option_type.name}  {self.lower_option.strike}/{self.center_option.strike}/{self.upper_option.strike}>'
 
     @property
     def expiration(self) -> datetime.date:

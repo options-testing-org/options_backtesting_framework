@@ -1,5 +1,5 @@
-from .option_combo import OptionCombination
-from ..option_types import OptionCombinationType
+from .spread_base import SpreadBase
+from ..option_types import OptionSpreadType
 
-class IronButterfly(OptionCombination):
+class IronButterfly(SpreadBase):
     pass

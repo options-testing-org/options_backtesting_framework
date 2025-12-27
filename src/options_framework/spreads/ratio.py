@@ -1,6 +1,6 @@
-from .option_combo import OptionCombination
-from ..option_types import OptionCombinationType
+from .spread_base import SpreadBase
+from ..option_types import OptionSpreadType
 
-class Ratio(OptionCombination):
+class Ratio(SpreadBase):
 
     pass

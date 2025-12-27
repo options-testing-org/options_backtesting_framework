@@ -13,8 +13,8 @@ from options_framework.config import settings
 
 from pydispatch import Dispatcher
 
-TradeOpenInfo = namedtuple("TradeOpen", "option_id date quantity price premium fees spot_price")
-TradeCloseInfo = namedtuple("TradeClose", "option_id date quantity price premium profit_loss profit_loss_percent fees spot_price")
+TradeOpenInfo = namedtuple("TradeOpen", "option_id instance_id date quantity price premium fees spot_price")
+TradeCloseInfo = namedtuple("TradeClose", "option_id instance_id date quantity price premium profit_loss profit_loss_percent fees spot_price")
 
 
 @dataclass(repr=False, kw_only=True, slots=True)
@@ -31,7 +31,7 @@ class Option(Dispatcher):
 
     # immutable fields
     option_id: str | int = field(compare=True)
-    """The unique id of the option"""
+    """The unique identifier of the option contract"""
     symbol: str = field(compare=True)
     """The ticker symbol"""
     strike: int | float = field(compare=True)
@@ -40,6 +40,8 @@ class Option(Dispatcher):
     """The expiration date"""
     option_type: str = field(compare=True)
     """Put or Call"""
+    instance_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
+    """internal counter to keep track of individual option instances"""
     quote_datetime: datetime.datetime = field(default=None, compare=False)
     """The date of the current price information: spot_price, bid, ask, and price"""
     spot_price: int | float = field(default=None, compare=False)
@@ -129,8 +131,9 @@ class Option(Dispatcher):
 
 
     def __repr__(self) -> str:
+        long_short = '' if self.position_type is None else f' {self.position_type.name}'
         return f'<{self.option_type.upper()}({self.option_id}) {self.symbol} {self.strike} ' \
-            + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}>'
+            + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}{long_short}>'
 
     def _incur_fees(self, *, quantity: int | Decimal) -> float:
         """
@@ -165,15 +168,19 @@ class Option(Dispatcher):
         expiration_date, exp_time = self.expiration, datetime.time(16, 00)
         if ((quote_date > expiration_date) or (quote_date == expiration_date and quote_time >= exp_time)):
             self.status |= OptionStatus.EXPIRED
-            self.emit("option_expired", self.option_id)
+            self.emit("option_expired", self.instance_id)
             #print(f'emit expire {self.option_id}')
             return True
         return False
 
     def next(self, updates: dict):
+        if self.option_id != updates['option_id']:
+            raise ValueError("Option ID mismatch")
+
         self.quote_datetime = updates['quote_datetime']
 
         if self.is_expired():
+            self.close_trade(quantity=self.quantity)
             return
 
         self.spot_price = updates['spot_price']
@@ -232,7 +239,10 @@ class Option(Dispatcher):
         fees = 0
         if self.incur_fees:
             fees = self._incur_fees(quantity=quantity)
-        trade_open_info = TradeOpenInfo(option_id=self.option_id, date=self.quote_datetime, quantity=quantity,
+        trade_open_info = TradeOpenInfo(option_id=self.option_id,
+                                        instance_id=self.instance_id,
+                                        date=self.quote_datetime,
+                                        quantity=quantity,
                                         price=price,
                                         premium=premium,
                                         fees=fees,
@@ -240,7 +250,7 @@ class Option(Dispatcher):
         self.trade_open_info = trade_open_info
         self.position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
         self.quantity = quantity
-        self.status |= OptionStatus.TRADE_IS_OPEN
+        self.status = OptionStatus.TRADE_IS_OPEN
 
         self.emit("open_transaction_completed", trade_open_info)
         #print(f'emit open {self.option_id}')
@@ -255,7 +265,12 @@ class Option(Dispatcher):
         :return: the profit/loss of the closed quantity of the trade
         :rtype: float
         """
-        if OptionStatus.TRADE_IS_OPEN not in self.status and OptionStatus.EXPIRED not in self.status:
+
+        # if trade has already been closed, just return the close info
+        if OptionStatus.TRADE_IS_CLOSED in self.status:
+            return self.trade_close_info
+
+        if OptionStatus.TRADE_IS_OPEN not in self.status:
             raise ValueError("Cannot close an option that is not open.")
 
         if quantity is None:
@@ -289,7 +304,10 @@ class Option(Dispatcher):
             fees = self._incur_fees(quantity=abs(quantity))
 
         # date quantity price premium profit_loss fees
-        trade_close_record = TradeCloseInfo(option_id=self.option_id, date=self.quote_datetime, quantity=int(quantity),
+        trade_close_record = TradeCloseInfo(option_id=self.option_id,
+                                            instance_id=self.instance_id,
+                                            date=self.quote_datetime,
+                                            quantity=int(quantity),
                                             price=float(close_price),
                                             premium=float(premium),
                                             profit_loss=float(profit_loss),
@@ -304,6 +322,7 @@ class Option(Dispatcher):
 
         if self.quantity == 0:
             self.status &= ~OptionStatus.TRADE_IS_OPEN
+            self.status &= ~OptionStatus.TRADE_PARTIALLY_CLOSED
             self.status |= OptionStatus.TRADE_IS_CLOSED
             self.price = float(close_price)
         else:
@@ -389,7 +408,11 @@ class Option(Dispatcher):
         profit_loss_percent = decimalize_4(profit_loss / trade_open_premium) * (quantity * -1 / abs(quantity))
         fees = sum(x.fees for x in records)
 
-        trade_close = TradeCloseInfo(option_id=self.option_id, date=date, quantity=int(quantity), price=float(price),
+        trade_close = TradeCloseInfo(option_id=self.option_id,
+                                     instance_id=self.instance_id,
+                                     date=date,
+                                     quantity=int(quantity),
+                                     price=float(price),
                                      premium=float(premium),
                                      profit_loss=float(profit_loss),
                                      profit_loss_percent=float(profit_loss_percent),
@@ -398,7 +421,7 @@ class Option(Dispatcher):
 
         self.trade_close_info = trade_close
 
-    def dte(self) -> int:
+    def get_dte(self) -> int:
         """
         DTE is "days to expiration"
         :return: The number of days to the expiration for the current quote
@@ -486,7 +509,8 @@ class Option(Dispatcher):
         current_price = decimalize_4(self.price)
         open_quantity = decimalize_0(self.quantity)
         percent = ((current_price - trade_price) / trade_price) * (open_quantity / abs(open_quantity))
-        return float(decimalize_4(percent))
+        percent = float(decimalize_4(percent))
+        return percent
 
     def get_profit_loss_percent(self) -> float:
         if OptionStatus.TRADE_IS_OPEN not in self.status and OptionStatus.TRADE_IS_CLOSED not in self.status:
@@ -503,7 +527,9 @@ class Option(Dispatcher):
         if self.position_type == OptionPositionType.SHORT:
             profit_loss_percent *= -1
 
-        return float(profit_loss_percent)
+        profit_loss_percent = float(profit_loss_percent)
+
+        return round(profit_loss_percent, 4)
 
     def get_days_in_trade(self) -> int:
 

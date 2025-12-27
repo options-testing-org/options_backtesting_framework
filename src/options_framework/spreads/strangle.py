@@ -1,8 +1,8 @@
-from .option_combo import OptionCombination
-from ..option_types import OptionCombinationType, OptionStatus
+from .spread_base import SpreadBase
+from ..option_types import OptionSpreadType, OptionStatus
 
 
-class Strangle(OptionCombination):
+class Strangle(SpreadBase):
     def update_quantity(self, quantity: int):
         pass
 

@@ -1,20 +1,27 @@
-from dataclasses import field
+from dataclasses import dataclass, field
 
-from options_framework.option_types import OptionPositionType, OptionCombinationType, OptionStatus
+from options_framework.option_types import OptionPositionType, OptionSpreadType, OptionStatus
 from options_framework.option_chain import OptionChain
-from options_framework.spreads.option_combo import OptionCombination
+from options_framework.spreads.spread_base import SpreadBase
 from options_framework.utils.helpers import decimalize_2
 from options_framework.option import Option
 import datetime
 from typing import Self
 
+@dataclass(slots=True)
+class Vertical(SpreadBase):
 
-class Vertical(OptionCombination):
+    long_option: Option = field(default=None)
+    short_option: Option = field(default=None)
 
     @classmethod
-    def create(cls, option_chain: OptionChain, expiration: datetime.date, option_type: str,
-                     long_strike: int | float,
-                     short_strike: int | float) -> Self:
+    def create(cls,
+               option_chain: OptionChain,
+               expiration: datetime.date = None,
+               option_type: str = None,
+               long_strike: int | float = None,
+               short_strike: int | float = None,
+               *args, **kwargs) -> Self:
 
         if long_strike < short_strike:
             option_position_type = OptionPositionType.LONG if option_type == 'call' \
@@ -55,8 +62,9 @@ class Vertical(OptionCombination):
         short_option.quantity = -1
 
         vertical = Vertical(options=[long_option, short_option],
-                            option_combination_type=OptionCombinationType.VERTICAL,
-                            option_position_type=option_position_type, quantity=1)
+                            spread_type=OptionSpreadType.VERTICAL,
+                            position_type=option_position_type, quantity=1)
+        super(Vertical, vertical)._save_user_defined_values(vertical, **kwargs)
         return vertical
 
 
@@ -74,6 +82,8 @@ class Vertical(OptionCombination):
         #     message = "The parameter option_position_type: OptionPositionType must not be None"
         if self.options[0].strike == self.options[1].strike:
             message = "Long and short option strikes must not be the same option."
+        if self.spread_type != OptionSpreadType.VERTICAL:
+            message = "Vertical must have spread type of VERTICAL"
         if message is not None:
             raise ValueError(message)
 
@@ -81,36 +91,36 @@ class Vertical(OptionCombination):
         self.long_option.position_type = OptionPositionType.LONG
         self.short_option = self.options[0] if self.options[0].quantity < 0 else self.options[1]
         self.short_option.position_type = OptionPositionType.SHORT
-        self.option_combination_type = OptionCombinationType.VERTICAL
+
 
     def __repr__(self) -> str:
         strikes = [self.long_option.strike, self.short_option.strike]
-        s = f'<{self.option_combination_type.name}({self.position_id}) {self.option_type.upper()} {self.option_position_type.name} ' \
+        s = f'<{self.spread_type.name}({self.position_id}) {self.option_type.upper()} {self.position_type.name} ' \
                 + f'{self.symbol} {strikes[0]}/{strikes[1]} ' \
                 + f'{self.expiration}>'
         return s
 
-    def update_quantity(self, quantity: int):
+    def _update_quantity(self, quantity: int):
         self.quantity = quantity
         self.long_option.quantity = abs(quantity)
         self.short_option.quantity = abs(quantity) * -1
 
-    def open_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
+    def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
-        super(Vertical, self).open_trade(quantity=quantity, **kwargs)
+        super(Vertical, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> None:
+    def close_trade(self, quantity: int | None = None, *args, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else quantity == self.long_option.quantity
         self.long_option.close_trade(quantity=quantity)
         self.short_option.close_trade(quantity=quantity * -1)
         self.quantity -= quantity
-        super(Vertical, self).close_trade(quantity=quantity, **kwargs)
+        super(Vertical, self)._save_user_defined_values(selfty, **kwargs)
 
     @property
     def max_profit(self) -> float | None:
-        if self.option_position_type == OptionPositionType.LONG:
+        if self.position_type == OptionPositionType.LONG:
             long_price = self.long_option.price if self.long_option.status == OptionStatus.INITIALIZED \
                 else self.long_option.trade_price
             short_price = self.short_option.price if self.short_option.status == OptionStatus.INITIALIZED \
@@ -124,7 +134,7 @@ class Vertical(OptionCombination):
 
     @property
     def max_loss(self) -> float | None:
-        if self.option_position_type == OptionPositionType.LONG:
+        if self.position_type == OptionPositionType.LONG:
             max_loss = self.trade_value
         else:
             long_price = self.long_option.trade_price
@@ -141,9 +151,9 @@ class Vertical(OptionCombination):
     def required_margin(self) -> float:
         if OptionStatus.TRADE_IS_OPEN not in self.long_option.status:
             return 0
-        elif self.option_position_type == OptionPositionType.LONG:
+        elif self.position_type == OptionPositionType.LONG:
             return 0
-        elif self.option_position_type == OptionPositionType.SHORT:
+        elif self.position_type == OptionPositionType.SHORT:
             return abs((self.short_option.strike - self.long_option.strike) * 100 * self.quantity)
 
     @property
@@ -161,13 +171,13 @@ class Vertical(OptionCombination):
     def option_type(self) -> str:
         return self.long_option.option_type
 
-    @property
-    def symbol(self):
-        return self.long_option.symbol
 
     @property
     def status(self) -> OptionStatus:
         return self.long_option.status
+
+    def get_dte(self) -> int | None:
+        return self.long_option.get_dte()
 
     def get_trade_price(self) -> float | None:
         if OptionStatus.INITIALIZED ==  self.long_option.status:

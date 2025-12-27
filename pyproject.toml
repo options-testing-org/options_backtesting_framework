@@ -7,7 +7,7 @@ version= "0.0.1"
 authors = [
     {name = "Annie Bougie", email = "anne.bougie@gmail.com"}
 ]
-description = "Options testing framework that works with the Backtrader library to back test options trading strategies"
+description = "Options testing framework library to back test options trading strategies"
 readme = "README.md"
 requires-python = ">=3.11"
 keywords = ["backtrader", "options", "backtesting", "trading"]

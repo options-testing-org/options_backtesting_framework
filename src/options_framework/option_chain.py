@@ -36,6 +36,7 @@ class OptionChain():
     def on_next(self, quote_datetime: datetime.datetime):
         # find quote datetime in datetimes list
         self.quote_datetime = quote_datetime
+        #print(f'next {self.symbol} {quote_datetime}')
         try:
             dt = next(d for d in self.datetimes if d == quote_datetime)
         except StopIteration:
@@ -113,8 +114,11 @@ class OptionChain():
     def on_next_options(self, options: list[Option]) -> list[dict] | None:
         for option in options:
             try:
-                option_quote = next(q for q in self.options if q['option_id'] == option.option_id)
-                option.next(option_quote)
+                if option.expiration < self.quote_datetime.date():
+                    option.next({'option_id': option.option_id, 'quote_datetime': self.quote_datetime})
+                else:
+                    option_quote = next(q for q in self.options if q['option_id'] == option.option_id)
+                    option.next(option_quote)
             except StopIteration:
                 continue
 

@@ -1,6 +1,6 @@
 import datetime
 
-from options_framework.option_types import OptionPositionType, OptionCombinationType
+from options_framework.option_types import OptionPositionType, OptionSpreadType
 from options_framework.spreads.iron_condor import IronCondor
 
 
@@ -14,7 +14,7 @@ from options_framework.spreads.iron_condor import IronCondor
 #     long_condor = IronCondor.get_iron_condor_by_delta(option_chain=option_chain, expiration=expiration,
 #                                                        long_delta=long_delta, short_delta=short_delta)
 #
-#     assert long_condor.option_combination_type == OptionCombinationType.IRON_CONDOR
+#     assert long_condor.option_spread_type == OptionCombinationType.IRON_CONDOR
 #     assert long_condor.option_position_type == OptionPositionType.LONG
 #     assert long_condor.long_call_option.delta <= long_delta
 #     assert long_condor.short_call_option.delta <= short_delta
@@ -37,7 +37,7 @@ from options_framework.spreads.iron_condor import IronCondor
 #                                                        long_put_strike=long_put_strke,
 #                                                        short_put_strike=short_put_strike)
 #
-#     assert long_condor.option_combination_type == OptionCombinationType.IRON_CONDOR
+#     assert long_condor.option_spread_type == OptionCombinationType.IRON_CONDOR
 #     assert long_condor.option_position_type == OptionPositionType.LONG
 #     assert long_condor.long_call_option.strike == long_call_strike
 #     assert long_condor.short_call_option.strike == short_call_strike
@@ -67,7 +67,7 @@ from options_framework.spreads.iron_condor import IronCondor
 #                                                                  inner_put_strike=put_strike,
 #                                                                  spread_width=width)
 #
-#     assert iron_condor.option_combination_type == OptionCombinationType.IRON_CONDOR
+#     assert iron_condor.option_spread_type == OptionCombinationType.IRON_CONDOR
 #     assert iron_condor.option_position_type == OptionPositionType.SHORT
 #     assert iron_condor.expiration == expiration
 #     assert iron_condor.long_call_option == lc_option
