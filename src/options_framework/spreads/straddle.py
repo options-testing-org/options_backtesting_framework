@@ -32,8 +32,9 @@ class Straddle(SpreadBase):
 
         # Find nearest matching strike for this expiration
         strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
+        spot_price = option_chain.options[0].spot_price
         try:
-            strike = next(s for s in strikes if s >= strike)
+            strike = min(strikes, key=lambda x: abs(x - spot_price))
             options = [o for o in option_chain.options if o['expiration'] == expiration and o['strike'] == strike]
         except StopIteration:
             raise ValueError(
@@ -81,7 +82,7 @@ class Straddle(SpreadBase):
 
     def __repr__(self):
         long_short = '' if self.position_type is None else f' {self.position_type.name}'
-        return f'<{self.spread_type.name}({self.position_id}) {self.symbol} {self.strike} {self.expiration}{long_short}>'
+        return f'<{self.spread_type.name}({self.instance_id}) {self.symbol} {self.strike} {self.expiration}{long_short}>'
 
     def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
         self.call.open_trade(quantity=quantity)
@@ -139,7 +140,7 @@ class Straddle(SpreadBase):
         return self.call.get_dte()
 
     def get_trade_price(self) -> float | None:
-        if OptionStatus.INITIALIZED == self.option.status:
+        if all(o.status == OptionStatus.INITIALIZED for o in self.options):
             return None
         else:
             return self.call.trade_open_info.price + self.put.trade_open_info.price
@@ -155,13 +156,13 @@ class Straddle(SpreadBase):
     @property
     def max_profit(self) -> float | None:
         if self.position_type == OptionPositionType.SHORT:
-            return self.get_trade_price()
+            return self.get_trade_premium() * -1
         else:
             return None
 
     @property
     def max_loss(self) -> float | None:
         if self.position_type == OptionPositionType.LONG:
-            return self.get_trade_premium()
+            return self.get_trade_premium() * -1
         else:
             return None

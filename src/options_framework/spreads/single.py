@@ -68,7 +68,7 @@ class Single(SpreadBase):
 
     def __repr__(self) -> str:
         long_short = '' if self.position_type is None else f' {self.position_type.name}'
-        return f'<{self.spread_type.name}({self.position_id}) {self.option.symbol} {self.option_type.upper()} {self.strike} {self.expiration}{long_short}>'
+        return f'<{self.spread_type.name}({self.instance_id}) {self.option.symbol} {self.option_type.upper()} {self.strike} {self.expiration}{long_short}>'
 
     @property
     def expiration(self) -> datetime.date:
@@ -139,7 +139,7 @@ class Single(SpreadBase):
     @property
     def max_profit(self) -> float | None:
         if self.position_type == OptionPositionType.SHORT:
-            return self.get_trade_price()
+            return self.get_trade_premium()
         else:
             return None
 

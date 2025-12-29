@@ -90,7 +90,7 @@ class SPX0DTE(bt.Strategy):
     def expired(self, position):
         pnl = position.get_profit_loss()
         trade_val = position.trade_value
-        message = f'expired ({position.position_id}) opened value: {trade_val:.2f} expired value: {pnl:.2f} pct gain/loss: {pnl/trade_val*-1:.2f}%'
+        message = f'expired ({position.instance_id}) opened value: {trade_val:.2f} expired value: {pnl:.2f} pct gain/loss: {pnl / trade_val * -1:.2f}%'
         self.log(message)
 
     def __init__(self):
@@ -141,7 +141,7 @@ class SPX0DTE(bt.Strategy):
                 if to_close:
                     self.portfolio.close_position(pos)
                     close_pnl = pos.get_profit_loss()
-                    self.log(f'closed ({pos.position_id}) {pos.trade_value} for {close_pnl:.2f} Pct: {close_pnl/pos.trade_value*-1:.2f}%')
+                    self.log(f'closed ({pos.instance_id}) {pos.trade_value} for {close_pnl:.2f} Pct: {close_pnl / pos.trade_value * -1:.2f}%')
 
         if self.trade_today:
             price = self.data.close[0]
@@ -163,7 +163,7 @@ class SPX0DTE(bt.Strategy):
                     profit_stop = iron_condor.current_value*-1*self.p.profit_stop_pct
                     stop_loss = iron_condor.current_value * self.p.stop_loss_pct
                     self.portfolio.open_position(iron_condor, quantity=qty, profit_stop=profit_stop, stop_loss=stop_loss)
-                    message = f'opened iron condor ({iron_condor.position_id}) for {iron_condor.current_value:.2f}'
+                    message = f'opened iron condor ({iron_condor.instance_id}) for {iron_condor.current_value:.2f}'
                     self.log(message)
 
                     self.trade_today = False

@@ -81,7 +81,7 @@ class SPX14DayPutCredit(bt.Strategy):
     def expired(self, position):
         pnl = position.get_profit_loss()
         trade_val = position.trade_value
-        message = f'expired ({position.position_id}) opened value: {trade_val:.2f} expired value: {pnl:.2f} pct gain/loss: {pnl/trade_val*-1:.2f}%'
+        message = f'expired ({position.instance_id}) opened value: {trade_val:.2f} expired value: {pnl:.2f} pct gain/loss: {pnl / trade_val * -1:.2f}%'
         self.log(message)
 
     def __init__(self):

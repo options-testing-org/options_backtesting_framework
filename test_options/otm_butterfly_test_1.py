@@ -116,9 +116,9 @@ class OTMButterflyStrategy(bt.Strategy):
         position.user_defined["time_slot"] = time_slot.name
         position.user_defined["zone"] = zone.name
         self.log(
-            f'close position {position.position_id} p/l: {profit} {percent_of_high:.2f} @ {position.user_defined["highest_profit"]["time"]} ',
+            f'close position {position.instance_id} p/l: {profit} {percent_of_high:.2f} @ {position.user_defined["highest_profit"]["time"]} ',
             self.dt)
-        logging.info(f'{datetime.datetime.now()} Close position({position.position_id}) @ {self.dt} pnl: {profit}')
+        logging.info(f'{datetime.datetime.now()} Close position({position.instance_id}) @ {self.dt} pnl: {profit}')
 
     def __init__(self):
         self.hull = bt.indicators.HullMA(self.data1, period=self.p.hull_period)
@@ -213,8 +213,8 @@ class OTMButterflyStrategy(bt.Strategy):
                         butterfly.user_defined["hull_direction"] = "Up" if hull_direction_option_type == OptionType.CALL else "Down"
                         butterfly.user_defined["time_slot"] = TimeSlot.UNDEFINED
                         butterfly.user_defined["zone"] = Zone.UNDEFINED
-                        self.log(f'open new position {butterfly.position_id} @ {t} {butterfly.current_value}')
-                        logging.info(f'{datetime.datetime.now()} Open new position({butterfly.position_id}): date: {self.dt} debit: {butterfly.max_loss:.2f} {butterfly}')
+                        self.log(f'open new position {butterfly.instance_id} @ {t} {butterfly.current_value}')
+                        logging.info(f'{datetime.datetime.now()} Open new position({butterfly.instance_id}): date: {self.dt} debit: {butterfly.max_loss:.2f} {butterfly}')
                         return
                 except ValueError as ve:
                     self.log("ValueError", ve.strerror)

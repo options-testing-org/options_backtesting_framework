@@ -52,18 +52,20 @@ class OptionPortfolio(Dispatcher):
         self.positions.append(option_spread)
 
 
-    def close_position(self, position_id: int, quantity: int = None, **kwargs: dict):
+    def close_position(self, instance_id: int, quantity: int = None, **kwargs: dict):
 
         try:
-            to_close = next(x for x in self.positions if x.position_id == position_id)
+            to_close = next(x for x in self.positions if x.instance_id == instance_id)
         except StopIteration:
-            raise ValueError(f'Position {position_id} not in open positions list.')
+            raise ValueError(f'Position {instance_id} not in open positions list.')
+
+        quantity = to_close.quantity if quantity is None else quantity
 
         try:
             to_close.close_trade(quantity=quantity, **kwargs)
             closing_value = sum(o.trade_close_records[-1].premium for o in to_close.options)
-            raw_pnl = to_close.trade_value - closing_value
-            raw_pnl = raw_pnl * -1 if to_close.position_type == OptionPositionType.SHORT else raw_pnl
+            raw_pnl = closing_value - to_close.trade_value
+            #raw_pnl = raw_pnl * -1 if to_close.position_type == OptionPositionType.SHORT else raw_pnl
 
             # Adjust portfolio cash if the closing value is greater than the max profit for this position
             if to_close.max_profit:
@@ -94,24 +96,24 @@ class OptionPortfolio(Dispatcher):
     def next(self, quote_datetime: datetime.datetime, symbols: list[str] = None, *args):
         self.current_datetime = quote_datetime
         symbols = [] if symbols is None else symbols
-        try:
-            del_symbols = [s for s in list(self.option_chains.keys()) if s not in symbols]
-            self._remove_symbols(del_symbols)
-            for symbol in symbols:
-                self._initialize_ticker(symbol=symbol, quote_datetime=quote_datetime)
+        # try:
+        del_symbols = [s for s in list(self.option_chains.keys()) if s not in symbols]
+        self._remove_symbols(del_symbols)
+        for symbol in symbols:
+            self._initialize_ticker(symbol=symbol, quote_datetime=quote_datetime)
 
-            self.emit('next', quote_datetime)
-            options = [o for pos in self.positions for o in pos.options]
-            self.emit('next_options', options)
-            values = [quote_datetime, self.current_value] + list(args)
-            self.close_values.append(values)
-        except Exception as e:
-            raise Exception(str(e)) from e
+        self.emit('next', quote_datetime)
+        options = [o for pos in self.positions for o in pos.options]
+        self.emit('next_options', options)
+        values = [quote_datetime, self.current_value] + list(args)
+        self.close_values.append(values)
+        # except Exception as e:
+        #     raise Exception(str(e)) from e
 
-    def get_open_position_by_id(self, position_id: int) -> SpreadBase:
+    def get_open_position_by_id(self, instance_id: int) -> SpreadBase:
         pass
 
-    def get_closed_position_by_id(self, position_id: int) -> SpreadBase:
+    def get_closed_position_by_id(self, instance_id: int) -> SpreadBase:
         pass
 
     @property
@@ -129,24 +131,24 @@ class OptionPortfolio(Dispatcher):
     def on_option_open_transaction_completed(self, trade_open_info: TradeOpenInfo):
         open_premium = trade_open_info.premium
         self.cash = self.cash - open_premium
-        print(f'opened option. ${open_premium:,.2f} subtracted from cash')
-        print(f"portfolio: option position was opened {trade_open_info.option_id}")
+        # print(f'opened option. ${open_premium:,.2f} subtracted from cash')
+        # print(f"portfolio: option position was opened {trade_open_info.option_id}")
 
     def on_option_close_transaction_completed(self, trade_close_info: TradeCloseInfo):
         close_premium = trade_close_info.premium
         self.cash = self.cash + close_premium
-        print(f'closed option. ${close_premium:,.2f} added to cash')
-        print(f"portfolio: option position was closed {trade_close_info.option_id}")
+        # print(f'closed option. ${close_premium:,.2f} added to cash')
+        # print(f"portfolio: option position was closed {trade_close_info.option_id}")
 
     def on_option_expired(self, instance_id: int):
-        print(f"portfolio: option expired {instance_id}")
+        #print(f"portfolio: option expired {instance_id}")
         try:
             expired_position = next(pos for pos in self.positions for o in pos.options if o.instance_id == instance_id)
         except StopIteration:
             raise ValueError(f'Cannot find expired option {instance_id} in open positions list.')
 
-        if all([OptionStatus.EXPIRED in option.status for option in expired_position.options]):
-                self.close_position(expired_position, expired_position.quantity)
+        if all(OptionStatus.EXPIRED in option.status for option in expired_position.options):
+                self.close_position(expired_position.instance_id, expired_position.quantity)
                 self.emit('position_expired', expired_position)
 
     def on_fees_incurred(self, fees):

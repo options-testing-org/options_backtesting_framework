@@ -102,7 +102,7 @@ if __name__ == "__main__":
                                                                        short_strike=short_strike)
                             if vertical.price > 0.70:
                                 portfolio.open_position(vertical, quantity=-1)
-                                position_id = vertical.position_id
+                                position_id = vertical.instance_id
                                 can_open = False
 
                 else:

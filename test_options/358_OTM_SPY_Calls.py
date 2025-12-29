@@ -123,7 +123,7 @@ class SPX_358_OTM_Calls(bt.Strategy):
                 if to_close:
                     self.portfolio.close_position(pos)
                     self.trade_today = True
-                    message = f'Closed ({pos.position_id}) credit: {pos.trade_value:.2f} expired value: {pnl:.2f} pct gain/loss: {pnl / pos.trade_value * -1:.2f}% reason: {reason}'
+                    message = f'Closed ({pos.instance_id}) credit: {pos.trade_value:.2f} expired value: {pnl:.2f} pct gain/loss: {pnl / pos.trade_value * -1:.2f}% reason: {reason}'
                     self.log(message)
 
         if len(self.portfolio.positions) > 0 or not self.trade_today:

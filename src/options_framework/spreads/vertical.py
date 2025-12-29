@@ -95,7 +95,7 @@ class Vertical(SpreadBase):
 
     def __repr__(self) -> str:
         strikes = [self.long_option.strike, self.short_option.strike]
-        s = f'<{self.spread_type.name}({self.position_id}) {self.option_type.upper()} {self.position_type.name} ' \
+        s = f'<{self.spread_type.name}({self.instance_id}) {self.option_type.upper()} {self.position_type.name} ' \
                 + f'{self.symbol} {strikes[0]}/{strikes[1]} ' \
                 + f'{self.expiration}>'
         return s

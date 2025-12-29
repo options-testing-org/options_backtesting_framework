@@ -22,14 +22,14 @@ def test_repr(option_chain_data, strike, quantity, position_type, expected_repr)
                                option_position_type=position_type)
 
     # straddle that is closed - does not have long or short type yet
-    test_repr = expected_repr.format(straddle.position_id, '')
+    test_repr = expected_repr.format(straddle.instance_id, '')
     repr_ = straddle.__repr__()
     assert test_repr == repr_
 
 
     straddle.open_trade(quantity=quantity)
     type_ = " LONG" if quantity > 0 else " SHORT"
-    test_repr = expected_repr.format(straddle.position_id, type_)
+    test_repr = expected_repr.format(straddle.instance_id, type_)
     repr_ = straddle.__repr__()
     assert test_repr == repr_
 

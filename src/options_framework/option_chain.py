@@ -1,6 +1,6 @@
 import datetime
 import os
-import dill as pickle
+import pickle
 import glob
 
 import pandas as pd

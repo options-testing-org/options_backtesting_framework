@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import Optional
 import datetime
 import numbers
+import itertools
 
 import pandas as pd
 import numpy as np
@@ -180,7 +181,7 @@ class Option(Dispatcher):
         self.quote_datetime = updates['quote_datetime']
 
         if self.is_expired():
-            self.close_trade(quantity=self.quantity)
+            #self.close_trade(quantity=self.quantity)
             return
 
         self.spot_price = updates['spot_price']

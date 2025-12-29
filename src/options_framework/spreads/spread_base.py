@@ -23,7 +23,7 @@ class SpreadBase(ABC):
     options: list[Option] = field(default=None)
     spread_type: OptionSpreadType = field(default=None)
     quantity: int = field(default=0)
-    position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
+    instance_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
     position_type: Optional[OptionPositionType] = field(default=None)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
