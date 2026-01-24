@@ -23,8 +23,8 @@ class OptionPortfolio(Dispatcher):
     closed_positions: list = field(init=False, default_factory=lambda: [])
     portfolio_risk: float = field(init=False, default=0.0)
     close_values: list = field(init=False, default_factory=lambda: [])
-    option_chains: dict = field(default_factory=lambda: {})
-    uninitialize_closed_positions: bool = field(init=False, default=False)
+    option_chains: dict = field(init=False, default_factory=lambda: {})
+    check_margin_on_open: bool = field(default=True)
 
     def __post_init__(self):
         pass
@@ -32,7 +32,7 @@ class OptionPortfolio(Dispatcher):
     def __repr__(self) -> str:
         return f'<OptionPortfolio cash=${self.cash:,.2f} portfolio_value=${self.current_value:,.2f}>'
 
-    def open_position(self, option_spread: SpreadBase, quantity: int, *args, **kwargs: dict):
+    def open_position(self, option_spread: SpreadBase, quantity: int, margin_percent: float = None, *args, **kwargs: dict):
         try:
             if option_spread.symbol not in self.option_chains.keys():
                 self.initialize_ticker(option_spread.symbol, self.current_datetime)
@@ -41,15 +41,19 @@ class OptionPortfolio(Dispatcher):
                          option_expired=self.on_option_expired,
                          fees_incurred=self.on_fees_incurred) for option in option_spread.options]
             option_spread.open_trade(quantity=quantity, *args, **kwargs)
-            if option_spread.position_type == OptionPositionType.SHORT:
+            if option_spread.position_type == OptionPositionType.SHORT and self.check_margin_on_open:
+
                 # check to see if we have enough margin to open this position
-                new_margin = option_spread.required_margin + self.portfolio_margin_allocation
-                if new_margin > self.cash:
+                new_margin = option_spread.get_required_margin(quantity) + self.portfolio_margin_allocation
+                allowed_margin = self.cash if margin_percent is None else self.current_value * margin_percent
+                allowed_margin = allowed_margin if allowed_margin <= self.cash else self.cash
+                if new_margin >= allowed_margin:
                     raise ValueError(f'Insufficient margin available to open this position.')
         except ValueError as e:
             raise ValueError(str(e)) from e
 
         self.positions.append(option_spread)
+
 
 
     def close_position(self, instance_id: int, quantity: int = None, **kwargs: dict):
@@ -71,14 +75,14 @@ class OptionPortfolio(Dispatcher):
             if to_close.max_profit:
                 if raw_pnl > to_close.max_profit:
                     self.cash -= (raw_pnl - to_close.max_profit)
-                    print(f'corrected pnl > max profit: {(raw_pnl - to_close.max_profit)}')
+                    #print(f'corrected pnl > max profit: {(raw_pnl - to_close.max_profit)}')
 
             # Adjust portfolio cash if the closing value is less than the max loss for this position
             if to_close.max_loss:
                 max_loss = to_close.max_loss * -1
                 if raw_pnl < max_loss:
                     self.cash += (raw_pnl - max_loss)
-                    print(f'corrected pnl < max loss: {(max_loss - raw_pnl)}')
+                    #print(f'corrected pnl < max loss: {(max_loss - raw_pnl)}')
 
             self.closed_positions.append(to_close)
             self.positions.remove(to_close)
@@ -93,10 +97,12 @@ class OptionPortfolio(Dispatcher):
         except Exception as e:
             raise Exception(str(e)) from e
 
-    def next(self, quote_datetime: datetime.datetime, symbols: list[str] = None, *args):
+    def next(self, quote_datetime: datetime.datetime, symbols: str | list[str] = None, *args, **kwargs):
         self.current_datetime = quote_datetime
         symbols = [] if symbols is None else symbols
-        # try:
+        symbols = [symbols] if isinstance(symbols, str) else symbols
+        open_position_symbols = [x.symbol for x in self.positions]
+        symbols = symbols + open_position_symbols
         del_symbols = [s for s in list(self.option_chains.keys()) if s not in symbols]
         self._remove_symbols(del_symbols)
         for symbol in symbols:
@@ -125,7 +131,7 @@ class OptionPortfolio(Dispatcher):
 
     @property
     def portfolio_margin_allocation(self):
-        margin = sum(position.required_margin for position in self.positions)
+        margin = sum(position.get_required_margin(position.quantity) for position in self.positions)
         return margin
 
     def on_option_open_transaction_completed(self, trade_open_info: TradeOpenInfo):

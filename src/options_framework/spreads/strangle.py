@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import datetime
+from dataclasses import field
 from decimal import Decimal
 from typing import Self
 
@@ -12,6 +13,10 @@ from ..utils.helpers import decimalize_0, decimalize_4, decimalize_2
 
 
 class Strangle(SpreadBase):
+
+    call: Option = field(default=None)
+    put: Option = field(default=None)
+
     @classmethod
     def create(cls, option_chain: OptionChain,
                expiration: datetime.date = None,
@@ -64,11 +69,9 @@ class Strangle(SpreadBase):
             raise ValueError("A Strangle must have one put and one call option.")
         call_option = next(o for o in self.options if o.option_type == 'call')
         put_option = next(o for o in self.options if o.option_type == 'put')
-        if put_option.strike >= call_option.strike:
-            raise ValueError("Strangle call option strike must be greater than the put option strike.")
         if call_option.position_type is not None and put_option.position_type is not None:
             if call_option.position_type != put_option.position_type:
-                raise ValueError("Strangle options must both be long or short.")
+                raise ValueError("Straddle options must both be long or short.")
         if call_option.quantity != put_option.quantity:
             raise ValueError("Strangle options must have the same quantity")
         if call_option.symbol != put_option.symbol:
@@ -86,6 +89,7 @@ class Strangle(SpreadBase):
         self.put.open_trade(quantity=quantity)
         self.position_type = self.call.position_type
         self.quantity = self.call.quantity
+        self._apply_slippage()
 
         super(Strangle, self)._save_user_defined_values(self, **kwargs)
 
@@ -112,10 +116,11 @@ class Strangle(SpreadBase):
         else:
             return None
 
-    @property
-    def required_margin(self) -> float:
+
+    def get_required_margin(self, quantity: int) -> float:
         margin = 0
-        if self.position_type == OptionPositionType.SHORT:
+        position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
+        if position_type == OptionPositionType.SHORT:
             """
             Short options:
             20% of the spot price minus the out-of-money amount plus the option premium
@@ -128,14 +133,14 @@ class Strangle(SpreadBase):
                 pct_10 = decimalize_4(option.spot_price * 0.1)
                 otm_amount = decimalize_4(
                     option.spot_price - option.strike) if option.otm() else decimalize_0(0)
-                price = decimalize_2(option.trade_open_info.price)
+                price = decimalize_2(option.price)
 
                 # three calculations - take the largest value
                 calc1 = (pct_20 - otm_amount + price)
                 calc2 = (pct_10 + price)
                 calc3 = (Decimal(1) + price)
                 _margin = max(calc1, calc2, calc3)
-                _margin = float(_margin) * 100 * abs(self.quantity)
+                _margin = float(_margin) * 100 * abs(quantity)
                 margin += _margin
             margin = round(margin, 2)
         return round(margin, 2)

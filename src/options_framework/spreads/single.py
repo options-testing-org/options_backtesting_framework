@@ -33,14 +33,15 @@ class Single(SpreadBase):
         # Find nearest matching strike for this expiration
         strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
         try:
-            if option_type == 'call':
-                strike = next(s for s in strikes if s >= strike)
-            else:
-                strikes.sort(reverse=True)
-                strike = next(s for s in strikes if s <= strike)
+            selected_strike = min(strikes, key=lambda x: abs(x - strike))
+        #     if option_type == 'call':
+        #         strike = next(s for s in strikes if s >= strike)
+        #     else:
+        #         strikes.sort(reverse=True)
+        #         strike = next(s for s in strikes if s <= strike)
 
             option = next(o for o in option_chain.options if o['option_type'] == option_type
-                          and o['expiration'] == expiration and o['strike'] == strike)
+                          and o['expiration'] == expiration and o['strike'] == selected_strike)
         except StopIteration:
             raise ValueError("No matching strike was found in the option chain.")
 
@@ -91,10 +92,10 @@ class Single(SpreadBase):
         return self.option.status
 
 
-    @property
-    def required_margin(self) -> float:
+    def get_required_margin(self, quantity: int) -> float:
         margin = 0
-        if self.position_type == OptionPositionType.SHORT:
+        position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
+        if position_type == OptionPositionType.SHORT:
             """
             Short options:
             20% of the spot price minus the out-of-money amount plus the option premium
@@ -104,14 +105,14 @@ class Single(SpreadBase):
             pct_20 = decimalize_4(self.option.spot_price * 0.2)
             pct_10 = decimalize_4(self.option.spot_price * 0.1)
             otm_amount = decimalize_4(self.option.spot_price - self.option.strike) if self.option.otm() else decimalize_0(0)
-            price = decimalize_2(self.option.trade_open_info.price)
+            price = decimalize_2(self.option.price)
 
             # three calculations - take the largest value
             calc1 = (pct_20 - otm_amount + price)
             calc2 = (pct_10 + price)
             calc3 = (Decimal(1) + price)
             margin = max(calc1, calc2, calc3)
-            margin = float(margin) * 100 * abs(self.quantity)
+            margin = float(margin) * 100 * abs(quantity)
             margin = round(margin, 2)
 
         return margin
@@ -139,14 +140,14 @@ class Single(SpreadBase):
     @property
     def max_profit(self) -> float | None:
         if self.position_type == OptionPositionType.SHORT:
-            return self.get_trade_premium()
+            return self.get_trade_premium()* -1
         else:
             return None
 
     @property
     def max_loss(self) -> float | None:
         if self.position_type == OptionPositionType.LONG:
-            return self.get_trade_premium()
+            return self.get_trade_premium()*-1
         else:
             return None
 
