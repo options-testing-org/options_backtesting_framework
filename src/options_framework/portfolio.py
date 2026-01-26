@@ -49,12 +49,17 @@ class OptionPortfolio(Dispatcher):
                 allowed_margin = allowed_margin if allowed_margin <= self.cash else self.cash
                 if new_margin >= allowed_margin:
                     raise ValueError(f'Insufficient margin available to open this position.')
+            self.positions.append(option_spread)
+        except Exception as e:
+            # back out of any transactions that may have completed, add back any premium that was subtracted from cash.
+            for o in option_spread.options:
+                if OptionStatus.TRADE_IS_OPEN in o.status:
+                    premium = o.trade_open_info.premium
+                    fees = o.trade_open_info.fees
+                    self.cash += premium + fees
+                    #print(f'Exception occurred: {premium + fees:.2f} subtracted from cash. {e}')
         except ValueError as e:
             raise ValueError(str(e)) from e
-
-        self.positions.append(option_spread)
-
-
 
     def close_position(self, instance_id: int, quantity: int = None, **kwargs: dict):
 
@@ -137,13 +142,13 @@ class OptionPortfolio(Dispatcher):
     def on_option_open_transaction_completed(self, trade_open_info: TradeOpenInfo):
         open_premium = trade_open_info.premium
         self.cash = self.cash - open_premium
-        # print(f'opened option. ${open_premium:,.2f} subtracted from cash')
+        #print(f'opened option. ${open_premium:,.2f} subtracted from cash')
         # print(f"portfolio: option position was opened {trade_open_info.option_id}")
 
     def on_option_close_transaction_completed(self, trade_close_info: TradeCloseInfo):
         close_premium = trade_close_info.premium
         self.cash = self.cash + close_premium
-        # print(f'closed option. ${close_premium:,.2f} added to cash')
+        #print(f'closed option. ${close_premium:,.2f} added to cash')
         # print(f"portfolio: option position was closed {trade_close_info.option_id}")
 
     def on_option_expired(self, instance_id: int):
