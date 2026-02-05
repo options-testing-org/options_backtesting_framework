@@ -56,10 +56,11 @@ class OptionPortfolio(Dispatcher):
                 if OptionStatus.TRADE_IS_OPEN in o.status:
                     premium = o.trade_open_info.premium
                     fees = o.trade_open_info.fees
-                    self.cash += premium + fees
+                    self.cash += (premium + fees)
                     #print(f'Exception occurred: {premium + fees:.2f} subtracted from cash. {e}')
-        except ValueError as e:
-            raise ValueError(str(e)) from e
+            raise
+        # except ValueError as e:
+        #     raise ValueError(str(e)) from e
 
     def close_position(self, instance_id: int, quantity: int = None, **kwargs: dict):
 
