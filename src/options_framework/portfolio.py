@@ -59,15 +59,14 @@ class OptionPortfolio(Dispatcher):
                     self.cash += (premium + fees)
                     #print(f'Exception occurred: {premium + fees:.2f} subtracted from cash. {e}')
             raise
-        # except ValueError as e:
-        #     raise ValueError(str(e)) from e
 
-    def close_position(self, instance_id: int, quantity: int = None, **kwargs: dict):
+    def close_position(self, option_spread: SpreadBase, quantity: int = None, **kwargs: dict):
 
         try:
+            instance_id = option_spread.instance_id
             to_close = next(x for x in self.positions if x.instance_id == instance_id)
         except StopIteration:
-            raise ValueError(f'Position {instance_id} not in open positions list.')
+            raise ValueError(f'Position {instance} not in open positions list.')
 
         quantity = to_close.quantity if quantity is None else quantity
 
@@ -93,12 +92,6 @@ class OptionPortfolio(Dispatcher):
             self.closed_positions.append(to_close)
             self.positions.remove(to_close)
             self.emit("position_closed", to_close)
-
-            # if self._uninitialize_closed_positions:
-            #     symbol = to_close.symbol
-            #     open_symbols = [o.symbol for pos in self.positions for o in pos.options]
-            #     if symbol not in open_symbols:
-            #         self.uninitialize_ticker(symbol)
 
         except Exception as e:
             raise Exception(str(e)) from e
@@ -160,7 +153,7 @@ class OptionPortfolio(Dispatcher):
             raise ValueError(f'Cannot find expired option {instance_id} in open positions list.')
 
         if all(OptionStatus.EXPIRED in option.status for option in expired_position.options):
-                self.close_position(expired_position.instance_id, expired_position.quantity)
+                self.close_position(expired_position, expired_position.quantity)
                 self.emit('position_expired', expired_position)
 
     def on_fees_incurred(self, fees):

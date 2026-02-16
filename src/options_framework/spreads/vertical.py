@@ -56,10 +56,8 @@ class Vertical(SpreadBase):
 
         long_dict = next(o for o in options if o['strike'] == long_strike)
         long_option = Option(**long_dict)
-        long_option.quantity = 1
         short_dict = next(o for o in options if o['strike'] == short_strike)
         short_option = Option(**short_dict)
-        short_option.quantity = -1
 
         vertical = Vertical(options=[long_option, short_option],
                             spread_type=OptionSpreadType.VERTICAL,
@@ -112,7 +110,7 @@ class Vertical(SpreadBase):
         super(Vertical, self)._save_user_defined_values(self, **kwargs)
 
     def close_trade(self, quantity: int | None = None, *args, **kwargs: dict) -> None:
-        quantity = quantity if quantity is not None else quantity == self.long_option.quantity
+        quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.close_trade(quantity=quantity)
         self.short_option.close_trade(quantity=quantity * -1)
         self.quantity -= quantity
@@ -203,8 +201,7 @@ class Vertical(SpreadBase):
         if all(OptionStatus.TRADE_IS_CLOSED in o.status for o in self.options):
             closed_value = self.closed_value
             if closed_value > self.max_profit or closed_value < self.max_loss * -1:
-                fees = self.get_fees()
-                profit_loss = closed_value + fees
+                profit_loss = closed_value
 
         return profit_loss
 
