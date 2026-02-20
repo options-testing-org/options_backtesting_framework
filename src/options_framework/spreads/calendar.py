@@ -183,7 +183,7 @@ class Calendar(SpreadBase):
 
     def get_profit_loss(self) -> float:
         pnl = super(Calendar, self).get_profit_loss()
-        if self.position_type == OptionPositionType.LONG and pnl < self.max_loss:
+        if self.position_type == OptionPositionType.LONG and pnl < self.max_loss * -1:
             return self.max_loss * -1
         elif self.position_type == OptionPositionType.SHORT and pnl > self.max_profit:
             return self.max_profit

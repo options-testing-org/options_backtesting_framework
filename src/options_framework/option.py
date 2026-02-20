@@ -97,6 +97,7 @@ class Option(Dispatcher):
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
     incur_fees: bool = field(default=True, compare=False)
     fee_per_contract: float = field(default=0.65, compare=False)
+    history: list = field(default_factory=lambda: [], compare=False)
 
     def __post_init__(self):
         # check for required fields
@@ -230,15 +231,19 @@ class Option(Dispatcher):
         if self.bid > self.ask:
             raise ValueError(f"Crossed quote bid>ask for {self.option_id}: {self.bid}>{self.ask}")
 
+        fill_factor = settings.get('fill_factor', 0)
+
         # calculate premium debit or credit. If this is a long position, the premium is a positive number.
         # If it is a short position, the premium is a negative number.
         if quantity > 0:
-            fill_price = decimalize_2(self.ask)
+            ask = self.ask - fill_factor*(self.ask - self.price)
+            fill_price = decimalize_2(ask)
             if fill_price <= 0:
                 raise ValueError(f"Cannot open LONG with non-positive ask for {self.option_id}")
             premium = float(-fill_price * 100 * abs(quantity))  # cash outflow
             self.position_type = OptionPositionType.LONG
         else:
+            bid = self.bid + fill_factor*(self.price - self.bid)
             fill_price = decimalize_2(self.bid)
             if fill_price <= 0:
                 raise ValueError(f"Cannot open SHORT with non-positive bid for {self.option_id}")
@@ -255,7 +260,7 @@ class Option(Dispatcher):
                                         instance_id=self.instance_id,
                                         date=self.quote_datetime,
                                         quantity=int(quantity),
-                                        price=float(price),
+                                        price=float(fill_price),
                                         premium=premium,
                                         fees=fees,
                                         spot_price=float(self.spot_price))
@@ -268,6 +273,26 @@ class Option(Dispatcher):
         #print(f'emit open {self.option_id}')
 
         return trade_open_info
+
+
+    def get_open_price(self, position_type: OptionPositionType | None = None) -> float:
+
+        fill_factor = settings.get('fill_factor', 0)
+        bid = self.bid + fill_factor * (self.price - self.bid)
+        ask = self.ask - fill_factor * (self.ask - self.price)
+
+        if position_type == None and self.position_type == None:
+            return None
+
+        position_type = self.position_type if position_type is None else position_type
+
+        if position_type == OptionPositionType.LONG:
+            return ask
+        elif position_type == OptionPositionType.SHORT:
+            return bid
+        else:
+            return None
+
 
     def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> TradeCloseInfo:
         """
@@ -288,6 +313,8 @@ class Option(Dispatcher):
         pos_qty = int(self.quantity)
         if pos_qty == 0:
             raise ValueError("No open quantity.")
+        else:
+            close_qty = abs(int(pos_qty))
 
         # how many contracts to close (always positive)
         if close_qty is None:
@@ -297,15 +324,19 @@ class Option(Dispatcher):
         if close_qty > abs(pos_qty):
             raise ValueError("Quantity to close is greater than the current open quantity.")
 
+        fill_factor = settings.get('fill_factor', 0)
+
         # determine executable close price and action sign
         if self.position_type == OptionPositionType.LONG:
+            bid = self.bid + fill_factor*(self.price - self.bid)
             close_price = decimalize_2(self.bid)  # sell to close on bid
             action_qty = -close_qty  # sell
         else:  # SHORT
-            close_price = decimalize_2(self.ask)  # buy to close on ask
+            ask = self.ask - fill_factor*(self.ask - self.price)
+            close_price = decimalize_2(ask)  # buy to close on ask
             action_qty = +close_qty  # buy
 
-        if close_price <= 0:
+        if close_price < 0:
             raise ValueError(f"Non-positive close price for {self.option_id}.")
 
         open_price = decimalize_2(self.trade_open_info.price)
@@ -319,8 +350,11 @@ class Option(Dispatcher):
         else:
             profit_loss = decimalize_2((open_price - close_price) * 100 * close_qty)
 
-        ratio = (close_price - open_price) / open_price if open_price > 0 else 0
-        profit_loss_percent = decimalize_4(ratio) * (quantity * -1 / abs(quantity))
+        open_premium = self.trade_open_info.premium
+        open_qty = abs(int(self.trade_open_info.quantity))
+        open_prem_alloc = decimalize_2(abs(open_premium) * (close_qty/open_qty))
+        profit_loss_percent = (profit_loss / open_prem_alloc) if open_prem_alloc > 0 else 0.0
+        profit_loss_percent = decimalize_4(profit_loss_percent)
 
         fees = self._incur_fees(quantity=close_qty) if self.incur_fees else 0
 
@@ -330,20 +364,20 @@ class Option(Dispatcher):
         else:
             self.quantity = pos_qty + close_qty
 
-            # Save record with *close_qty* (positive) + side stored separately is cleaner
-            rec = TradeCloseInfo(
-                option_id=self.option_id,
-                instance_id=self.instance_id,
-                date=self.quote_datetime,
-                quantity=close_qty,  # positive count
-                price=float(close_price),
-                premium=float(close_premium),
-                profit_loss=float(profit_loss),
-                profit_loss_percent=0.0,  # compute from abs(open premium) if you want
-                fees=fees,
-                spot_price=float(self.spot_price),
-            )
-            self.trade_close_records.append(rec)
+        # Save record with *close_qty* (positive) + side stored separately is cleaner
+        rec = TradeCloseInfo(
+            option_id=self.option_id,
+            instance_id=self.instance_id,
+            date=self.quote_datetime,
+            quantity=close_qty,  # positive count
+            price=float(close_price),
+            premium=float(close_premium),
+            profit_loss=float(profit_loss),
+            profit_loss_percent=float(profit_loss_percent),
+            fees=fees,
+            spot_price=float(self.spot_price),
+        )
+        self.trade_close_records.append(rec)
 
         for key, value in kwargs.items():
             self.user_defined[key] = value
@@ -357,10 +391,10 @@ class Option(Dispatcher):
             self.status |= OptionStatus.TRADE_PARTIALLY_CLOSED
 
         self._calculate_trade_close_info()
-        self.emit("close_transaction_completed", trade_close_record)
+        self.emit("close_transaction_completed", rec)
         #print(f'emit close {self.option_id}')
 
-        return trade_close_record
+        return rec
 
 
     def get_closing_price(self) -> float:
@@ -385,8 +419,9 @@ class Option(Dispatcher):
                 return max(strike - spot, 0.0)
 
         # Not expired: executable close depends on position side
-        bid = float(self.bid)
-        ask = float(self.ask)
+        fill_factor = settings.get('fill_factor', 0)
+        bid = self.bid + fill_factor*(self.price - self.bid)
+        ask = self.ask - fill_factor*(self.ask - self.price)
 
         # Basic quote sanity
         if bid < 0 or ask < 0 or (ask > 0 and bid > ask):

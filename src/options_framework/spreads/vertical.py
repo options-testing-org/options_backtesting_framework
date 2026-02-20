@@ -81,9 +81,9 @@ class Vertical(SpreadBase):
         if message is not None:
             raise ValueError(message)
 
-        self.long_option = self.options[0] if self.options[0].quantity > 0 else self.options[1]
+        self.long_option = self.options[0]
         self.long_option.position_type = OptionPositionType.LONG
-        self.short_option = self.options[0] if self.options[0].quantity < 0 else self.options[1]
+        self.short_option = self.options[1]
         self.short_option.position_type = OptionPositionType.SHORT
 
 
@@ -100,10 +100,10 @@ class Vertical(SpreadBase):
         self.short_option.quantity = abs(quantity) * -1
 
     def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
-        if self.position_type == OptionPositionType.LONG and quantity < 0:
-            raise ValueError('Long option quantity cannot be negative.')
-        elif self.position_type == OptionPositionType.SHORT and quantity > 0:
-            raise ValueError('Short option quantity must be negative.')
+        # if self.position_type == OptionPositionType.LONG and quantity < 0:
+        #     raise ValueError('Long option quantity cannot be negative.')
+        # elif self.position_type == OptionPositionType.SHORT and quantity > 0:
+        #     raise ValueError('Short option quantity must be negative.')
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
