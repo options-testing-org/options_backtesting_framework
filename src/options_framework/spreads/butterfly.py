@@ -100,7 +100,7 @@ class Butterfly(SpreadBase):
             else OptionPositionType.SHORT
 
     def __repr__(self) -> str:
-        return f'<{self.spread_type.name}({self.position_id}) {self.option_type.name}  {self.lower_option.strike}/{self.center_option.strike}/{self.upper_option.strike}>'
+        return f'<{self.spread_type.name}({self.instance_id}) {self.option_type.name}  {self.lower_option.strike}/{self.center_option.strike}/{self.upper_option.strike}>'
 
     @property
     def expiration(self) -> datetime.date:

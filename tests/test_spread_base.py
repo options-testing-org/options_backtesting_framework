@@ -82,7 +82,7 @@ def test_instantiate_child_class_succeeds(option_chain_data):
     test_spread = TestOption.create([option1, option2], 'a value', what='so what')
     assert test_spread.spread_type == OptionSpreadType.CUSTOM
     assert test_spread.quantity == 0 # default quantity
-    assert test_spread.position_id is not None # position id is set
+    assert test_spread.instance_id is not None # position id is set
 
 def test_current_value_is_sum_of_options_current_values(option_chain_data):
     quote_date = datetime.datetime(2014, 12, 30, 0, 0)

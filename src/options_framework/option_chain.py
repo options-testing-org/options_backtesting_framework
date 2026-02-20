@@ -1,6 +1,6 @@
 import datetime
 import os
-import dill as pickle
+import pickle
 import glob
 
 import pandas as pd
@@ -30,7 +30,7 @@ class OptionChain():
     expiration_strikes: dict = field(init=False, default_factory=lambda: {}, repr=False)
 
     def __post_init__(self):
-        self.timeslots_folder = options_folder = Path(settings['options_directory'], settings['data_frequency'], self.symbol, 'timeslots')
+        self.timeslots_folder = Path(settings['options_directory'], settings['data_frequency'], self.symbol, 'timeslots')
         self.datetimes = datetimes = self.get_datetimes_in_date_range()
 
     def on_next(self, quote_datetime: datetime.datetime):

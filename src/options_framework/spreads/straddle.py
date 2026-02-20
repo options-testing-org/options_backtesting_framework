@@ -12,6 +12,7 @@ from ..option_types import OptionSpreadType, OptionStatus, OptionPositionType
 from ..utils.helpers import decimalize_4, decimalize_2, decimalize_0
 
 
+# noinspection PyUnresolvedReferences
 @dataclass(repr=False, slots=True)
 class Straddle(SpreadBase):
 
@@ -33,8 +34,8 @@ class Straddle(SpreadBase):
         # Find nearest matching strike for this expiration
         strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
         try:
-            strike = next(s for s in strikes if s >= strike)
-            options = [o for o in option_chain.options if o['expiration'] == expiration and o['strike'] == strike]
+            selected_strike = min(strikes, key=lambda x: abs(x - strike))
+            options = [o for o in option_chain.options if o['expiration'] == expiration and o['strike'] == selected_strike]
         except StopIteration:
             raise ValueError(
                 "No matching strike was found in the option chain.")
@@ -81,7 +82,7 @@ class Straddle(SpreadBase):
 
     def __repr__(self):
         long_short = '' if self.position_type is None else f' {self.position_type.name}'
-        return f'<{self.spread_type.name}({self.position_id}) {self.symbol} {self.strike} {self.expiration}{long_short}>'
+        return f'<{self.spread_type.name}({self.instance_id}) {self.symbol} {self.strike} {self.expiration}{long_short}>'
 
     def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
         self.call.open_trade(quantity=quantity)
@@ -99,10 +100,10 @@ class Straddle(SpreadBase):
 
         super(Straddle, self)._save_user_defined_values(self, **kwargs)
 
-    @property
-    def required_margin(self) -> float:
+    def get_required_margin(self, quantity: int) -> float:
         margin = 0
-        if self.position_type == OptionPositionType.SHORT:
+        position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
+        if position_type == OptionPositionType.SHORT:
             """
             Short options:
             20% of the spot price minus the out-of-money amount plus the option premium
@@ -115,14 +116,14 @@ class Straddle(SpreadBase):
                 pct_10 = decimalize_4(option.spot_price * 0.1)
                 otm_amount = decimalize_4(
                     option.spot_price - option.strike) if option.otm() else decimalize_0(0)
-                price = decimalize_2(option.trade_open_info.price)
+                price = decimalize_2(option.price)
 
                 # three calculations - take the largest value
                 calc1 = (pct_20 - otm_amount + price)
                 calc2 = (pct_10 + price)
                 calc3 = (Decimal(1) + price)
                 _margin = max(calc1, calc2, calc3)
-                _margin = float(_margin) * 100 * abs(self.quantity)
+                _margin = float(_margin) * 100 * abs(quantity)
                 margin += _margin
             margin = round(margin, 2)
         return round(margin, 2)
@@ -139,7 +140,7 @@ class Straddle(SpreadBase):
         return self.call.get_dte()
 
     def get_trade_price(self) -> float | None:
-        if OptionStatus.INITIALIZED == self.option.status:
+        if all(o.status == OptionStatus.INITIALIZED for o in self.options):
             return None
         else:
             return self.call.trade_open_info.price + self.put.trade_open_info.price
@@ -155,13 +156,13 @@ class Straddle(SpreadBase):
     @property
     def max_profit(self) -> float | None:
         if self.position_type == OptionPositionType.SHORT:
-            return self.get_trade_price()
+            return self.get_trade_premium() * -1
         else:
             return None
 
     @property
     def max_loss(self) -> float | None:
         if self.position_type == OptionPositionType.LONG:
-            return self.get_trade_premium()
+            return self.get_trade_premium() * -1
         else:
             return None

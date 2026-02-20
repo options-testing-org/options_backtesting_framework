@@ -18,14 +18,14 @@ def test_repr(option_chain_data, option_type, strike, quantity, expected_repr):
 
     single = Single.create(option_chain=option_chain, expiration=expiration, strike=strike, option_type=option_type)
 
-    test_repr = expected_repr.format(single.position_id, '')
+    test_repr = expected_repr.format(single.instance_id, '')
     repr_ = single.__repr__()
     assert test_repr == repr_
 
     single.open_trade(quantity=quantity)
     repr_ = single.__repr__()
     long_short = ' LONG' if quantity > 0 else ' SHORT'
-    test_repr = expected_repr.format(single.position_id, long_short)
+    test_repr = expected_repr.format(single.instance_id, long_short)
     assert test_repr == repr_
 
 

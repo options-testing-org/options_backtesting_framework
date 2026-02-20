@@ -32,12 +32,12 @@ class Vertical(SpreadBase):
         else:
             raise ValueError("Long and short strikes cannot be the same")
 
-            # Find nearest matching expiration
-            try:
-                expiration = next(e for e in option_chain.expirations if e >= expiration)
-            except StopIteration:
-                message = "No matching expiration was found in the option chain."
-                raise ValueError(message)
+        # Find nearest matching expiration
+        try:
+            expiration = next(e for e in option_chain.expirations if e >= expiration)
+        except StopIteration:
+            message = "No matching expiration was found in the option chain."
+            raise ValueError(message)
 
         expiration_strikes = option_chain.expiration_strikes[expiration].copy()
         options = [o for o in option_chain.options if o['option_type'] == option_type and o['expiration'] == expiration].copy()
@@ -56,24 +56,18 @@ class Vertical(SpreadBase):
 
         long_dict = next(o for o in options if o['strike'] == long_strike)
         long_option = Option(**long_dict)
-        long_option.quantity = 1
         short_dict = next(o for o in options if o['strike'] == short_strike)
         short_option = Option(**short_dict)
-        short_option.quantity = -1
 
         vertical = Vertical(options=[long_option, short_option],
                             spread_type=OptionSpreadType.VERTICAL,
-                            position_type=option_position_type, quantity=1)
+                            position_type=option_position_type)
         super(Vertical, vertical)._save_user_defined_values(vertical, **kwargs)
         return vertical
 
 
     def __post_init__(self):
         message = None
-        if any(o for o in self.options if o.quantity == 0):
-            message = "Quantity must be set for each option. Short options should have a negative quantity, and long options should have a positive quantity."
-        if not sum(o.quantity for o in self.options) == 0:
-            message = "Invalid quantities. A Vertical Spread must have an equal number of long and short options."
         if self.options[0].option_type != self.options[1].option_type:
             message = "Invalid option type. Both legs must be either calls or puts."
         if self.options[0].expiration != self.options[0].expiration:
@@ -87,15 +81,15 @@ class Vertical(SpreadBase):
         if message is not None:
             raise ValueError(message)
 
-        self.long_option = self.options[0] if self.options[0].quantity > 0 else self.options[1]
+        self.long_option = self.options[0]
         self.long_option.position_type = OptionPositionType.LONG
-        self.short_option = self.options[0] if self.options[0].quantity < 0 else self.options[1]
+        self.short_option = self.options[1]
         self.short_option.position_type = OptionPositionType.SHORT
 
 
     def __repr__(self) -> str:
         strikes = [self.long_option.strike, self.short_option.strike]
-        s = f'<{self.spread_type.name}({self.position_id}) {self.option_type.upper()} {self.position_type.name} ' \
+        s = f'<{self.spread_type.name}({self.instance_id}) {self.option_type.upper()} {self.position_type.name} ' \
                 + f'{self.symbol} {strikes[0]}/{strikes[1]} ' \
                 + f'{self.expiration}>'
         return s
@@ -106,17 +100,21 @@ class Vertical(SpreadBase):
         self.short_option.quantity = abs(quantity) * -1
 
     def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
+        # if self.position_type == OptionPositionType.LONG and quantity < 0:
+        #     raise ValueError('Long option quantity cannot be negative.')
+        # elif self.position_type == OptionPositionType.SHORT and quantity > 0:
+        #     raise ValueError('Short option quantity must be negative.')
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
         super(Vertical, self)._save_user_defined_values(self, **kwargs)
 
     def close_trade(self, quantity: int | None = None, *args, **kwargs: dict) -> None:
-        quantity = quantity if quantity is not None else quantity == self.long_option.quantity
+        quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.close_trade(quantity=quantity)
         self.short_option.close_trade(quantity=quantity * -1)
         self.quantity -= quantity
-        super(Vertical, self)._save_user_defined_values(selfty, **kwargs)
+        super(Vertical, self)._save_user_defined_values(self, **kwargs)
 
     @property
     def max_profit(self) -> float | None:
@@ -147,8 +145,7 @@ class Vertical(SpreadBase):
 
         return max_loss
 
-    @property
-    def required_margin(self) -> float:
+    def get_required_margin(self, quantity: int) -> float:
         if OptionStatus.TRADE_IS_OPEN not in self.long_option.status:
             return 0
         elif self.position_type == OptionPositionType.LONG:
@@ -204,8 +201,7 @@ class Vertical(SpreadBase):
         if all(OptionStatus.TRADE_IS_CLOSED in o.status for o in self.options):
             closed_value = self.closed_value
             if closed_value > self.max_profit or closed_value < self.max_loss * -1:
-                fees = self.get_fees()
-                profit_loss = closed_value + fees
+                profit_loss = closed_value
 
         return profit_loss
 

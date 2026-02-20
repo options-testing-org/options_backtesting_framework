@@ -4,6 +4,7 @@ import pandas as pd
 from pandas import DataFrame
 import os
 
+
 os.environ["OPTIONS_FRAMEWORK_CONFIG_FOLDER"] = r'C:\_code\options_backtesting_framework\tests\config'
 from mocks import *
 from test_data.test_option_data import *
@@ -11,6 +12,7 @@ from test_data.test_option_data import *
 from pprint import pprint as pp
 
 from options_framework.config import settings, load_settings
+
 
 
 @pytest.fixture

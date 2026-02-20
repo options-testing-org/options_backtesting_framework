@@ -23,8 +23,8 @@ class OptionPortfolio(Dispatcher):
     closed_positions: list = field(init=False, default_factory=lambda: [])
     portfolio_risk: float = field(init=False, default=0.0)
     close_values: list = field(init=False, default_factory=lambda: [])
-    option_chains: dict = field(default_factory=lambda: {})
-    uninitialize_closed_positions: bool = field(init=False, default=False)
+    option_chains: dict = field(init=False, default_factory=lambda: {})
+    check_margin_on_open: bool = field(default=True)
 
     def __post_init__(self):
         pass
@@ -32,7 +32,7 @@ class OptionPortfolio(Dispatcher):
     def __repr__(self) -> str:
         return f'<OptionPortfolio cash=${self.cash:,.2f} portfolio_value=${self.current_value:,.2f}>'
 
-    def open_position(self, option_spread: SpreadBase, quantity: int, *args, **kwargs: dict):
+    def open_position(self, option_spread: SpreadBase, quantity: int, margin_percent: float = None, *args, **kwargs: dict):
         try:
             if option_spread.symbol not in self.option_chains.keys():
                 self.initialize_ticker(option_spread.symbol, self.current_datetime)
@@ -41,77 +41,84 @@ class OptionPortfolio(Dispatcher):
                          option_expired=self.on_option_expired,
                          fees_incurred=self.on_fees_incurred) for option in option_spread.options]
             option_spread.open_trade(quantity=quantity, *args, **kwargs)
-            if option_spread.position_type == OptionPositionType.SHORT:
+            if option_spread.position_type == OptionPositionType.SHORT and self.check_margin_on_open:
+
                 # check to see if we have enough margin to open this position
-                new_margin = option_spread.required_margin + self.portfolio_margin_allocation
-                if new_margin > self.cash:
+                new_margin = option_spread.get_required_margin(quantity) + self.portfolio_margin_allocation
+                allowed_margin = self.cash if margin_percent is None else self.current_value * margin_percent
+                allowed_margin = allowed_margin if allowed_margin <= self.cash else self.cash
+                if new_margin >= allowed_margin:
                     raise ValueError(f'Insufficient margin available to open this position.')
-        except ValueError as e:
-            raise ValueError(str(e)) from e
+            self.positions.append(option_spread)
+        except Exception as e:
+            # back out of any transactions that may have completed, add back any premium that was subtracted from cash.
+            for o in option_spread.options:
+                if OptionStatus.TRADE_IS_OPEN in o.status:
+                    premium = o.trade_open_info.premium
+                    fees = o.trade_open_info.fees
+                    self.cash += (premium + fees)
+                    #print(f'Exception occurred: {premium + fees:.2f} subtracted from cash. {e}')
+            raise
 
-        self.positions.append(option_spread)
-
-
-    def close_position(self, position_id: int, quantity: int = None, **kwargs: dict):
+    def close_position(self, option_spread: SpreadBase, quantity: int = None, **kwargs: dict):
 
         try:
-            to_close = next(x for x in self.positions if x.position_id == position_id)
+            instance_id = option_spread.instance_id
+            to_close = next(x for x in self.positions if x.instance_id == instance_id)
         except StopIteration:
-            raise ValueError(f'Position {position_id} not in open positions list.')
+            raise ValueError(f'Position {instance} not in open positions list.')
+
+        quantity = to_close.quantity if quantity is None else quantity
 
         try:
             to_close.close_trade(quantity=quantity, **kwargs)
             closing_value = sum(o.trade_close_records[-1].premium for o in to_close.options)
-            raw_pnl = to_close.trade_value - closing_value
-            raw_pnl = raw_pnl * -1 if to_close.position_type == OptionPositionType.SHORT else raw_pnl
+            raw_pnl = closing_value - to_close.trade_value
+            #raw_pnl = raw_pnl * -1 if to_close.position_type == OptionPositionType.SHORT else raw_pnl
 
             # Adjust portfolio cash if the closing value is greater than the max profit for this position
             if to_close.max_profit:
                 if raw_pnl > to_close.max_profit:
                     self.cash -= (raw_pnl - to_close.max_profit)
-                    print(f'corrected pnl > max profit: {(raw_pnl - to_close.max_profit)}')
+                    #print(f'corrected pnl > max profit: {(raw_pnl - to_close.max_profit)}')
 
             # Adjust portfolio cash if the closing value is less than the max loss for this position
             if to_close.max_loss:
                 max_loss = to_close.max_loss * -1
                 if raw_pnl < max_loss:
                     self.cash += (raw_pnl - max_loss)
-                    print(f'corrected pnl < max loss: {(max_loss - raw_pnl)}')
+                    #print(f'corrected pnl < max loss: {(max_loss - raw_pnl)}')
 
             self.closed_positions.append(to_close)
             self.positions.remove(to_close)
             self.emit("position_closed", to_close)
 
-            # if self._uninitialize_closed_positions:
-            #     symbol = to_close.symbol
-            #     open_symbols = [o.symbol for pos in self.positions for o in pos.options]
-            #     if symbol not in open_symbols:
-            #         self.uninitialize_ticker(symbol)
-
         except Exception as e:
             raise Exception(str(e)) from e
 
-    def next(self, quote_datetime: datetime.datetime, symbols: list[str] = None, *args):
+    def next(self, quote_datetime: datetime.datetime, symbols: str | list[str] = None, *args, **kwargs):
         self.current_datetime = quote_datetime
         symbols = [] if symbols is None else symbols
-        try:
-            del_symbols = [s for s in list(self.option_chains.keys()) if s not in symbols]
-            self._remove_symbols(del_symbols)
-            for symbol in symbols:
-                self._initialize_ticker(symbol=symbol, quote_datetime=quote_datetime)
+        symbols = [symbols] if isinstance(symbols, str) else symbols
+        open_position_symbols = [x.symbol for x in self.positions]
+        symbols = symbols + open_position_symbols
+        del_symbols = [s for s in list(self.option_chains.keys()) if s not in symbols]
+        self._remove_symbols(del_symbols)
+        for symbol in symbols:
+            self._initialize_ticker(symbol=symbol, quote_datetime=quote_datetime)
 
-            self.emit('next', quote_datetime)
-            options = [o for pos in self.positions for o in pos.options]
-            self.emit('next_options', options)
-            values = [quote_datetime, self.current_value] + list(args)
-            self.close_values.append(values)
-        except Exception as e:
-            raise Exception(str(e)) from e
+        self.emit('next', quote_datetime)
+        options = [o for pos in self.positions for o in pos.options]
+        self.emit('next_options', options)
+        values = [quote_datetime, self.current_value] + list(args)
+        self.close_values.append(values)
+        # except Exception as e:
+        #     raise Exception(str(e)) from e
 
-    def get_open_position_by_id(self, position_id: int) -> SpreadBase:
+    def get_open_position_by_id(self, instance_id: int) -> SpreadBase:
         pass
 
-    def get_closed_position_by_id(self, position_id: int) -> SpreadBase:
+    def get_closed_position_by_id(self, instance_id: int) -> SpreadBase:
         pass
 
     @property
@@ -123,29 +130,29 @@ class OptionPortfolio(Dispatcher):
 
     @property
     def portfolio_margin_allocation(self):
-        margin = sum(position.required_margin for position in self.positions)
+        margin = sum(position.get_required_margin(position.quantity) for position in self.positions)
         return margin
 
     def on_option_open_transaction_completed(self, trade_open_info: TradeOpenInfo):
         open_premium = trade_open_info.premium
         self.cash = self.cash - open_premium
-        print(f'opened option. ${open_premium:,.2f} subtracted from cash')
-        print(f"portfolio: option position was opened {trade_open_info.option_id}")
+        #print(f'opened option. ${open_premium:,.2f} subtracted from cash')
+        # print(f"portfolio: option position was opened {trade_open_info.option_id}")
 
     def on_option_close_transaction_completed(self, trade_close_info: TradeCloseInfo):
         close_premium = trade_close_info.premium
         self.cash = self.cash + close_premium
-        print(f'closed option. ${close_premium:,.2f} added to cash')
-        print(f"portfolio: option position was closed {trade_close_info.option_id}")
+        #print(f'closed option. ${close_premium:,.2f} added to cash')
+        # print(f"portfolio: option position was closed {trade_close_info.option_id}")
 
     def on_option_expired(self, instance_id: int):
-        print(f"portfolio: option expired {instance_id}")
+        #print(f"portfolio: option expired {instance_id}")
         try:
             expired_position = next(pos for pos in self.positions for o in pos.options if o.instance_id == instance_id)
         except StopIteration:
             raise ValueError(f'Cannot find expired option {instance_id} in open positions list.')
 
-        if all([OptionStatus.EXPIRED in option.status for option in expired_position.options]):
+        if all(OptionStatus.EXPIRED in option.status for option in expired_position.options):
                 self.close_position(expired_position, expired_position.quantity)
                 self.emit('position_expired', expired_position)
 

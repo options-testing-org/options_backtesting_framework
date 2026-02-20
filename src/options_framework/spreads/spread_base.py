@@ -23,7 +23,7 @@ class SpreadBase(ABC):
     options: list[Option] = field(default=None)
     spread_type: OptionSpreadType = field(default=None)
     quantity: int = field(default=0)
-    position_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
+    instance_id: int = field(init=False, default_factory=lambda counter=itertools.count(): next(counter))
     position_type: Optional[OptionPositionType] = field(default=None)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
 
@@ -33,6 +33,12 @@ class SpreadBase(ABC):
 
     def __repr__(self) -> str:
         raise NotImplementedError
+
+    # Matches objects based on instance id so copies of lists can loop through and match
+    def __eq__(self, other: SpreadBase) -> bool:
+        if isinstance(other, SpreadBase):
+            return self.instance_id == other.instance_id
+        return NotImplemented
 
     @classmethod
     @abstractmethod
@@ -70,6 +76,9 @@ class SpreadBase(ABC):
         for arg, val in kwargs.items():
             obj.user_defined[arg] = val
 
+    def _apply_slippage(self):
+        pass
+
     @property
     @abstractmethod
     def max_profit(self) -> float | None:
@@ -80,9 +89,9 @@ class SpreadBase(ABC):
     def max_loss(self) -> float | None:
         raise NotImplementedError
 
-    @property
+
     @abstractmethod
-    def required_margin(self) -> float:
+    def get_required_margin(self, quantity: int) -> float:
         raise NotImplementedError
 
     @property
@@ -98,6 +107,10 @@ class SpreadBase(ABC):
     @abstractmethod
     def price(self) -> float:
         raise NotImplementedError
+
+    @property
+    def spot_price(self) -> float:
+        return self.options[0].spot_price
 
     @property
     def quote_datetime(self) -> datetime.datetime:
@@ -118,7 +131,9 @@ class SpreadBase(ABC):
             return sum(o.trade_open_info.premium for o in self.options)
 
     def get_profit_loss_percent(self) -> float:
-        pnl_pct = sum(o.get_profit_loss_percent() for o in self.options)
+        premium = abs(self.get_trade_premium())
+        pnl_pct = self.get_profit_loss() / premium
+        #sum(o.get_profit_loss_percent() for o in self.options)
         return round(pnl_pct, 4)
 
 

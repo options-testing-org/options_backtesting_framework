@@ -94,7 +94,7 @@ class SPX_7_Day_Put_Credit(bt.Strategy):
     def expired(self, position):
         pnl = position.get_profit_loss()
         trade_val = position.trade_value
-        message = f'expired ({position.position_id}) opened value: {trade_val:.2f} expired value: {pnl:.2f} pct gain/loss: {pnl/trade_val*-1:.2f}%'
+        message = f'expired ({position.instance_id}) opened value: {trade_val:.2f} expired value: {pnl:.2f} pct gain/loss: {pnl / trade_val * -1:.2f}%'
         self.log(message)
 
     def __init__(self):
@@ -145,7 +145,7 @@ class SPX_7_Day_Put_Credit(bt.Strategy):
                 if to_close:
                     self.portfolio.close_position(pos)
                     self.trade_today = True
-                    message = f'Closed ({pos.position_id}) credit: {pos.trade_value:.2f} closed value: {pnl:.2f} pct gain/loss: {pnl / pos.trade_value * -1:.2f}%'
+                    message = f'Closed ({pos.instance_id}) credit: {pos.trade_value:.2f} closed value: {pnl:.2f} pct gain/loss: {pnl / pos.trade_value * -1:.2f}%'
                     self.log(message)
 
         # Only hold one position at a time

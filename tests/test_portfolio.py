@@ -66,7 +66,7 @@ def test_close_position_removes_from_open_positions_adds_to_closed_positions(dai
     assert len(portfolio.positions) == 1
     assert len(portfolio.closed_positions) == 0
 
-    portfolio.close_position(single.position_id, quantity=5)
+    portfolio.close_position(single.instance_id, quantity=5)
 
     assert len(portfolio.positions) == 0
     assert len(portfolio.closed_positions) == 1
@@ -124,7 +124,7 @@ def test_portfolio_events_are_emitted(option_chain_data):
 
     # position_closed event
     portfolio.bind(position_closed=listener.on_position_closed)
-    portfolio.close_position(single.position_id, 1)
+    portfolio.close_position(single.instance_id, 1)
     assert on_position_closed_fired is single
 
     # position_expired event
