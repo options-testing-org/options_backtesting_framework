@@ -100,6 +100,7 @@ class SpreadBase(ABC):
         raise NotImplementedError
 
     @property
+    @abstractmethod
     def symbol(self) -> str:
         return self.options[0].symbol
 
@@ -156,6 +157,10 @@ class SpreadBase(ABC):
     def get_trade_price(self) -> float | None:
         raise NotImplementedError
 
+    @abstractmethod
+    def get_closed_price(self) -> float | None:
+        raise NotImplementedError
+
     def get_open_datetime(self) -> datetime.datetime | None:
         first_option = self.options[0]
         if (OptionStatus.TRADE_IS_OPEN & OptionStatus.TRADE_IS_CLOSED) not in first_option.status:
@@ -186,3 +191,8 @@ class SpreadBase(ABC):
                 fees += o.trade_close_info.fees
 
         return fees
+
+    @abstractmethod
+    def get_price_history(self) -> list[tuple]:
+        raise NotImplementedError
+

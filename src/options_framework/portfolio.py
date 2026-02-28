@@ -40,7 +40,7 @@ class OptionPortfolio(Dispatcher):
                          close_transaction_completed=self.on_option_close_transaction_completed,
                          option_expired=self.on_option_expired,
                          fees_incurred=self.on_fees_incurred) for option in option_spread.options]
-            option_spread.open_trade(quantity=quantity, *args, **kwargs)
+            option_spread.open_trade(quantity=quantity,*args, **kwargs)
             if option_spread.position_type == OptionPositionType.SHORT and self.check_margin_on_open:
 
                 # check to see if we have enough margin to open this position

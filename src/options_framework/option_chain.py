@@ -15,7 +15,7 @@ from options_framework.option import Option
 from options_framework.utils.helpers import distinct
 from typing import Optional
 from options_framework.config import settings
-from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
+from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4, get_market_dates
 
 @dataclass
 class OptionChain():
@@ -74,40 +74,66 @@ class OptionChain():
         try:
             ts_file = next(find_timeslot)
         except StopIteration:
-            raise ValueError(f'Cannot find option chain for {self.symbol} on {quote_datetime}.')
+            return None
+            #raise ValueError(f'Cannot find option chain for {self.symbol} on {quote_datetime}.')
 
         with open(ts_file, 'rb') as f:
             options_data = pickle.load(f)
         return options_data
 
 
-    def get_folder_as_date(self, folder):
-        return folder, datetime.datetime.strptime(folder.name, '%Y_%m').date()
-
-
     def get_datetimes_in_date_range(self):
-        folders_list = self.timeslots_folder.glob('*')
+        datetimes = get_market_dates(self.quote_datetime.date(), self.end_datetime.date())
+        datetimes = [datetime.datetime.combine(x, datetime.time(0,0)) for x in datetimes]
+        data_frequency = settings['data_frequency']
+        if data_frequency == 'daily':
+            return datetimes
 
-        start_folder = datetime.date(self.quote_datetime.year, self.quote_datetime.month, 1)
-        end_folder = datetime.date(self.end_datetime.year, self.end_datetime.month, 1)
-        end = self.end_datetime + datetime.timedelta(days=1) # Need to add a day so we can capture all the times from that day.
+        elif data_frequency == 'intraday':
+            minute_granularity = int(settings['minute_granularity'])
+            start_time_setting =  settings['start_time']
+            start_time = datetime.time(int(start_time_setting[:2]), int(start_time_setting[-2:]))
+            end_time_setting = settings['end_time']
+            end_time = datetime.time(int(end_time_setting[:2]), int(end_time_setting[-2:]))
 
-        datetimes = []
-        while True:
-            try:
-                fol, folder_dt = self.get_folder_as_date(next(folders_list))
 
-                if folder_dt >= start_folder:
-                    if folder_dt <= end_folder:
-                        fol_dts = [datetime.datetime.strptime(f.stem, '%Y_%m_%d_%H_%M') for f in fol.iterdir()]
-                        datetimes.extend(fol_dts)
-                    else:
-                        break
-            except StopIteration:
-                break
+            intra_datetimes = []
 
-        datetimes.sort()
-        datetimes = [x for x in datetimes if x >= self.quote_datetime and x <= self.end_datetime]
+            for dt in datetimes:
+                tm = start_time
+                while tm <= end_time:
+                    new_datetime = datetime.datetime.combine(dt, tm)
+                    intra_datetimes.append(new_datetime)
+                    new_datetime += datetime.timedelta(minutes=minute_granularity)
+                    tm = new_datetime.time()
+
+            return intra_datetimes
+
+
+
+        # folders_list = self.timeslots_folder.glob('*')
+        #
+        # start_folder = datetime.date(self.quote_datetime.year, self.quote_datetime.month, 1)
+        # end_folder = datetime.date(self.end_datetime.year, self.end_datetime.month, 1)
+        # end = self.end_datetime + datetime.timedelta(days=1) # Need to add a day so we can capture all the times from that day.
+        #
+        # datetimes = []
+        # while True:
+        #     try:
+        #         fol, folder_dt = self.get_folder_as_date(next(folders_list))
+        #
+        #         if folder_dt >= start_folder:
+        #             if folder_dt <= end_folder:
+        #                 fol_dts = [datetime.datetime.strptime(f.stem, '%Y_%m_%d_%H_%M') for f in fol.iterdir()]
+        #                 datetimes.extend(fol_dts)
+        #             else:
+        #                 break
+        #     except StopIteration:
+        #         break
+        #
+        # datetimes.sort()
+        # datetimes = [x for x in datetimes if x >= self.quote_datetime and x <= self.end_datetime]
+        # return datetimes
         return datetimes
 
 

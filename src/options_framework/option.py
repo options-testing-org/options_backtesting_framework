@@ -9,8 +9,9 @@ import itertools
 import pandas as pd
 import numpy as np
 from options_framework.option_types import OptionPositionType, OptionStatus
-from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
+from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4, get_market_dates
 from options_framework.config import settings
+
 
 from pydispatch import Dispatcher
 
@@ -98,6 +99,7 @@ class Option(Dispatcher):
     incur_fees: bool = field(default=True, compare=False)
     fee_per_contract: float = field(default=0.65, compare=False)
     history: list = field(default_factory=lambda: [], compare=False)
+    _dates: list = field(default_factory=lambda: [], compare=False)
 
     def __post_init__(self):
         # check for required fields
@@ -200,6 +202,9 @@ class Option(Dispatcher):
         self.volume = updates.get('volume', None)
         self.implied_volatility = updates.get('implied_volatility')
 
+        self._dates = [x for x in self._dates if x >= self.quote_datetime.date()]
+        self.history.append((self.quote_datetime, self.price, self.spot_price, len(self._dates)))
+
     def open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
         """
         Opens a trade with a given quantity. Returns the premium amount of the trade.
@@ -240,14 +245,14 @@ class Option(Dispatcher):
             fill_price = decimalize_2(ask)
             if fill_price <= 0:
                 raise ValueError(f"Cannot open LONG with non-positive ask for {self.option_id}")
-            premium = float(-fill_price * 100 * abs(quantity))  # cash outflow
+            premium = float(+fill_price * 100 * abs(quantity))  # cash outflow
             self.position_type = OptionPositionType.LONG
         else:
             bid = self.bid + fill_factor*(self.price - self.bid)
-            fill_price = decimalize_2(self.bid)
+            fill_price = decimalize_2(bid)
             if fill_price <= 0:
                 raise ValueError(f"Cannot open SHORT with non-positive bid for {self.option_id}")
-            premium = float(+fill_price * 100 * abs(quantity))  # cash inflow
+            premium = float(-fill_price * 100 * abs(quantity))  # cash inflow
             self.position_type = OptionPositionType.SHORT
 
         for key, value in kwargs.items():
@@ -271,6 +276,9 @@ class Option(Dispatcher):
 
         self.emit("open_transaction_completed", trade_open_info)
         #print(f'emit open {self.option_id}')
+
+        self._dates = get_market_dates(self.quote_datetime.date(), self.expiration)
+        self.history.append((self.quote_datetime, float(fill_price), self.spot_price, len(self._dates)))
 
         return trade_open_info
 
@@ -329,7 +337,7 @@ class Option(Dispatcher):
         # determine executable close price and action sign
         if self.position_type == OptionPositionType.LONG:
             bid = self.bid + fill_factor*(self.price - self.bid)
-            close_price = decimalize_2(self.bid)  # sell to close on bid
+            close_price = decimalize_2(bid)  # sell to close on bid
             action_qty = -close_qty  # sell
         else:  # SHORT
             ask = self.ask - fill_factor*(self.ask - self.price)
@@ -387,6 +395,11 @@ class Option(Dispatcher):
             self.status &= ~OptionStatus.TRADE_PARTIALLY_CLOSED
             self.status |= OptionStatus.TRADE_IS_CLOSED
             self.price = float(close_price)
+            dte = len([x for x in self._dates if x >= self.quote_datetime.date()])
+            if dte > 0:
+                # The last update was for this time period, but we are closing, so replace the last price update with the
+                # closing update. Otherwise there would be two history records for the same time slot.
+                self.history[-1] = (self.quote_datetime, self.price, self.spot_price, dte)
         else:
             self.status |= OptionStatus.TRADE_PARTIALLY_CLOSED
 
@@ -428,16 +441,11 @@ class Option(Dispatcher):
             raise ValueError(f"Bad quote bid/ask for {self.option_id}: bid={bid}, ask={ask}")
 
         if self.position_type == OptionPositionType.LONG:
-            # sell to close on bid
-            if bid <= 0:
-                # No executable bid -> treat as missing quote, not worth 0
-                raise ValueError(f"Missing/zero bid for LONG option close: {self.option_id}")
+
             return bid
 
         elif self.position_type == OptionPositionType.SHORT:
-            # buy to close on ask
-            if ask <= 0:
-                raise ValueError(f"Missing/zero ask for SHORT option close: {self.option_id}")
+
             return ask
 
         else:

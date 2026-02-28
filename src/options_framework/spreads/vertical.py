@@ -41,18 +41,9 @@ class Vertical(SpreadBase):
 
         expiration_strikes = option_chain.expiration_strikes[expiration].copy()
         options = [o for o in option_chain.options if o['option_type'] == option_type and o['expiration'] == expiration].copy()
-        try:
-            # Find nearest strikes
-            if option_type == 'call':
-                long_strike = next(s for s in expiration_strikes if s >= long_strike)
-                short_strike = next(s for s in expiration_strikes if s >= short_strike)
-            else:
-                expiration_strikes.sort(reverse=True)
-                long_strike = next(s for s in expiration_strikes if s <= long_strike)
-                short_strike = next(s for s in expiration_strikes if s <= short_strike)
-        except StopIteration as ex:
-            message = "No matching strike was found in the option chain."
-            raise ValueError(message)
+
+        long_strike = min(expiration_strikes, key=lambda x: abs(x - long_strike))
+        short_strike = min(expiration_strikes, key=lambda x: abs(x - short_strike))
 
         long_dict = next(o for o in options if o['strike'] == long_strike)
         long_option = Option(**long_dict)
@@ -100,10 +91,6 @@ class Vertical(SpreadBase):
         self.short_option.quantity = abs(quantity) * -1
 
     def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
-        # if self.position_type == OptionPositionType.LONG and quantity < 0:
-        #     raise ValueError('Long option quantity cannot be negative.')
-        # elif self.position_type == OptionPositionType.SHORT and quantity > 0:
-        #     raise ValueError('Short option quantity must be negative.')
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
@@ -185,6 +172,15 @@ class Vertical(SpreadBase):
             trade_price = long_price - short_price
             return float(trade_price)
 
+    def get_closed_price(self) -> float | None:
+        if OptionStatus.TRADE_IS_CLOSED not in self.long_option.status:
+            return None
+        long_price = decimalize_2(self.long_option.trade_close_info.price)
+        short_price = decimalize_2(self.short_option.trade_close_info.price)
+        closed_price = long_price - short_price
+        return float(closed_price)
+
+
     @property
     def closed_value(self) -> float | None:
         closed_value = super(Vertical, self).closed_value
@@ -205,3 +201,18 @@ class Vertical(SpreadBase):
 
         return profit_loss
 
+
+    def get_price_history(self) -> list[tuple]:
+        long_history = self.long_option.history
+        short_history = self.short_option.history
+        history = []
+        for i in range(len(long_history)):
+            dt = long_history[i][0]
+            l = long_history[i][1]
+            s = short_history[i][1]
+            price = l - s
+            spot_price = long_history[i][2]
+            dte = long_history[i][3]
+            history.append((dt, price, spot_price, dte))
+
+        return history

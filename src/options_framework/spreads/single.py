@@ -34,12 +34,6 @@ class Single(SpreadBase):
         strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
         try:
             selected_strike = min(strikes, key=lambda x: abs(x - strike))
-        #     if option_type == 'call':
-        #         strike = next(s for s in strikes if s >= strike)
-        #     else:
-        #         strikes.sort(reverse=True)
-        #         strike = next(s for s in strikes if s <= strike)
-
             option = next(o for o in option_chain.options if o['option_type'] == option_type
                           and o['expiration'] == expiration and o['strike'] == selected_strike)
         except StopIteration:
@@ -153,3 +147,7 @@ class Single(SpreadBase):
 
     def get_dte(self) -> int | None:
         return self.option.get_dte()
+
+
+    def get_price_history(self) -> list[tuple]:
+        return self.option.history
