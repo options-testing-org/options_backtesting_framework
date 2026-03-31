@@ -72,7 +72,7 @@ class Butterfly(SpreadBase):
 
 
     def __repr__(self) -> str:
-        return f'<{self.spread_type.name}({self.instance_id}) {self.option_type}  {self.lower_option.strike}/{self.center_option.strike}/{self.upper_option.strike}>'
+        return f'<{self.spread_type.name}({self.instance_id}) {self.option_type} {self.expiration} {self.lower_option.strike}/{self.center_option.strike}/{self.upper_option.strike}>'
 
 
     @property
@@ -92,9 +92,9 @@ class Butterfly(SpreadBase):
             qty = qty * -1
             center_qty = qty * 2
 
-        self.lower_option.open_trade(quantity=qty)
-        self.center_option.open_trade(quantity=center_qty)
-        self.upper_option.open_trade(quantity=qty)
+        self.lower_option.open_trade(quantity=qty, parent_id=self.instance_id, bid_open=self.lower_option.bid, ask_open=self.lower_option.ask, mid_open=self.lower_option.price)
+        self.center_option.open_trade(quantity=center_qty, parent_id=self.instance_id, bid_open=self.center_option.bid, ask_open=self.center_option.ask, mid_open=self.center_option.price)
+        self.upper_option.open_trade(quantity=qty, parent_id=self.instance_id, bid_open=self.upper_option.bid, ask_open=self.upper_option.ask, mid_open=self.upper_option.price)
 
         self.quantity = self.lower_option.quantity
 
@@ -104,9 +104,9 @@ class Butterfly(SpreadBase):
     def close_trade(self, quantity: int | None = None, *args, **kwargs: dict) -> None:
         qty = quantity if quantity is not None else self.lower_option.quantity
         center_qty = quantity * 2
-        self.lower_option.close_trade(quantity=qty)
-        self.center_option.close_trade(quantity=center_qty)
-        self.upper_option.close_trade(quantity=qty)
+        self.lower_option.close_trade(quantity=qty, parent_id=self.instance_id, bid_close=self.lower_option.bid, ask_close=self.lower_option.ask, mid_close=self.lower_option.price)
+        self.center_option.close_trade(quantity=center_qty, parent_id=self.instance_id, bid_close=self.center_option.bid, ask_close=self.center_option.ask, mid_close=self.center_option.price)
+        self.upper_option.close_trade(quantity=qty, parent_id=self.instance_id, bid_close=self.upper_option.bid, ask_close=self.upper_option.ask, mid_close=self.upper_option.price)
         self.quantity = self.lower_option.quantity
 
         super(Butterfly, self)._save_user_defined_values(self, **kwargs)

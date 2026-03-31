@@ -155,6 +155,9 @@ class Vertical(SpreadBase):
     def option_type(self) -> str:
         return self.long_option.option_type
 
+    @property
+    def symbol(self ):
+        return self.long_option.symbol
 
     @property
     def status(self) -> OptionStatus:

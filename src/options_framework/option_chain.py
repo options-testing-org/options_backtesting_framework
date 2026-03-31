@@ -31,7 +31,7 @@ class OptionChain():
 
     def __post_init__(self):
         self.timeslots_folder = Path(settings['options_directory'], settings['data_frequency'], self.symbol, 'timeslots')
-        self.datetimes = datetimes = self.get_datetimes_in_date_range()
+        self.datetimes = self.get_datetimes_in_date_range()
 
     def on_next(self, quote_datetime: datetime.datetime):
         # find quote datetime in datetimes list

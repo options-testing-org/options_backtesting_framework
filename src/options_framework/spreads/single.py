@@ -151,3 +151,13 @@ class Single(SpreadBase):
 
     def get_price_history(self) -> list[tuple]:
         return self.option.history
+
+    @property
+    def symbol(self) -> str:
+        return self.option.symbol
+
+    def get_closed_price(self) -> float | None:
+        if OptionStatus.TRADE_IS_CLOSED not in self.option.status:
+            return None
+        price = decimalize_2(self.option.trade_close_info.price)
+        return float(price)

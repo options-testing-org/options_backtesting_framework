@@ -73,21 +73,21 @@ class OptionPortfolio(Dispatcher):
         try:
             to_close.close_trade(quantity=quantity, **kwargs)
             closing_value = sum(o.trade_close_records[-1].premium for o in to_close.options)
-            raw_pnl = closing_value - to_close.trade_value
+            # raw_pnl = closing_value - to_close.trade_value
             #raw_pnl = raw_pnl * -1 if to_close.position_type == OptionPositionType.SHORT else raw_pnl
 
-            # Adjust portfolio cash if the closing value is greater than the max profit for this position
-            if to_close.max_profit:
-                if raw_pnl > to_close.max_profit:
-                    self.cash -= (raw_pnl - to_close.max_profit)
-                    #print(f'corrected pnl > max profit: {(raw_pnl - to_close.max_profit)}')
-
-            # Adjust portfolio cash if the closing value is less than the max loss for this position
-            if to_close.max_loss:
-                max_loss = to_close.max_loss * -1
-                if raw_pnl < max_loss:
-                    self.cash += (raw_pnl - max_loss)
-                    #print(f'corrected pnl < max loss: {(max_loss - raw_pnl)}')
+            # # Adjust portfolio cash if the closing value is greater than the max profit for this position
+            # if to_close.max_profit:
+            #     if raw_pnl > to_close.max_profit:
+            #         self.cash -= (raw_pnl - to_close.max_profit)
+            #         #print(f'corrected pnl > max profit: {(raw_pnl - to_close.max_profit)}')
+            #
+            # # Adjust portfolio cash if the closing value is less than the max loss for this position
+            # if to_close.max_loss:
+            #     max_loss = to_close.max_loss * -1
+            #     if raw_pnl < max_loss:
+            #         self.cash += (raw_pnl - max_loss)
+            #         #print(f'corrected pnl < max loss: {(max_loss - raw_pnl)}')
 
             self.closed_positions.append(to_close)
             self.positions.remove(to_close)
@@ -123,9 +123,9 @@ class OptionPortfolio(Dispatcher):
 
     @property
     def current_value(self):
-        current_value = sum(option.current_value for option in [option for position in self.positions
+        options_value = sum(option.current_value for option in [option for position in self.positions
                                                                 for option in position.options])
-        portfolio_value = decimalize_2(current_value) + decimalize_2(self.cash)
+        portfolio_value = decimalize_2(options_value) + decimalize_2(self.cash)
         return float(portfolio_value)
 
     @property
