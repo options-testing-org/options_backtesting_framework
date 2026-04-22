@@ -12,10 +12,10 @@ from pydispatch import Dispatcher
 from pathlib import Path
 
 from options_framework.option import Option
-from options_framework.utils.helpers import distinct
+from options_framework.utils.helpers import distinct, decimalize_0, decimalize_2, decimalize_4, get_market_dates
+from options_framework.utils.options_db import IntradayOptionsDB, OptionsDB
 from typing import Optional
 from options_framework.config import settings
-from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4, get_market_dates
 
 @dataclass
 class OptionChain():
@@ -30,7 +30,11 @@ class OptionChain():
     expiration_strikes: dict = field(init=False, default_factory=lambda: {}, repr=False)
 
     def __post_init__(self):
-        self.timeslots_folder = Path(settings['options_directory'], settings['data_frequency'], self.symbol, 'timeslots')
+        data_frequency = settings['data_frequency']
+        if data_frequency == 'daily':
+            self.db = OptionsDB.from_symbol(self.symbol)
+        else:
+            self.db = IntradayOptionsDB.from_symbol(self.symbol)
         self.datetimes = self.get_datetimes_in_date_range()
 
     def on_next(self, quote_datetime: datetime.datetime):
@@ -46,41 +50,17 @@ class OptionChain():
             self.expiration_strikes = {}
             return
 
-        options = self.load_timeslot(quote_datetime=quote_datetime)
-        if options is None:
-            return # no options for this time slot
+        options = self.db.get_chain_at(self.quote_datetime.isoformat())
+        if len(options) == 0:
+            return [] # no options for this time slot
 
         idx_quote = self.datetimes.index(quote_datetime)
         if len(self.datetimes) > 1:
             self.datetimes = self.datetimes[idx_quote + 1:]
         self.options = options
 
-        expirations = [x['expiration'] for x in options]
-        expirations = list(set(expirations))
-        expirations.sort()
-        self.expirations = expirations
-        expiration_strikes = [(x['expiration'], x['strike']) for x in options]
-        expiration_strikes = list(set(expiration_strikes))
-        expiration_strikes = sorted(expiration_strikes,key=lambda x: (x[0], x[1]))
-        expiration_strikes = {exp: [s for (e, s) in expiration_strikes if e == exp] for exp in expirations}
-        self.expiration_strikes = expiration_strikes
-
-
-    def load_timeslot(self, quote_datetime: datetime.datetime) -> list[Option]:
-        ym_str = datetime.datetime.strftime(quote_datetime, '%Y_%m')
-        folder = self.timeslots_folder.joinpath(ym_str)
-        dt_str = datetime.datetime.strftime(quote_datetime, '%Y_%m_%d_%H_%M')
-        find_timeslot = folder.glob(f'{dt_str}.pkl')
-        try:
-            ts_file = next(find_timeslot)
-        except StopIteration:
-            return None
-            #raise ValueError(f'Cannot find option chain for {self.symbol} on {quote_datetime}.')
-
-        with open(ts_file, 'rb') as f:
-            options_data = pickle.load(f)
-        return options_data
-
+        self.expirations = self.db.get_expirations_at(self.quote_datetime.isoformat())
+        self.expiration_strikes = self.db.get_expiration_strikes_at(self.quote_datetime.isoformat())
 
     def get_datetimes_in_date_range(self):
         datetimes = get_market_dates(self.quote_datetime.date(), self.end_datetime.date())
@@ -109,45 +89,14 @@ class OptionChain():
 
             return intra_datetimes
 
-
-
-        # folders_list = self.timeslots_folder.glob('*')
-        #
-        # start_folder = datetime.date(self.quote_datetime.year, self.quote_datetime.month, 1)
-        # end_folder = datetime.date(self.end_datetime.year, self.end_datetime.month, 1)
-        # end = self.end_datetime + datetime.timedelta(days=1) # Need to add a day so we can capture all the times from that day.
-        #
-        # datetimes = []
-        # while True:
-        #     try:
-        #         fol, folder_dt = self.get_folder_as_date(next(folders_list))
-        #
-        #         if folder_dt >= start_folder:
-        #             if folder_dt <= end_folder:
-        #                 fol_dts = [datetime.datetime.strptime(f.stem, '%Y_%m_%d_%H_%M') for f in fol.iterdir()]
-        #                 datetimes.extend(fol_dts)
-        #             else:
-        #                 break
-        #     except StopIteration:
-        #         break
-        #
-        # datetimes.sort()
-        # datetimes = [x for x in datetimes if x >= self.quote_datetime and x <= self.end_datetime]
-        # return datetimes
         return datetimes
 
-
-    def on_next_options(self, options: list[Option]) -> list[dict] | None:
-        for option in options:
-            try:
-                if option.expiration < self.quote_datetime.date():
-                    option.next({'option_id': option.option_id, 'quote_datetime': self.quote_datetime})
-                else:
-                    option_quote = next(q for q in self.options if q['option_id'] == option.option_id)
-                    option.next(option_quote)
-            except StopIteration:
-                continue
-
+    # def on_next_options(self, options: list[Option]) -> list[dict] | None:
+    #     for option in options:
+    #         try:
+    #             option.next(self.quote_datetime)
+    #         except StopIteration:
+    #             continue
 
 
 

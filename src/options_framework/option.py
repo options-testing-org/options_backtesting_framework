@@ -2,6 +2,7 @@ from collections import namedtuple
 from dataclasses import dataclass, field
 from decimal import Decimal
 from typing import Optional
+from pathlib import Path
 import datetime
 import numbers
 import itertools
@@ -10,8 +11,8 @@ import pandas as pd
 import numpy as np
 from options_framework.option_types import OptionPositionType, OptionStatus
 from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4, get_market_dates
+from options_framework.utils.options_db import OptionsDB, IntradayOptionsDB
 from options_framework.config import settings
-
 
 from pydispatch import Dispatcher
 
@@ -100,6 +101,7 @@ class Option(Dispatcher):
     fee_per_contract: float = field(default=0.65, compare=False)
     history: list = field(default_factory=lambda: [], compare=False)
     _dates: list = field(default_factory=lambda: [], compare=False)
+    _updates: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
         # check for required fields
@@ -133,11 +135,20 @@ class Option(Dispatcher):
         if self.quote_datetime.date() > self.expiration:
             raise ValueError("Cannot create an option with a quote date past its expiration date")
 
+        # option was successfully instantiated
+        data_frequency = settings['data_frequency']
+        if data_frequency == 'daily':
+            self.db = OptionsDB.from_symbol(self.symbol)
+        else:
+            self.db = IntradayOptionsDB.from_symbol(self.symbol)
+        pass
+
 
     def __repr__(self) -> str:
         long_short = '' if self.position_type is None else f' {self.position_type.name}'
         return f'<{self.option_type.upper()}({self.option_id}) {self.symbol} {self.strike} ' \
             + f'{datetime.datetime.strftime(self.expiration, "%Y-%m-%d")}{long_short}>'
+
 
     def _incur_fees(self, *, quantity: int | Decimal) -> float:
         """
@@ -178,14 +189,13 @@ class Option(Dispatcher):
             return True
         return False
 
-    def next(self, updates: dict):
-        if self.option_id != updates['option_id']:
-            raise ValueError("Option ID mismatch")
-
-        self.quote_datetime = updates['quote_datetime']
-
+    def next(self, quote_datetime: datetime.datetime) -> float:
+        self.quote_datetime = quote_datetime
         if self.is_expired():
-            #self.close_trade(quantity=self.quantity)
+            return
+
+        updates = self._updates.get(quote_datetime, None)
+        if updates is None:
             return
 
         self.spot_price = updates['spot_price']
@@ -203,7 +213,7 @@ class Option(Dispatcher):
         self.implied_volatility = updates.get('implied_volatility')
 
         self._dates = [x for x in self._dates if x >= self.quote_datetime.date()]
-        self.history.append((self.quote_datetime, self.price, self.spot_price, len(self._dates)))
+        #self.history.append((self.quote_datetime, self.price, self.spot_price, len(self._dates)))
 
     def open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
         """
@@ -279,6 +289,7 @@ class Option(Dispatcher):
 
         self._dates = get_market_dates(self.quote_datetime.date(), self.expiration)
         self.history.append((self.quote_datetime, float(fill_price), self.spot_price, len(self._dates)))
+        self._updates = self.db.get_contract_updates(self.option_id, self.quote_datetime.isoformat(), self.expiration.isoformat())
 
         return trade_open_info
 
@@ -313,7 +324,7 @@ class Option(Dispatcher):
 
         # if trade has already been closed, just return the close info
         if OptionStatus.TRADE_IS_CLOSED in self.status:
-            return self.trade_close_info
+            raise ValueError("Option is already closed.")
 
         if OptionStatus.TRADE_IS_OPEN not in self.status:
             raise ValueError("Cannot close an option that is not open.")
@@ -321,16 +332,18 @@ class Option(Dispatcher):
         pos_qty = int(self.quantity)
         if pos_qty == 0:
             raise ValueError("No open quantity.")
-        else:
-            close_qty = abs(int(pos_qty))
 
         # how many contracts to close (always positive)
-        if close_qty is None:
-            close_qty = abs(pos_qty)
-        if close_qty <= 0:
-            raise ValueError("close_qty must be positive.")
-        if close_qty > abs(pos_qty):
+        if quantity is None:
+            close_qty = pos_qty
+        elif quantity <= 0:
+            raise ValueError("quantity must be positive.")
+        elif quantity > abs(pos_qty):
             raise ValueError("Quantity to close is greater than the current open quantity.")
+        elif type(quantity) is not int:
+            raise TypeError("quantity must be an integer.")
+        else:
+            close_qty = quantity
 
         fill_factor = settings.get('fill_factor', 0)
 
@@ -427,9 +440,9 @@ class Option(Dispatcher):
         # Expired: intrinsic only
         if OptionStatus.EXPIRED in self.status:
             if self.option_type == "call":
-                return max(spot - strike, 0.0)
+                return max(self.spot_price - self.strike, 0.0)
             else:
-                return max(strike - spot, 0.0)
+                return max(self.strike - self.spot_price, 0.0)
 
         # Not expired: executable close depends on position side
         fill_factor = settings.get('fill_factor', 0)
@@ -580,20 +593,12 @@ class Option(Dispatcher):
         if OptionStatus.TRADE_IS_OPEN not in self.status and OptionStatus.TRADE_IS_CLOSED not in self.status:
             raise Exception("This option has not been traded.")
 
-        current_price = decimalize_2(self.price)
-        open_quantity = decimalize_0(self.quantity)
-        opening_trade_value = decimalize_2(self.trade_open_info.premium)
-        closed_contracts_value = sum(decimalize_2(x.price) * 100 * decimalize_0(x.quantity) * -1
-                                     for x in self.trade_close_records)
-        open_contracts_value = current_price * 100 * open_quantity
-        value_of_trade = open_contracts_value + closed_contracts_value
-        profit_loss_percent = (decimalize_4((value_of_trade - opening_trade_value) / opening_trade_value))
-        if self.position_type == OptionPositionType.SHORT:
-            profit_loss_percent *= -1
-
-        profit_loss_percent = float(profit_loss_percent)
-
-        return round(profit_loss_percent, 4)
+        total_pnl = decimalize_2(self.get_profit_loss())
+        opening_cost_basis = abs(decimalize_2(self.trade_open_info.premium))
+        if opening_cost_basis == 0:
+            return 0.0
+        pnl_pct = decimalize_4(total_pnl / opening_cost_basis)
+        return round(float(pnl_pct), 4)
 
     def get_days_in_trade(self) -> int:
 

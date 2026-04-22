@@ -76,8 +76,6 @@ class SpreadBase(ABC):
         for arg, val in kwargs.items():
             obj.user_defined[arg] = val
 
-    def _apply_slippage(self):
-        pass
 
     @property
     @abstractmethod

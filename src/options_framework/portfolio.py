@@ -13,7 +13,7 @@ from options_framework.utils.helpers import decimalize_2
 @dataclass(repr=False)
 class OptionPortfolio(Dispatcher):
 
-    _events_ = ['position_closed', 'next', 'next_options', 'position_expired']
+    _events_ = ['position_closed', 'next', 'position_expired']
 
     cash: float | int
     start_date: datetime.datetime
@@ -40,6 +40,7 @@ class OptionPortfolio(Dispatcher):
                          close_transaction_completed=self.on_option_close_transaction_completed,
                          option_expired=self.on_option_expired,
                          fees_incurred=self.on_fees_incurred) for option in option_spread.options]
+            [self.bind(next=option.next) for option in option_spread.options]
             option_spread.open_trade(quantity=quantity,*args, **kwargs)
             if option_spread.position_type == OptionPositionType.SHORT and self.check_margin_on_open:
 
@@ -66,7 +67,7 @@ class OptionPortfolio(Dispatcher):
             instance_id = option_spread.instance_id
             to_close = next(x for x in self.positions if x.instance_id == instance_id)
         except StopIteration:
-            raise ValueError(f'Position {instance} not in open positions list.')
+            raise ValueError(f'Position {instance_id} not in open positions list.')
 
         quantity = to_close.quantity if quantity is None else quantity
 
@@ -92,6 +93,7 @@ class OptionPortfolio(Dispatcher):
             self.closed_positions.append(to_close)
             self.positions.remove(to_close)
             self.emit("position_closed", to_close)
+            [self.unbind(option.next) for option in to_close.options]
 
         except Exception as e:
             raise Exception(str(e)) from e
@@ -108,8 +110,8 @@ class OptionPortfolio(Dispatcher):
             self._initialize_ticker(symbol=symbol, quote_datetime=quote_datetime)
 
         self.emit('next', quote_datetime)
-        options = [o for pos in self.positions for o in pos.options]
-        self.emit('next_options', options)
+        # options = [o for pos in self.positions for o in pos.options]
+        # self.emit('next_options', options)
         values = [quote_datetime, self.current_value] + list(args)
         self.close_values.append(values)
         # except Exception as e:
@@ -167,7 +169,8 @@ class OptionPortfolio(Dispatcher):
             return
         option_chain = OptionChain(symbol=symbol, quote_datetime=quote_datetime, end_datetime=self.end_date)
         self.bind(next=option_chain.on_next)
-        self.bind(next_options=option_chain.on_next_options)
+
+        # self.bind(next_options=option_chain.on_next_options)
         self.option_chains[symbol] = option_chain
 
     def _remove_symbols(self, symbols: list[str]) -> None:
@@ -182,5 +185,4 @@ class OptionPortfolio(Dispatcher):
                 return
 
             self.unbind(option_chain.on_next)
-            self.unbind(option_chain.on_next_options)
             del self.option_chains[symbol]

@@ -150,7 +150,26 @@ class Single(SpreadBase):
 
 
     def get_price_history(self) -> list[tuple]:
-        return self.option.history
+        if OptionStatus.TRADE_IS_CLOSED in self.option.status:
+            last_date = self.option.trade_close_info.date
+        else:
+            last_date = self.option.quote_datetime
+
+        keys = [k for k in self.option._updates.keys() if k <= last_date]
+        total_count = len(keys)
+        trade_price = self.get_trade_price()
+        history = []
+        for i, k in enumerate(keys):
+            price = self.option._updates[k]['price']
+            spot_price = self.option._updates[k]['spot_price']
+            pnl_pct = (trade_price - price) / trade_price
+            num = total_count - i
+            history.append((k, price, spot_price, pnl_pct, num))
+        # history = [(k, self.option._updates[k]['price'], self.option._updates[k]['spot_price'],
+        #             (self.option._updates[k]['price'] - trade_price) / trade_price,
+        #             total_count - i) for i, k in enumerate(keys)]
+        return history
+
 
     @property
     def symbol(self) -> str:

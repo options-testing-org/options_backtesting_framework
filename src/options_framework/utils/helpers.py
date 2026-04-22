@@ -5,6 +5,7 @@ from decimal import Decimal
 from typing import Any, Generator
 from pathlib import Path
 import calendar
+import duckdb
 
 import pandas as pd
 
@@ -56,6 +57,22 @@ def distinct(iterable: list) -> Generator[Any, Any, None]:
             continue
         yield x
         distinct_values.add(x)
+
+def month_range(start_dt: datetime.datetime, end_dt: datetime.date) -> list[tuple[int, int]]:
+    """
+    Return list of (year, month) tuples covering the date range.
+    """
+
+    months = []
+    year, month = start_dt.year, start_dt.month
+    while (year, month) <= (end_dt.year, end_dt.month):
+        months.append((year, month))
+        month += 1
+        if month > 12:
+            month = 1
+            year += 1
+
+    return months
 
 def get_witching_dates(start_date: datetime.date, end_date: datetime.date) -> list[datetime.date]:
     start_year = start_date.year
@@ -118,6 +135,8 @@ def get_market_dates(start_date: datetime.date, end_date: datetime.date) -> list
                 market_days_list.append(current_date)
         current_date += datetime.timedelta(days=1)
     return market_days_list
+
+
 
 
 
