@@ -34,12 +34,6 @@ class Single(SpreadBase):
         strikes = [s for s in option_chain.expiration_strikes[expiration]].copy()
         try:
             selected_strike = min(strikes, key=lambda x: abs(x - strike))
-        #     if option_type == 'call':
-        #         strike = next(s for s in strikes if s >= strike)
-        #     else:
-        #         strikes.sort(reverse=True)
-        #         strike = next(s for s in strikes if s <= strike)
-
             option = next(o for o in option_chain.options if o['option_type'] == option_type
                           and o['expiration'] == expiration and o['strike'] == selected_strike)
         except StopIteration:
@@ -153,3 +147,36 @@ class Single(SpreadBase):
 
     def get_dte(self) -> int | None:
         return self.option.get_dte()
+
+
+    def get_price_history(self) -> list[tuple]:
+        if OptionStatus.TRADE_IS_CLOSED in self.option.status:
+            last_date = self.option.trade_close_info.date
+        else:
+            last_date = self.option.quote_datetime
+
+        keys = [k for k in self.option._updates.keys() if k <= last_date]
+        total_count = len(keys)
+        trade_price = self.get_trade_price()
+        history = []
+        for i, k in enumerate(keys):
+            price = self.option._updates[k]['price']
+            spot_price = self.option._updates[k]['spot_price']
+            pnl_pct = (trade_price - price) / trade_price
+            num = total_count - i
+            history.append((k, price, spot_price, pnl_pct, num))
+        # history = [(k, self.option._updates[k]['price'], self.option._updates[k]['spot_price'],
+        #             (self.option._updates[k]['price'] - trade_price) / trade_price,
+        #             total_count - i) for i, k in enumerate(keys)]
+        return history
+
+
+    @property
+    def symbol(self) -> str:
+        return self.option.symbol
+
+    def get_closed_price(self) -> float | None:
+        if OptionStatus.TRADE_IS_CLOSED not in self.option.status:
+            return None
+        price = decimalize_2(self.option.trade_close_info.price)
+        return float(price)

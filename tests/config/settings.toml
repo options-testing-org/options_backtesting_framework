@@ -5,8 +5,8 @@ incur_fees=true
 slippage=0.05
 apply_slippage=true
 
-options_directory =  "C:\\_code\\options_backtesting_framework\\tests\\test_data\\data_files"
-data_frequency = 'intraday'
+options_directory =  "D:\\options_data"
+data_frequency = 'daily'
 
 
 

@@ -89,7 +89,6 @@ class Strangle(SpreadBase):
         self.put.open_trade(quantity=quantity)
         self.position_type = self.call.position_type
         self.quantity = self.call.quantity
-        self._apply_slippage()
 
         super(Strangle, self)._save_user_defined_values(self, **kwargs)
 
@@ -166,3 +165,17 @@ class Strangle(SpreadBase):
     @property
     def expiration(self) -> datetime.date:
         return self.call.expiration
+
+    @property
+    def symbol(self) -> str:
+        return self.call.symbol
+
+    def get_closed_price(self) -> float | None:
+        if OptionStatus.TRADE_IS_CLOSED not in self.option.status:
+            return None
+        call_price = decimalize_2(self.call.trade_close_info.price)
+        put_price = decimalize_2(self.put.trade_close_info.price)
+        return float(call_price + put_price)
+
+    def get_price_history(self) -> list[tuple]:
+        return None

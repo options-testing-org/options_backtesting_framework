@@ -3,7 +3,7 @@ import tomllib
 from pathlib import Path
 
 #config_folder = Path(os.getenv("OPTIONS_FRAMEWORK_CONFIG_FOLDER"))
-config_folder = Path(os.getcwd(), 'config')
+config_folder = Path(os.getenv("OPTIONS_FRAMEWORK_CONFIG_FOLDER")) if not os.getenv("OPTIONS_FRAMEWORK_CONFIG_FOLDER") is None else Path(os.getcwd(), 'config')
 
 def load_settings(settings_file):
     settings_path = config_folder.joinpath(settings_file)
