@@ -2,9 +2,7 @@ name="UNIT TESTING SETTINGS"
 
 standard_fee=0.50
 incur_fees=true
-slippage=0.05
-apply_slippage=true
-
+fill_factor=0.0
 options_directory =  "D:\\options_data"
 data_frequency = 'daily'
 

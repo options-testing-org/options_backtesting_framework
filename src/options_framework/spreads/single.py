@@ -81,11 +81,6 @@ class Single(SpreadBase):
     def price(self) -> float:
         return self.option.price
 
-    @property
-    def status(self) -> OptionStatus:
-        return self.option.status
-
-
     def get_required_margin(self, quantity: int) -> float:
         margin = 0
         position_type = OptionPositionType.LONG if quantity > 0 else OptionPositionType.SHORT
@@ -118,9 +113,8 @@ class Single(SpreadBase):
 
         super(Single, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, quantity: int | None = None, **kwargs: dict) -> None:
-        quantity = quantity if quantity is not None else self.option.quantity
-        self.option.close_trade(quantity=quantity)
+    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+        self.option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.quantity = self.option.quantity
 
         super(Single, self)._save_user_defined_values(self, **kwargs) # call super to set any kwargs
@@ -133,47 +127,79 @@ class Single(SpreadBase):
 
     @property
     def max_profit(self) -> float | None:
-        if self.position_type == OptionPositionType.SHORT:
-            return self.get_trade_premium()* -1
-        else:
-            return None
+        if self.position_type is None:
+            raise RuntimeError("Cannot calculate max profit: trade has not been opened.")
+        if self.position_type == OptionPositionType.LONG:
+            if self.option.option_type == 'call':
+                return None  # unlimited
+            else:  # put
+                return (self.option.strike * 100 * abs(self.quantity)) - abs(self.get_trade_premium())
+        else:  # SHORT
+            return abs(self.get_trade_premium())
 
     @property
     def max_loss(self) -> float | None:
-        if self.position_type == OptionPositionType.LONG:
-            return self.get_trade_premium()*-1
-        else:
-            return None
+        if self.position_type is None:
+            raise RuntimeError("Cannot calculate max loss: trade has not been opened.")
+        if self.position_type == OptionPositionType.SHORT:
+            if self.option.option_type == 'call':
+                return None  # unlimited
+            else:  # put
+                return (self.option.strike * 100 * abs(self.quantity)) - abs(self.get_trade_premium())
+        else:  # LONG
+            return abs(self.get_trade_premium())
 
     def get_dte(self) -> int | None:
         return self.option.get_dte()
 
 
     def get_price_history(self) -> list[tuple]:
+        if OptionStatus.TRADE_IS_OPEN not in self.option.status and OptionStatus.TRADE_IS_CLOSED not in self.option.status:
+            raise RuntimeError("Cannot get price history: trade has not been opened.")
+
         if OptionStatus.TRADE_IS_CLOSED in self.option.status:
             last_date = self.option.trade_close_info.date
         else:
             last_date = self.option.quote_datetime
 
-        keys = [k for k in self.option._updates.keys() if k <= last_date]
-        total_count = len(keys)
-        trade_price = self.get_trade_price()
+        open_price = self.option.trade_open_info.price
+        open_qty = self.option.trade_open_info.quantity  # signed
+        close_records = self.option.trade_close_records
+
+        keys = [k for k in self.option.updates.keys() if k <= last_date]
+
         history = []
-        for i, k in enumerate(keys):
-            price = self.option._updates[k]['price']
-            spot_price = self.option._updates[k]['spot_price']
-            pnl_pct = (trade_price - price) / trade_price
-            num = total_count - i
-            history.append((k, price, spot_price, pnl_pct, num))
-        # history = [(k, self.option._updates[k]['price'], self.option._updates[k]['spot_price'],
-        #             (self.option._updates[k]['price'] - trade_price) / trade_price,
-        #             total_count - i) for i, k in enumerate(keys)]
+        for k in keys:
+            update = self.option.updates[k]
+
+            # reconstruct signed open quantity at this point in time
+            closes_so_far = sum(r.quantity for r in close_records if r.date <= k)
+            remaining = abs(open_qty) - closes_so_far
+            signed_remaining = remaining * (1 if open_qty > 0 else -1)
+
+            current_price = round(float(update['price']), 2)
+            pnl = round((current_price - open_price) * 100 * signed_remaining, 2)
+            open_premium_allocated = open_price * 100 * remaining
+            pnl_pct = round(pnl / open_premium_allocated, 4) if open_premium_allocated != 0 else 0.0
+
+            history.append({
+                'quote_datetime': k,
+                'price': current_price,
+                'spot_price': update.get('spot_price'),
+                'bid': update.get('bid'),
+                'ask': update.get('ask'),
+                'delta': update.get('delta'),
+                'gamma': update.get('gamma'),
+                'theta': update.get('theta'),
+                'vega': update.get('vega'),
+                'rho': update.get('rho'),
+                'iv': update.get('implied_volatility'),
+                'pnl': pnl,
+                'pnl_pct': pnl_pct,
+            })
+
         return history
 
-
-    @property
-    def symbol(self) -> str:
-        return self.option.symbol
 
     def get_closed_price(self) -> float | None:
         if OptionStatus.TRADE_IS_CLOSED not in self.option.status:

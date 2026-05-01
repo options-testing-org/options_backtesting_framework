@@ -8,7 +8,7 @@ from options_framework.option import Option
 import datetime
 from typing import Self
 
-@dataclass(slots=True)
+@dataclass(repr=False, slots=True)
 class Vertical(SpreadBase):
 
     long_option: Option = field(default=None)
@@ -21,16 +21,13 @@ class Vertical(SpreadBase):
                option_type: str = None,
                long_strike: int | float = None,
                short_strike: int | float = None,
+               position_type: OptionPositionType = None,
                *args, **kwargs) -> Self:
 
-        if long_strike < short_strike:
-            option_position_type = OptionPositionType.LONG if option_type == 'call' \
-                else OptionPositionType.SHORT
-        elif long_strike > short_strike:
-            option_position_type = OptionPositionType.SHORT if option_type == 'call' \
-                else OptionPositionType.LONG
-        else:
-            raise ValueError("Long and short strikes cannot be the same")
+        if position_type is None:
+            raise ValueError("position_type must be specified.")
+        if long_strike == short_strike:
+            raise ValueError("Long and short strikes cannot be the same.")
 
         # Find nearest matching expiration
         try:
@@ -52,7 +49,7 @@ class Vertical(SpreadBase):
 
         vertical = Vertical(options=[long_option, short_option],
                             spread_type=OptionSpreadType.VERTICAL,
-                            position_type=option_position_type)
+                            position_type=position_type)
         super(Vertical, vertical)._save_user_defined_values(vertical, **kwargs)
         return vertical
 
@@ -61,10 +58,8 @@ class Vertical(SpreadBase):
         message = None
         if self.options[0].option_type != self.options[1].option_type:
             message = "Invalid option type. Both legs must be either calls or puts."
-        if self.options[0].expiration != self.options[0].expiration:
+        if self.options[0].expiration != self.options[1].expiration:
             message = "Invalid option expirations. Both legs must have the same expiration."
-        # if self.option_position_type is None:
-        #     message = "The parameter option_position_type: OptionPositionType must not be None"
         if self.options[0].strike == self.options[1].strike:
             message = "Long and short option strikes must not be the same option."
         if self.spread_type != OptionSpreadType.VERTICAL:
@@ -85,51 +80,51 @@ class Vertical(SpreadBase):
                 + f'{self.expiration}>'
         return s
 
-    def _update_quantity(self, quantity: int):
-        self.quantity = quantity
-        self.long_option.quantity = abs(quantity)
-        self.short_option.quantity = abs(quantity) * -1
 
     def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
+        if quantity <= 0:
+            raise ValueError("Quantity must be positive. The position type determines the direction of each leg.")
         self.quantity = quantity if quantity is not None else self.long_option.quantity
         self.long_option.open_trade(quantity=self.quantity)
         self.short_option.open_trade(quantity=self.quantity * -1)
         super(Vertical, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, quantity: int | None = None, *args, **kwargs: dict) -> None:
+    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else self.long_option.quantity
-        self.long_option.close_trade(quantity=quantity)
-        self.short_option.close_trade(quantity=quantity * -1)
+        self.long_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.short_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.quantity -= quantity
         super(Vertical, self)._save_user_defined_values(self, **kwargs)
 
     @property
     def max_profit(self) -> float | None:
+        if self.position_type is None:
+            raise RuntimeError("Cannot calculate max profit: trade has not been opened.")
         if self.position_type == OptionPositionType.LONG:
-            long_price = self.long_option.price if self.long_option.status == OptionStatus.INITIALIZED \
-                else self.long_option.trade_price
-            short_price = self.short_option.price if self.short_option.status == OptionStatus.INITIALIZED \
-                else self.short_option.trade_price
+            long_price = self.long_option.price if OptionStatus.INITIALIZED == self.long_option.status \
+                else self.long_option.trade_open_info.price
+            short_price = self.short_option.price if OptionStatus.INITIALIZED == self.short_option.status \
+                else self.short_option.trade_open_info.price
             max_profit = float((abs(decimalize_2(self.long_option.strike) - decimalize_2(self.short_option.strike))
                                 - abs(decimalize_2(long_price) - decimalize_2(short_price))) * 100)
         else:
             max_profit = self.trade_value * -1
-
         return max_profit
 
     @property
     def max_loss(self) -> float | None:
+        if self.position_type is None:
+            raise RuntimeError("Cannot calculate max loss: trade has not been opened.")
         if self.position_type == OptionPositionType.LONG:
             max_loss = self.trade_value
         else:
-            long_price = self.long_option.trade_price
-            short_price = self.short_option.trade_price
+            long_price = self.long_option.trade_open_info.price
+            short_price = self.short_option.trade_open_info.price
             quantity = self.long_option.trade_open_info.quantity \
                 if OptionStatus.TRADE_IS_CLOSED in self.long_option.status \
                 else self.quantity
             max_loss = float((abs(decimalize_2(self.long_option.strike) - decimalize_2(self.short_option.strike))
                               - abs(decimalize_2(long_price) - decimalize_2(short_price))) * 100 * abs(quantity))
-
         return max_loss
 
     def get_required_margin(self, quantity: int) -> float:
@@ -154,14 +149,6 @@ class Vertical(SpreadBase):
     @property
     def option_type(self) -> str:
         return self.long_option.option_type
-
-    @property
-    def symbol(self ):
-        return self.long_option.symbol
-
-    @property
-    def status(self) -> OptionStatus:
-        return self.long_option.status
 
     def get_dte(self) -> int | None:
         return self.long_option.get_dte()
@@ -204,18 +191,69 @@ class Vertical(SpreadBase):
 
         return profit_loss
 
+    def get_price_history(self) -> list[dict]:
+        if (OptionStatus.TRADE_IS_OPEN not in self.long_option.status
+                and OptionStatus.TRADE_IS_CLOSED not in self.long_option.status):
+            raise RuntimeError("Cannot get price history: trade has not been opened.")
 
-    def get_price_history(self) -> list[tuple]:
-        long_history = self.long_option.history
-        short_history = self.short_option.history
+        if OptionStatus.TRADE_IS_CLOSED in self.long_option.status:
+            last_date = self.long_option.trade_close_info.date
+        else:
+            last_date = self.long_option.quote_datetime
+
+        long_open_price = self.long_option.trade_open_info.price
+        long_open_qty = self.long_option.trade_open_info.quantity
+        long_close_records = self.long_option.trade_close_records
+
+        short_open_price = self.short_option.trade_open_info.price
+        short_open_qty = self.short_option.trade_open_info.quantity
+        short_close_records = self.short_option.trade_close_records
+
+        keys = sorted(
+            set(self.long_option.updates.keys()) & set(self.short_option.updates.keys())
+        )
+        keys = [k for k in keys if k <= last_date]
+
         history = []
-        for i in range(len(long_history)):
-            dt = long_history[i][0]
-            l = long_history[i][1]
-            s = short_history[i][1]
-            price = l - s
-            spot_price = long_history[i][2]
-            dte = long_history[i][3]
-            history.append((dt, price, spot_price, dte))
+        for k in keys:
+            long_update = self.long_option.updates[k]
+            short_update = self.short_option.updates[k]
+
+            long_closes = sum(r.quantity for r in long_close_records if r.date <= k)
+            long_remaining = abs(long_open_qty) - long_closes
+            long_signed = long_remaining * (1 if long_open_qty > 0 else -1)
+            long_price = round(float(long_update['price']), 2)
+            long_pnl = round((long_price - long_open_price) * 100 * long_signed, 2)
+
+            short_closes = sum(r.quantity for r in short_close_records if r.date <= k)
+            short_remaining = abs(short_open_qty) - short_closes
+            short_signed = short_remaining * (1 if short_open_qty > 0 else -1)
+            short_price = round(float(short_update['price']), 2)
+            short_pnl = round((short_price - short_open_price) * 100 * short_signed, 2)
+
+            spread_price = round(long_price - short_price, 2)
+            spread_pnl = round(long_pnl + short_pnl, 2)
+            trade_price = abs(self.get_trade_price() or 0)
+            open_premium = trade_price * 100 * long_remaining
+            pnl_pct = round(spread_pnl / open_premium, 4) if open_premium != 0 else 0.0
+
+            def net(field):
+                lv = long_update.get(field)
+                sv = short_update.get(field)
+                return round(float(lv) - float(sv), 4) if lv is not None and sv is not None else None
+
+            history.append({
+                'quote_datetime': k,
+                'price': spread_price,
+                'spot_price': long_update.get('spot_price'),
+                'pnl': spread_pnl,
+                'pnl_pct': pnl_pct,
+                'delta': net('delta'),
+                'gamma': net('gamma'),
+                'theta': net('theta'),
+                'vega': net('vega'),
+                'rho': net('rho'),
+                'iv': net('implied_volatility'),
+            })
 
         return history
