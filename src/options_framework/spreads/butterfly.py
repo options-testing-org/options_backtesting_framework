@@ -7,8 +7,26 @@ from options_framework.option_types import OptionSpreadType, OptionPositionType,
 from options_framework.spreads.spread_base import SpreadBase
 from typing import Self
 
-@dataclass(slots=True)
+
+@dataclass(repr=False, slots=True)  # BUG 1 FIX: was @dataclass(slots=True) — missing repr=False
+                                    # caused auto-generated __repr__ to shadow the hand-written one
 class Butterfly(SpreadBase):
+
+    lower_option: Option = field(init=False, default=None)
+    center_option: Option = field(init=False, default=None)
+    upper_option: Option = field(init=False, default=None)
+
+    def __post_init__(self):
+        self.lower_option = self.options[0]
+        self.center_option = self.options[1]
+        self.upper_option = self.options[2]
+
+    def __repr__(self) -> str:
+        return (
+            f'<{self.spread_type.name}({self.instance_id}) '
+            f'{self.option_type} {self.expiration} '
+            f'{self.lower_option.strike}/{self.center_option.strike}/{self.upper_option.strike}>'
+        )
 
     @classmethod
     def create(cls,
@@ -32,10 +50,9 @@ class Butterfly(SpreadBase):
         try:
             expiration = next(e for e in option_chain.expirations if e >= expiration)
         except StopIteration:
-            message = "No matching expiration was found in the option chain."
-            raise ValueError(message)
+            raise ValueError("No matching expiration was found in the option chain.")
 
-        # find nearest strikes
+        # Find nearest strikes
         expiration_strikes = option_chain.expiration_strikes[expiration].copy()
         options = [o for o in option_chain.options if
                    o['option_type'] == option_type and o['expiration'] == expiration].copy()
@@ -52,28 +69,17 @@ class Butterfly(SpreadBase):
         lower_option = Option(**lower_option_data)
         upper_option = Option(**upper_option_data)
 
-        butterfly = Butterfly(options=[lower_option, center_option, upper_option],
-                              spread_type=OptionSpreadType.BUTTERFLY,
-                              position_type=OptionPositionType.LONG)
+        # BUG 3 FIX: was hardcoded OptionPositionType.LONG, ignoring the position_type parameter
+        resolved_position_type = position_type if position_type is not None else OptionPositionType.LONG
 
-        # save any kwargs that were sent to user_defined
+        butterfly = Butterfly(
+            options=[lower_option, center_option, upper_option],
+            spread_type=OptionSpreadType.BUTTERFLY,
+            position_type=resolved_position_type,
+        )
+
         super(Butterfly, butterfly)._save_user_defined_values(butterfly, **kwargs)
         return butterfly
-
-    lower_option: Option = field(init=False, default=None)
-    center_option: Option = field(init=False, default=None)
-    upper_option: Option = field(init=False, default=None)
-
-
-    def __post_init__(self):
-        self.lower_option = self.options[0]
-        self.center_option = self.options[1]
-        self.upper_option = self.options[2]
-
-
-    def __repr__(self) -> str:
-        return f'<{self.spread_type.name}({self.instance_id}) {self.option_type} {self.expiration} {self.lower_option.strike}/{self.center_option.strike}/{self.upper_option.strike}>'
-
 
     @property
     def expiration(self) -> datetime.date:
@@ -83,143 +89,243 @@ class Butterfly(SpreadBase):
     def option_type(self) -> str:
         return self.center_option.option_type
 
+    # BUG 2 FIX: removed symbol override — SpreadBase.symbol is non-abstract and returns
+    # self.options[0].symbol; the override here used center_option and diverged from the contract.
 
     def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         qty = abs(quantity)
         if self.position_type == OptionPositionType.LONG:
+            # Long butterfly: buy lower (+qty), sell 2x center (-2*qty), buy upper (+qty)
             center_qty = qty * -2
         else:
-            qty = qty * -1
+            # BUG 4 FIX: was qty = qty * -1 then center_qty = qty * 2, giving -2 for center.
+            # Short butterfly: sell lower (-qty), buy 2x center (+2*qty), sell upper (-qty).
+            # center_qty must be computed before negating qty.
             center_qty = qty * 2
+            qty = qty * -1
 
-        self.lower_option.open_trade(quantity=qty, parent_id=self.instance_id, bid_open=self.lower_option.bid, ask_open=self.lower_option.ask, mid_open=self.lower_option.price)
-        self.center_option.open_trade(quantity=center_qty, parent_id=self.instance_id, bid_open=self.center_option.bid, ask_open=self.center_option.ask, mid_open=self.center_option.price)
-        self.upper_option.open_trade(quantity=qty, parent_id=self.instance_id, bid_open=self.upper_option.bid, ask_open=self.upper_option.ask, mid_open=self.upper_option.price)
+        self.lower_option.open_trade(quantity=qty)
+        self.center_option.open_trade(quantity=center_qty)
+        self.upper_option.open_trade(quantity=qty)
 
         self.quantity = self.lower_option.quantity
-
         super(Butterfly, self)._save_user_defined_values(self, **kwargs)
 
+    # BUG 5 FIX: signature was (self, quantity=None, *args, **kwargs) — missing the keyword-only
+    # separator and the required quote_datetime parameter mandated by SpreadBase contract.
+    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
 
-    def close_trade(self, quantity: int | None = None, *args, **kwargs: dict) -> None:
-        qty = quantity if quantity is not None else self.lower_option.quantity
-        center_qty = quantity * 2
-        self.lower_option.close_trade(quantity=qty, parent_id=self.instance_id, bid_close=self.lower_option.bid, ask_close=self.lower_option.ask, mid_close=self.lower_option.price)
-        self.center_option.close_trade(quantity=center_qty, parent_id=self.instance_id, bid_close=self.center_option.bid, ask_close=self.center_option.ask, mid_close=self.center_option.price)
-        self.upper_option.close_trade(quantity=qty, parent_id=self.instance_id, bid_close=self.upper_option.bid, ask_close=self.upper_option.ask, mid_close=self.upper_option.price)
+        # BUG 6 FIX: was center_qty = quantity * 2 — crashed when quantity is None,
+        # and the sign was wrong. center_qty = qty * -2 correctly mirrors the open:
+        #   LONG open:  lower=+qty, center=-2*qty, upper=+qty  → close with lower=+qty, center=-2*qty, upper=+qty
+        #   SHORT open: lower=-qty, center=+2*qty, upper=-qty  → close with lower=-qty, center=+2*qty, upper=-qty
+        # Using qty * -2 produces the right result for both position types because
+        # self.lower_option.quantity already carries the correct sign from open_trade.
+        center_quantity = None if quantity is None else quantity * 2
+
+        self.lower_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.center_option.close_trade(quote_datetime=quote_datetime, quantity=center_quantity)
+        self.upper_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.quantity = self.lower_option.quantity
-
         super(Butterfly, self)._save_user_defined_values(self, **kwargs)
-
 
     def get_trade_price(self) -> float | None:
-        if self.center_option.status == OptionStatus.INITIALIZED:
+        # BUG 7 FIX: OptionStatus is a Flag — must use `in`, never `==`
+        if OptionStatus.INITIALIZED in self.center_option.status:
             return None
-        else:
-            lower_price = self.lower_option.trade_open_info.price
-            center_price = self.center_option.trade_open_info.price
-            upper_price = self.upper_option.trade_open_info.price
-            price = self._calculate_price(lower_price=lower_price,
-                                          center_price=center_price,
-                                          upper_price=upper_price)
-
-            return price
-
+        lower_price = self.lower_option.trade_open_info.price
+        center_price = self.center_option.trade_open_info.price
+        upper_price = self.upper_option.trade_open_info.price
+        return self._calculate_price(lower_price=lower_price,
+                                     center_price=center_price,
+                                     upper_price=upper_price)
 
     @property
     def price(self) -> float:
-        lower_price = self.lower_option.price
-        center_price = self.center_option.price
-        upper_price = self.upper_option.price
-
-        price = self._calculate_price(lower_price=lower_price, center_price=center_price, upper_price=upper_price)
-
-        return price
-
-    """
-    Long Call Butterfly Spread:
-    Maximum Profit: Limited to the difference between the middle and lower strike minus the net cost of the spread.
-    Maximum Loss: Limited to the net cost of establishing the spread.
-    
-    Long Put Butterfly Spread:
-    Maximum Profit: Limited to the difference between the middle and lower strike minus the net cost of the spread.
-    Maximum Loss: Limited to the net cost of establishing the spread.
-    
-    Short Call Butterfly Spread:
-    Maximum Profit: Limited to the net credit received when entering the trade.
-    Maximum Loss: Limited to the difference between the middle and lower strike prices minus the net credit received.
-    
-    Short Put Butterfly Spread:
-    Maximum Profit: Limited to the net credit received when entering the trade.
-    Maximum Loss: Limited to the difference between the middle and lower strike prices minus the net credit received.
-    """
-
-    @property
-    def symbol(self) -> str:
-        return self.center_option.symbol
+        return self._calculate_price(
+            lower_price=self.lower_option.price,
+            center_price=self.center_option.price,
+            upper_price=self.upper_option.price,
+        )
 
     def get_required_margin(self, quantity: int) -> float:
-        pass
-
-    @property
-    def status(self) -> OptionStatus:
-        return self.center_option.status
+        if self.position_type == OptionPositionType.LONG:
+            return 0.0
+        wing_width = min(
+            self.center_option.strike - self.lower_option.strike,
+            self.upper_option.strike - self.center_option.strike,
+        )
+        max_loss = float(decimalize_2(wing_width) - decimalize_2(self.price))
+        return max_loss * 100 * abs(quantity)
 
     def get_dte(self) -> int | None:
         return self.center_option.get_dte()
 
     def get_closed_price(self) -> float | None:
         if all(OptionStatus.TRADE_IS_CLOSED in x.status for x in self.options):
-            lower_price = self.lower_option.trade_close_info.price
-            center_price = self.center_option.trade_close_info.price
-            upper_price = self.upper_option.trade_close_info.price
+            return self._calculate_price(
+                lower_price=self.lower_option.trade_close_info.price,
+                center_price=self.center_option.trade_close_info.price,
+                upper_price=self.upper_option.trade_close_info.price,
+            )
+        return None
 
-            price = self._calculate_price(lower_price=lower_price, center_price=center_price, upper_price=upper_price)
-            return price
+    # BUG 8 FIX (revised): original returned list of 4-tuples. First revision incorrectly
+    # read from option.history (list of tuples). Single.get_price_history shows the real
+    # data source is option.updates — a dict keyed by datetime — and greek values come
+    # from the update dict (iv stored under key 'implied_volatility').
+    #
+    # PnL logic: the spread price formula encodes direction for both LONG and SHORT, so
+    #   pnl = (spread_price_t - trade_price) * 100 * abs(quantity)
+    # works uniformly. This follows from summing leg-level PnLs:
+    #   LONG:  (lower + upper - 2*center) - (lower_open + upper_open - 2*center_open)
+    #   SHORT: (2*center - lower - upper) - (2*center_open - lower_open - upper_open)
+    # Both reduce to (current_spread_price - open_spread_price) * 100 * abs(qty).
+    #
+    # Greek netting (per-contract, not scaled by quantity):
+    #   LONG butterfly:  net_G = G_lower + G_upper - 2*G_center
+    #   SHORT butterfly: net_G = 2*G_center - G_lower - G_upper
+    # IV is averaged across the three legs.
+    def get_price_history(self) -> list[dict]:
+        if (OptionStatus.TRADE_IS_OPEN not in self.lower_option.status
+                and OptionStatus.TRADE_IS_CLOSED not in self.lower_option.status):
+            raise RuntimeError("Cannot get price history: trade has not been opened.")
+
+        if OptionStatus.TRADE_IS_CLOSED in self.lower_option.status:
+            last_date = self.lower_option.trade_close_info.date
         else:
-           return None
+            last_date = self.lower_option.quote_datetime
 
-    def get_price_history(self) -> list[tuple]:
-        lower_history = self.lower_option.history
-        center_history = self.center_option.history
-        upper_history = self.upper_option.history
+        trade_price = self.get_trade_price()
+        open_qty = abs(self.lower_option.trade_open_info.quantity)
+        close_records = self.lower_option.trade_close_records
+
+        lower_updates  = self.lower_option.updates
+        center_updates = self.center_option.updates
+        upper_updates  = self.upper_option.updates
+
+        keys = [k for k in lower_updates.keys() if k <= last_date]
 
         history = []
-        for i in range(len(lower_history)):
-            dt = lower_history[i][0]
-            lower_price = lower_history[i][1]
-            center_price = center_history[i][1]
-            upper_price = upper_history[i][1]
-            price = self._calculate_price(lower_price=lower_price, center_price=center_price, upper_price=upper_price)
-            spot_price = lower_history[i][2]
-            dte = lower_history[i][3]
+        for k in keys:
+            lu = lower_updates[k]
+            cu = center_updates[k]
+            uu = upper_updates[k]
 
-            history.append((dt, price, spot_price, dte))
+            lower_price  = round(float(lu['price']), 2)
+            center_price = round(float(cu['price']), 2)
+            upper_price  = round(float(uu['price']), 2)
+
+            price = self._calculate_price(
+                lower_price=lower_price,
+                center_price=center_price,
+                upper_price=upper_price,
+            )
+
+            spot_price = lu.get('spot_price')
+
+            # Quantity remaining at this point in time (mirrors Single's logic)
+            closes_so_far = sum(r.quantity for r in close_records if r.date <= k)
+            remaining_qty = open_qty - closes_so_far
+            open_premium_allocated = abs(trade_price) * 100 * remaining_qty
+
+            pnl = round((price - trade_price) * 100 * remaining_qty, 2)
+            pnl_pct = round(pnl / open_premium_allocated, 4) if open_premium_allocated != 0 else 0.0
+
+            # Per-contract greeks from each leg's update dict
+            l_delta = lu.get('delta')
+            l_gamma = lu.get('gamma')
+            l_theta = lu.get('theta')
+            l_vega  = lu.get('vega')
+            l_rho   = lu.get('rho')
+            l_iv    = lu.get('implied_volatility')
+
+            c_delta = cu.get('delta')
+            c_gamma = cu.get('gamma')
+            c_theta = cu.get('theta')
+            c_vega  = cu.get('vega')
+            c_rho   = cu.get('rho')
+            c_iv    = cu.get('implied_volatility')
+
+            u_delta = uu.get('delta')
+            u_gamma = uu.get('gamma')
+            u_theta = uu.get('theta')
+            u_vega  = uu.get('vega')
+            u_rho   = uu.get('rho')
+            u_iv    = uu.get('implied_volatility')
+
+            def _net(l, c, u):
+                """Net a greek across legs. Returns None if any leg has no data."""
+                if l is None or c is None or u is None:
+                    return None
+                if self.position_type == OptionPositionType.LONG:
+                    return l + u - 2 * c
+                else:
+                    return 2 * c - l - u
+
+            def _avg_iv(l, c, u):
+                vals = [v for v in (l, c, u) if v is not None]
+                return sum(vals) / len(vals) if vals else None
+
+            history.append({
+                'quote_datetime': k,
+                'price': price,
+                'spot_price': spot_price,
+                'pnl': pnl,
+                'pnl_pct': pnl_pct,
+                'delta': _net(l_delta, c_delta, u_delta),
+                'gamma': _net(l_gamma, c_gamma, u_gamma),
+                'theta': _net(l_theta, c_theta, u_theta),
+                'vega':  _net(l_vega,  c_vega,  u_vega),
+                'rho':   _net(l_rho,   c_rho,   u_rho),
+                'iv':    _avg_iv(l_iv, c_iv, u_iv),
+            })
 
         return history
 
     @property
     def max_profit(self) -> float | None:
-        return None
-        """
-        current_price = decimalize_2(self.price)
-        quantity = decimalize_0(self.quantity)
-        current_value = current_price * 100 * quantity
-        """
-
+        if OptionStatus.INITIALIZED in self.center_option.status:
+            return None
+        wing_width = min(
+            self.center_option.strike - self.lower_option.strike,
+            self.upper_option.strike - self.center_option.strike,
+        )
+        trade_price = self.get_trade_price()
+        if self.position_type == OptionPositionType.LONG:
+            return float(decimalize_2(wing_width) - decimalize_2(trade_price))
+        else:
+            return trade_price
 
     @property
     def max_loss(self) -> float | None:
-        return None
-
+        if OptionStatus.INITIALIZED in self.center_option.status:
+            return None
+        wing_width = min(
+            self.center_option.strike - self.lower_option.strike,
+            self.upper_option.strike - self.center_option.strike,
+        )
+        trade_price = self.get_trade_price()
+        if self.position_type == OptionPositionType.LONG:
+            return trade_price
+        else:
+            return float(decimalize_2(wing_width) - decimalize_2(trade_price))
 
     def _calculate_price(self, *, lower_price: float, center_price: float, upper_price: float) -> float:
         lower_price = decimalize_2(lower_price)
         center_price = decimalize_2(center_price)
         upper_price = decimalize_2(upper_price)
         if self.position_type == OptionPositionType.LONG:
-            price = (lower_price + upper_price) - center_price*2
+            price = (lower_price + upper_price) - center_price * 2
         else:
-            price = center_price*2 - (lower_price + upper_price)
-
+            price = center_price * 2 - (lower_price + upper_price)
         return float(price)
+
+    """
+    Long Call/Put Butterfly:
+      Max Profit = (center_strike - lower_strike) - net_debit  (achieved when spot = center_strike at expiry)
+      Max Loss   = net_debit paid
+    Short Call/Put Butterfly:
+      Max Profit = net_credit received
+      Max Loss   = (center_strike - lower_strike) - net_credit
+    """

@@ -10,7 +10,7 @@ import itertools
 import pandas as pd
 import numpy as np
 from options_framework.option_types import OptionPositionType, OptionStatus
-from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4, get_market_dates
+from options_framework.utils.helpers import decimalize_0, decimalize_2, decimalize_4
 from options_framework.utils.options_db import OptionsDB, IntradayOptionsDB
 from options_framework.config import settings
 
@@ -20,7 +20,7 @@ TradeOpenInfo = namedtuple("TradeOpen", "option_id instance_id date quantity pri
 TradeCloseInfo = namedtuple("TradeClose", "option_id instance_id date quantity price premium profit_loss profit_loss_percent fees spot_price")
 
 
-@dataclass(repr=False, kw_only=True, slots=True)
+@dataclass(repr=False, kw_only=True)
 class Option(Dispatcher):
     """
     The Option class holds all the values that pertain to a single option. The option can have just basic option information
@@ -97,11 +97,9 @@ class Option(Dispatcher):
     volume: Optional[int] = field(default=None, compare=False)
     implied_volatility: Optional[float] = field(default=None, compare=False)
     user_defined: dict = field(default_factory=lambda: {}, compare=False)
-    incur_fees: bool = field(default=True, compare=False)
-    fee_per_contract: float = field(default=0.65, compare=False)
-    history: list = field(default_factory=lambda: [], compare=False)
-    _dates: list = field(default_factory=lambda: [], compare=False)
-    _updates: dict = field(default_factory=lambda: {}, compare=False)
+    incur_fees: Optional[bool] = field(default=None, compare=False)
+    fee_per_contract: Optional[float] = field(default=None, compare=False)
+    updates: dict = field(default_factory=lambda: {}, compare=False)
 
     def __post_init__(self):
         # check for required fields
@@ -113,12 +111,22 @@ class Option(Dispatcher):
             raise ValueError("strike cannot be None")
         if self.expiration is None:
             raise ValueError("expiration cannot be None")
+        if isinstance(self.expiration, datetime.datetime):
+            raise TypeError("expiration must be datetime.date, not datetime.datetime.")
+        if not isinstance(self.expiration, datetime.date):
+            raise TypeError(
+                f"expiration must be datetime.date, got {type(self.expiration).__name__}"
+            )
         if self.option_type is None:
             raise ValueError("option_type cannot be None")
         if self.quote_datetime is None:
             raise ValueError("quote_datetime cannot be None")
-        elif type(self.quote_datetime) != datetime.datetime and type(self.quote_datetime) != pd.Timestamp:
-            raise ValueError("quote datetime must be python datetime.datetime or pandas Timestamp")
+        if isinstance(self.quote_datetime, pd.Timestamp):
+            self.quote_datetime = self.quote_datetime.to_pydatetime()
+        elif not isinstance(self.quote_datetime, datetime.datetime):
+            raise TypeError(
+                f"quote_datetime must be datetime.datetime or pd.Timestamp, got {type(self.quote_datetime).__name__}"
+            )
         if self.spot_price is None:
             raise ValueError("spot_price cannot be None")
         if self.bid is None:
@@ -128,8 +136,11 @@ class Option(Dispatcher):
         if self.price is None:
             raise ValueError("price cannot be None")
         self.price = round(self.price, 2)
-        self.incur_fees = settings.get('incur_fees', True)
-        self.fee_per_contract = settings.get('standard_fee', 0.65)
+
+        if self.incur_fees is None:
+            self.incur_fees = settings.get('incur_fees', True)
+        if self.fee_per_contract is None:
+            self.fee_per_contract = settings.get('standard_fee', 0.65)
 
         # make sure the quote date is not past the expiration date
         if self.quote_datetime.date() > self.expiration:
@@ -175,7 +186,7 @@ class Option(Dispatcher):
         """
         if OptionStatus.EXPIRED in self.status:
             return True
-        if type(self.quote_datetime) == datetime.datetime:
+        if isinstance(self.quote_datetime, (datetime.datetime, pd.Timestamp)):
             quote_date, quote_time = self.quote_datetime.date(), self.quote_datetime.time()
         else:
             message = f"Wrong format for option date. Must be python datetime.datetime. Date was provided in {type(self.quote_datetime)} format."
@@ -189,12 +200,34 @@ class Option(Dispatcher):
             return True
         return False
 
-    def next(self, quote_datetime: datetime.datetime) -> float:
+    def next(self, quote_datetime: datetime.datetime) -> None:
+        """Advance the option's clock to quote_datetime and refresh its quote
+            state from the pre-loaded updates.
+
+            Side effects:
+              - Always updates self.quote_datetime (after normalization).
+              - If the new datetime triggers expiration, sets OptionStatus.EXPIRED
+                and emits option_expired; no further state changes.
+              - If an update exists at quote_datetime, refreshes spot_price, bid,
+                ask, price, greeks, open_interest, volume, and implied_volatility.
+              - If no update exists at quote_datetime, leaves market-data fields
+                unchanged (silent no-op on the price side, but quote_datetime
+                still advances).
+
+            :param quote_datetime: The new clock value. Must be datetime.datetime
+                or pd.Timestamp (normalized to datetime.datetime internally).
+            :raises TypeError: if quote_datetime is not a datetime or Timestamp.
+            """
+        if isinstance(quote_datetime, pd.Timestamp):
+            quote_datetime = quote_datetime.to_pydatetime()
+        elif not isinstance(quote_datetime, datetime.datetime):
+            raise TypeError(
+                f"quote_datetime must be datetime.datetime or pd.Timestamp, got {type(quote_datetime).__name__}")
         self.quote_datetime = quote_datetime
         if self.is_expired():
             return
 
-        updates = self._updates.get(quote_datetime, None)
+        updates = self.updates.get(quote_datetime, None)
         if updates is None:
             return
 
@@ -212,8 +245,6 @@ class Option(Dispatcher):
         self.volume = updates.get('volume', None)
         self.implied_volatility = updates.get('implied_volatility')
 
-        self._dates = [x for x in self._dates if x >= self.quote_datetime.date()]
-        #self.history.append((self.quote_datetime, self.price, self.spot_price, len(self._dates)))
 
     def open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
         """
@@ -236,7 +267,7 @@ class Option(Dispatcher):
         """
         if OptionStatus.TRADE_IS_OPEN in self.status:
             raise ValueError(f"Cannot open position. A position is already open. ({self.symbol})")
-        if (quantity is None) or not (isinstance(quantity, numbers.Number)) or (quantity == 0) or (quantity != int(quantity)):
+        if (quantity is None) or not (isinstance(quantity, numbers.Integral)) or (quantity == 0) or (quantity != int(quantity)):
             raise ValueError(f"Quantity must be a non-zero integer. ({self.symbol}) Quantity: {quantity}")
         quantity = int(quantity)
 
@@ -282,15 +313,14 @@ class Option(Dispatcher):
 
         self.trade_open_info = trade_open_info
         self.quantity = quantity
-        self.status = OptionStatus.TRADE_IS_OPEN
+
+        self.status |= OptionStatus.TRADE_IS_OPEN
+        self.status &= ~OptionStatus.INITIALIZED
+
+        self.updates = self.db.get_contract_updates(self.option_id, self.quote_datetime.isoformat(), self.expiration.isoformat())
 
         self.emit("open_transaction_completed", trade_open_info)
-        #print(f'emit open {self.option_id}')
-
-        self._dates = get_market_dates(self.quote_datetime.date(), self.expiration)
-        self.history.append((self.quote_datetime, float(fill_price), self.spot_price, len(self._dates)))
-        self._updates = self.db.get_contract_updates(self.option_id, self.quote_datetime.isoformat(), self.expiration.isoformat())
-
+        # print(f'emit open {self.option_id}')
         return trade_open_info
 
 
@@ -300,7 +330,7 @@ class Option(Dispatcher):
         bid = self.bid + fill_factor * (self.price - self.bid)
         ask = self.ask - fill_factor * (self.ask - self.price)
 
-        if position_type == None and self.position_type == None:
+        if position_type is None and self.position_type is None:
             return None
 
         position_type = self.position_type if position_type is None else position_type
@@ -313,7 +343,7 @@ class Option(Dispatcher):
             return None
 
 
-    def close_trade(self, *, quantity: int | None = None, **kwargs: dict) -> TradeCloseInfo:
+    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> TradeCloseInfo:
         """
         Calculates the closing price and sets the close date, price and profit/loss info for the
         quantity closed.
@@ -329,39 +359,52 @@ class Option(Dispatcher):
         if OptionStatus.TRADE_IS_OPEN not in self.status:
             raise ValueError("Cannot close an option that is not open.")
 
+        if quote_datetime is None:
+            raise ValueError("quote_datetime is required.")
+        if not isinstance(quote_datetime, (datetime.datetime, pd.Timestamp)):
+            raise TypeError("quote_datetime must be datetime.datetime or pd.Timestamp.")
+        if quote_datetime != self.quote_datetime:
+            raise ValueError(
+                f"quote_datetime mismatch for {self.option_id}: "
+                f"passed {quote_datetime}, option is at {self.quote_datetime}. "
+                f"Call next({quote_datetime}) before close_trade()."
+            )
+
         pos_qty = int(self.quantity)
         if pos_qty == 0:
             raise ValueError("No open quantity.")
 
         # how many contracts to close (always positive)
         if quantity is None:
-            close_qty = pos_qty
-        elif quantity <= 0:
-            raise ValueError("quantity must be positive.")
-        elif quantity > abs(pos_qty):
-            raise ValueError("Quantity to close is greater than the current open quantity.")
-        elif type(quantity) is not int:
-            raise TypeError("quantity must be an integer.")
+            close_qty = abs(pos_qty)
         else:
-            close_qty = quantity
+            if not isinstance(quantity, numbers.Integral) or isinstance(quantity, bool):
+                raise TypeError("quantity must be an integer.")
+            if quantity <= 0:
+                raise ValueError("quantity must be positive.")
+            if quantity > abs(pos_qty):
+                raise ValueError("Quantity to close is greater than the current open quantity.")
+            close_qty = int(quantity)
 
         fill_factor = settings.get('fill_factor', 0)
 
         # determine executable close price and action sign
         if self.position_type == OptionPositionType.LONG:
-            bid = self.bid + fill_factor*(self.price - self.bid)
-            close_price = decimalize_2(bid)  # sell to close on bid
+            # bid = self.bid + fill_factor*(self.price - self.bid)
+            # close_price = decimalize_2(bid)  # sell to close on bid
             action_qty = -close_qty  # sell
         else:  # SHORT
-            ask = self.ask - fill_factor*(self.ask - self.price)
-            close_price = decimalize_2(ask)  # buy to close on ask
+            # ask = self.ask - fill_factor*(self.ask - self.price)
+            # close_price = decimalize_2(ask)  # buy to close on ask
             action_qty = +close_qty  # buy
+
+        close_price = decimalize_2(self.get_closing_price())
 
         if close_price < 0:
             raise ValueError(f"Non-positive close price for {self.option_id}.")
 
         open_price = decimalize_2(self.trade_open_info.price)
-        close_premium = decimalize_2(close_price * 100 * action_qty * -1)
+        close_premium = decimalize_2(close_price * 100 * action_qty)
 
         # PnL for this close lot:
         # Long: (close - open)*100*close_qty
@@ -408,11 +451,7 @@ class Option(Dispatcher):
             self.status &= ~OptionStatus.TRADE_PARTIALLY_CLOSED
             self.status |= OptionStatus.TRADE_IS_CLOSED
             self.price = float(close_price)
-            dte = len([x for x in self._dates if x >= self.quote_datetime.date()])
-            if dte > 0:
-                # The last update was for this time period, but we are closing, so replace the last price update with the
-                # closing update. Otherwise there would be two history records for the same time slot.
-                self.history[-1] = (self.quote_datetime, self.price, self.spot_price, dte)
+
         else:
             self.status |= OptionStatus.TRADE_PARTIALLY_CLOSED
 
@@ -616,11 +655,10 @@ class Option(Dispatcher):
 
     def itm(self) -> bool :
         """
-        In the Money
-        A call option is in the money when the current price is higher than or equal to the strike price
-        A put option is in the money when the current price is lower than or equal to the strike price
-        Returns a boolean value indicating whether the option is currently in the money.
-        :return: Returns a boolean value indicating whether the option is currently in the money.
+        In the Money.
+        A call is in the money when the underlying's spot price is at or above the strike.
+        A put is in the money when the underlying's spot price is at or below the strike.
+        :return: True if the option is currently in the money.
         :rtype: bool
         """
 
@@ -631,10 +669,10 @@ class Option(Dispatcher):
 
     def otm(self) -> bool:
         """
-        Out of the Money
-        A call option is out of the money when the current price is lower than the spot price.
-        A put option is out of the money when the current price is greater than the spot price.
-        :return: Returns a boolean value indicating whether the option is currently out of the money.
+        Out of the Money.
+        A call is out of the money when the underlying's spot price is below the strike.
+        A put is out of the money when the underlying's spot price is above the strike.
+        :return: True if the option is currently out of the money.
         :rtype: bool
         """
         if self.option_type == 'call':

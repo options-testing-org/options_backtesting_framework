@@ -50,7 +50,7 @@ class SpreadBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def close_trade(self, quantity: int | None = None, *args, **kwargs: dict) -> None:
+    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
         raise NotImplementedError
 
     @property
@@ -93,12 +93,6 @@ class SpreadBase(ABC):
         raise NotImplementedError
 
     @property
-    @abstractmethod
-    def status(self) -> OptionStatus:
-        raise NotImplementedError
-
-    @property
-    @abstractmethod
     def symbol(self) -> str:
         return self.options[0].symbol
 
@@ -125,9 +119,8 @@ class SpreadBase(ABC):
 
     def get_trade_premium(self) -> float | None:
         if any(OptionStatus.INITIALIZED in o.status for o in self.options):
-            return None
-        else:
-            return sum(o.trade_open_info.premium for o in self.options)
+            raise RuntimeError("Cannot get trade premium: trade has not been opened.")
+        return sum(o.trade_open_info.premium for o in self.options)
 
     def get_profit_loss_percent(self) -> float:
         premium = abs(self.get_trade_premium())

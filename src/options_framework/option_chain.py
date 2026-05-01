@@ -1,18 +1,11 @@
 import datetime
-import os
-import pickle
-import glob
 
 import pandas as pd
-from pandas import DataFrame, Series
 from dataclasses import dataclass, field
-from dateutil import relativedelta
 
-from pydispatch import Dispatcher
 from pathlib import Path
 
-from options_framework.option import Option
-from options_framework.utils.helpers import distinct, decimalize_0, decimalize_2, decimalize_4, get_market_dates
+from options_framework.utils.helpers import get_market_dates
 from options_framework.utils.options_db import IntradayOptionsDB, OptionsDB
 from typing import Optional
 from options_framework.config import settings
@@ -23,7 +16,6 @@ class OptionChain():
     symbol: str
     quote_datetime: datetime.datetime
     end_datetime: datetime.datetime
-    timeslots_folder: Path = field(init=False, default=None, repr=False)
     datetimes: list = field(init=False, default_factory=lambda: [], repr=False)
     expirations: list = field(init=False, default_factory=lambda: [], repr=False)
     options: list = field(init=False, default_factory=lambda: [], repr=False)
@@ -41,24 +33,21 @@ class OptionChain():
         # find quote datetime in datetimes list
         self.quote_datetime = quote_datetime
         #print(f'next {self.symbol} {quote_datetime}')
-        try:
-            dt = next(d for d in self.datetimes if d == quote_datetime)
-        except StopIteration:
-            # There are no matching timeslots for the quote given
+
+        if quote_datetime not in self.datetimes:
             self.options = []
             self.expirations = []
             self.expiration_strikes = {}
             return
 
         options = self.db.get_chain_at(self.quote_datetime.isoformat())
-        if len(options) == 0:
-            return [] # no options for this time slot
-
-        idx_quote = self.datetimes.index(quote_datetime)
-        if len(self.datetimes) > 1:
-            self.datetimes = self.datetimes[idx_quote + 1:]
+        if not options:
+            self.options = []
+            self.expirations = []
+            self.expiration_strikes = {}
+            return
+        
         self.options = options
-
         self.expirations = self.db.get_expirations_at(self.quote_datetime.isoformat())
         self.expiration_strikes = self.db.get_expiration_strikes_at(self.quote_datetime.isoformat())
 
@@ -90,13 +79,3 @@ class OptionChain():
             return intra_datetimes
 
         return datetimes
-
-    # def on_next_options(self, options: list[Option]) -> list[dict] | None:
-    #     for option in options:
-    #         try:
-    #             option.next(self.quote_datetime)
-    #         except StopIteration:
-    #             continue
-
-
-
