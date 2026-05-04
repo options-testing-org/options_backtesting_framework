@@ -3,9 +3,6 @@ url = "https://pypi.org/simple"
 verify_ssl = true
 name = "pypi"
 
-[packages]
-dynaconf = "==3.2.4"
-
 [dev-packages]
 pytest = "==9.0.3"
 black = "==26.3.1"

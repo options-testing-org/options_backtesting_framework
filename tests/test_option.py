@@ -492,7 +492,7 @@ def test_open_trade_premium_short_is_negative(make_put_option_380):
 
     assert info.premium == pytest.approx(-2000.0)
 
-def test_close_trade_premium_long_full_close_is_negative(make_put_option_380):
+def test_close_trade_premium_long_full_close_is_positive(make_put_option_380):
     # Open LONG 10 @ $2.00, close 10 @ $3.00: sell-to-close, cash in $3000
     # premium should be -3000
     opt = make_put_option_380()
@@ -501,9 +501,9 @@ def test_close_trade_premium_long_full_close_is_negative(make_put_option_380):
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
     rec = opt.close_trade(quote_datetime=QUOTE_DT)
 
-    assert rec.premium == pytest.approx(-3000.0)
+    assert rec.premium == pytest.approx(3000.0)
 
-def test_close_trade_premium_short_full_close_is_positive(make_put_option_380):
+def test_close_trade_premium_short_full_close_is_negative(make_put_option_380):
     # Open SHORT -10 @ $2.00, close 10 @ $1.00: buy-to-close, cash out $1000
     # premium should be +1000
     opt = make_put_option_380()
@@ -512,7 +512,7 @@ def test_close_trade_premium_short_full_close_is_positive(make_put_option_380):
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
     rec = opt.close_trade(quote_datetime=QUOTE_DT)
 
-    assert rec.premium == pytest.approx(1000.0)
+    assert rec.premium == pytest.approx(-1000.0)
 
 
 def test_close_trade_premium_long_partial_close_is_negative(make_put_option_380):
@@ -525,7 +525,7 @@ def test_close_trade_premium_long_partial_close_is_negative(make_put_option_380)
     rec = opt.close_trade(quote_datetime=QUOTE_DT, quantity=4)
 
 
-def test_close_trade_premium_short_partial_close_is_positive(make_put_option_380):
+def test_close_trade_premium_short_partial_close_is_negative(make_put_option_380):
     # Open SHORT -10 @ $2.00, partial close 4 @ $1.50: cash out $600
     # premium should be +600
     opt = make_put_option_380()
@@ -534,9 +534,9 @@ def test_close_trade_premium_short_partial_close_is_positive(make_put_option_380
     opt.bid, opt.ask, opt.price = 1.50, 1.50, 1.50
     rec = opt.close_trade(quote_datetime=QUOTE_DT, quantity=4)
 
-    assert rec.premium == pytest.approx(600.0)
+    assert rec.premium == pytest.approx(-600.0)
 
-def test_close_trade_premium_sum_equals_negative_pnl_long_profit(make_put_option_380):
+def test_close_trade_premium_sum_equals_pnl_long_profit(make_put_option_380):
     # Open 10 @ $2.00 (+2000), close 10 @ $3.00 (-3000)
     # sum = -1000  |  pnl = +1000  |  -pnl = -1000
     opt = make_put_option_380()
@@ -545,10 +545,10 @@ def test_close_trade_premium_sum_equals_negative_pnl_long_profit(make_put_option
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
     close_rec = opt.close_trade(quote_datetime=QUOTE_DT)
 
-    premium_sum = open_info.premium + close_rec.premium
-    assert premium_sum == pytest.approx(-close_rec.profit_loss)
+    premium_sum = close_rec.premium - open_info.premium
+    assert premium_sum == pytest.approx(close_rec.profit_loss)
 
-def test_close_trade_premium_sum_equals_negative_pnl_long_loss(make_put_option_380):
+def test_close_trade_premium_sum_equals_pnl_long_loss(make_put_option_380):
     # Open 10 @ $2.00 (+2000), close 10 @ $1.50 (-1500)
     # sum = +500  |  pnl = -500  |  -pnl = +500
     opt = make_put_option_380()
@@ -557,11 +557,11 @@ def test_close_trade_premium_sum_equals_negative_pnl_long_loss(make_put_option_3
     opt.bid, opt.ask, opt.price = 1.50, 1.50, 1.50
     close_rec = opt.close_trade(quote_datetime=QUOTE_DT)
 
-    premium_sum = open_info.premium + close_rec.premium
-    assert premium_sum == pytest.approx(-close_rec.profit_loss)
+    premium_sum = close_rec.premium - open_info.premium
+    assert premium_sum == pytest.approx(close_rec.profit_loss)
 
 
-def test_close_trade_premium_sum_equals_negative_pnl_short_profit(make_put_option_380):
+def test_close_trade_premium_sum_equals_pnl_short_profit(make_put_option_380):
     # Open -10 @ $2.00 (-2000), close 10 @ $1.00 (+1000)
     # sum = -1000  |  pnl = +1000  |  -pnl = -1000
     opt = make_put_option_380()
@@ -570,11 +570,11 @@ def test_close_trade_premium_sum_equals_negative_pnl_short_profit(make_put_optio
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
     close_rec = opt.close_trade(quote_datetime=QUOTE_DT)
 
-    premium_sum = open_info.premium + close_rec.premium
-    assert premium_sum == pytest.approx(-close_rec.profit_loss)
+    premium_sum = close_rec.premium - open_info.premium
+    assert premium_sum == pytest.approx(close_rec.profit_loss)
 
 
-def test_close_trade_premium_sum_equals_negative_pnl_short_loss(make_put_option_380):
+def test_close_trade_premium_sum_equals_pnl_short_loss(make_put_option_380):
     # Open -10 @ $2.00 (-2000), close 10 @ $3.00 (+3000)
     # sum = +1000  |  pnl = -1000  |  -pnl = +1000
     opt = make_put_option_380()
@@ -583,10 +583,10 @@ def test_close_trade_premium_sum_equals_negative_pnl_short_loss(make_put_option_
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
     close_rec = opt.close_trade(quote_datetime=QUOTE_DT)
 
-    premium_sum = open_info.premium + close_rec.premium
-    assert premium_sum == pytest.approx(-close_rec.profit_loss)
+    premium_sum = close_rec.premium - open_info.premium
+    assert premium_sum == pytest.approx(close_rec.profit_loss)
 
-def test_close_trade_premium_sum_equals_negative_pnl_long_multiple_partials(make_put_option_380):
+def test_close_trade_premium_sum_equals_pnl_long_multiple_partials(make_put_option_380):
     # Round-trip invariant still holds across multiple partial closes
     # Open 10 @ $2.00 (+2000)
     # Close 4 @ $2.50 (-1000, pnl +200)
@@ -602,9 +602,9 @@ def test_close_trade_premium_sum_equals_negative_pnl_long_multiple_partials(make
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
     rec2 = opt.close_trade(quote_datetime=QUOTE_DT, quantity=6)
 
-    premium_sum = open_info.premium + rec1.premium + rec2.premium
+    premium_sum = (rec1.premium + rec2.premium) - open_info.premium
     total_pnl = rec1.profit_loss + rec2.profit_loss
-    assert premium_sum == pytest.approx(-total_pnl)
+    assert premium_sum == pytest.approx(total_pnl)
 
 def test_close_trade_premium_aggregate_matches_sum_of_records_long(make_put_option_380):
     # Aggregate trade_close_info.premium should equal the sum of individual
@@ -620,9 +620,6 @@ def test_close_trade_premium_aggregate_matches_sum_of_records_long(make_put_opti
 
     expected_sum = rec1.premium + rec2.premium
     assert opt.trade_close_info.premium == pytest.approx(expected_sum)
-    # And still negative (sell-to-close LONG is net cash in)
-    assert opt.trade_close_info.premium < 0
-
 
 def test_close_trade_premium_aggregate_matches_sum_of_records_short(make_put_option_380):
     opt = make_put_option_380()
@@ -636,8 +633,7 @@ def test_close_trade_premium_aggregate_matches_sum_of_records_short(make_put_opt
 
     expected_sum = rec1.premium + rec2.premium
     assert opt.trade_close_info.premium == pytest.approx(expected_sum)
-    # And still positive (buy-to-close SHORT is net cash out)
-    assert opt.trade_close_info.premium > 0
+
 
 # ---------------------------------------------------------------------------
 # Not yet expired - returns False, no side effects
@@ -1324,3 +1320,392 @@ def test_option_incur_fees_false_override_disables_fees_even_when_settings_enabl
 
     assert info.fees == 0
     assert opt.total_fees == 0
+
+
+# ── LONG ──────────────────────────────────────────────────────────────────
+
+def test_long_close_premium_is_positive(make_call_option_380):
+    """Selling a long must yield a positive close_premium."""
+    opt = make_call_option_380()
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+    opt.open_trade(quantity=+1)
+
+    opt.bid, opt.ask, opt.price = 0.75, 0.82, 0.79
+    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+
+    # close_price = bid = 0.75  →  expected premium = +75
+    assert rec.premium > 0, (
+        f"LONG close_premium should be positive (cash received). Got {rec.premium}. "
+        f"Sign is inverted — check the negation of action_qty in close_trade()."
+    )
+    assert rec.premium == pytest.approx(75.0), (
+        f"Expected +75.00 (0.75 × 100 × 1 contract). Got {rec.premium}."
+    )
+
+def test_long_close_premium_multi_contract(make_call_option_380):
+    """Premium magnitude scales with number of contracts closed."""
+    opt = make_call_option_380()
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+    opt.open_trade(quantity=+3)
+
+    bid = 0.60
+    ask = 0.68
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=3)
+
+    # 0.60 × 100 × 3 = 180
+    assert rec.premium == pytest.approx(180.0)
+
+def test_long_partial_close_premium(make_call_option_380):
+    """Partial close of a long: only closed contracts contribute."""
+    opt = make_call_option_380()
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+    opt.open_trade(quantity=+4)
+
+    bid = 0.70
+    ask = 0.78
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=2)
+
+    # 0.70 × 100 × 2 = 140
+    assert rec.premium == pytest.approx(140.0)
+    assert OptionStatus.TRADE_IS_OPEN in opt.status
+    assert OptionStatus.TRADE_PARTIALLY_CLOSED in opt.status
+
+    # ── SHORT ─────────────────────────────────────────────────────────────────
+
+def test_short_close_premium_is_negative(make_call_option_380):
+    """Buying back a short must yield a negative close_premium."""
+    opt = make_call_option_380()
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+    opt.open_trade(quantity=-1)
+
+    bid = 0.75
+    ask = 0.82
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+
+    # close_price = ask = 0.82  →  expected premium = -82
+    assert rec.premium < 0, (
+        f"SHORT close_premium should be negative (cash paid). Got {rec.premium}. "
+        f"Sign is inverted — check the negation of action_qty in close_trade()."
+    )
+    assert rec.premium == pytest.approx(-82.0), (
+        f"Expected -82.00 (0.82 × 100 × 1 contract). Got {rec.premium}."
+    )
+
+def test_short_close_premium_multi_contract(make_call_option_380):
+    """Premium magnitude scales with number of contracts closed."""
+    opt = make_call_option_380()
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+    opt.open_trade(quantity=-3)
+
+    bid = 0.70
+    ask = 0.78
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=3)
+
+    # 0.78 × 100 × 3 = 234
+    assert rec.premium == pytest.approx(-234.0)
+
+def test_short_partial_close_premium(make_call_option_380):
+    """Partial close of a short: only closed contracts contribute."""
+    opt = make_call_option_380()
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+    opt.open_trade(quantity=-4)
+
+    bid = 0.70
+    ask = 0.78
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=2)
+
+    # 0.78 × 100 × 2 = 156
+    assert rec.premium == pytest.approx(-156.0)
+
+    # ── Profit/loss is independent of the sign fix ─────────────────────────────
+
+def test_long_profit_loss_sign_unaffected(make_call_option_380):
+    """
+    profit_loss in the close record is computed independently of close_premium
+    and must not be changed by the fix.
+    Long: close < open → loss (negative PnL).
+    """
+    opt = make_call_option_380(bid=0.82, ask=0.90, price=0.86)  # open at ask=0.90
+    opt.open_trade(quantity=+1)
+
+    #_set_close_quote(opt, bid=0.70, ask=0.78)  # close at bid=0.70
+    bid = 0.70
+    ask = 0.78
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+
+    # (0.70 - 0.90) × 100 × 1 = -20
+    assert rec.profit_loss == pytest.approx(-20.0)
+
+def test_short_profit_loss_sign_unaffected(make_call_option_380):
+    """
+    Short: close (ask) > open (bid) → loss (negative PnL).
+    """
+    opt = make_call_option_380(bid=0.82, ask=0.90, price=0.86)  # open at bid=0.82
+    opt.open_trade(quantity=-1)
+
+    # close at ask=0.96
+    bid = 0.88
+    ask = 0.96
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+
+    # (0.82 - 0.96) × 100 × 1 = -14
+    assert rec.profit_loss == pytest.approx(-14.0)
+
+
+"""
+   Verify that _calculate_trade_close_info() correctly accumulates premium
+   across multiple partial closes.
+   """
+
+
+def test_single_close_aggregate_matches_record(make_call_option_380):
+    """After a full one-lot close, trade_close_info.premium equals the record."""
+    opt = make_call_option_380(bid=0.82, ask=0.90, price=0.86)
+    opt.open_trade(quantity=+1)
+
+    #_set_close_quote(opt, bid=0.70, ask=0.78)
+    bid = 0.70
+    ask = 0.78
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+
+    assert opt.trade_close_info.premium == pytest.approx(
+        opt.trade_close_records[0].premium
+    )
+
+
+def test_multi_partial_close_aggregate_sums_correctly(make_call_option_380):
+    """
+    Two partial closes: aggregate premium should be the sum of both records.
+    Both records must have the same sign (positive for long closes).
+    """
+    opt = make_call_option_380(bid=0.82, ask=0.90, price=0.86)
+    opt.open_trade(quantity=+4)
+
+    bid = 0.70
+    ask = 0.78
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    opt.close_trade(quote_datetime=QUOTE_DT, quantity=2)  # +140
+
+    bid = 0.65
+    ask = 0.72
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    opt.close_trade(quote_datetime=QUOTE_DT, quantity=2)  # +130
+
+    # Aggregate: 140 + 130 = 270
+    total_record_premium = sum(r.premium for r in opt.trade_close_records)
+    assert total_record_premium == pytest.approx(270.0)
+    assert opt.trade_close_info.premium == pytest.approx(270.0)
+
+# ─── Integration tests: OptionPortfolio cash accounting ───────────────────────
+"""
+End-to-end cash accounting through OptionPortfolio.
+These are the regression tests for the original bug report.
+
+Sign table (fill_factor=0, no fees):
+    Action        Fill price   open_premium   cash effect
+    ──────────────────────────────────────────────────────
+    LONG  open    ask=0.90     +90            cash − 90
+    SHORT open    bid=0.82     −82            cash + 82
+    LONG  close   bid=X        +X×100         cash + X×100
+    SHORT close   ask=X        −X×100         cash − X×100
+"""
+
+
+# ── Open side (already working, sanity check) ──────────────────────────────
+
+def test_long_open_deducts_cash(make_portfolio, make_single):
+    """Opening a long deducts the ask premium from cash."""
+    portfolio = make_portfolio(cash=10_000.0)
+    single = make_single()
+    single.option.bid, single.option.ask, single.option.price = 0.82, 0.90, 0.86
+
+    portfolio.open_position(single, quantity=1)
+
+    assert portfolio.cash == pytest.approx(10_000.0 - 0.90 * 100)
+
+
+def test_short_open_credits_cash(make_portfolio, make_single):
+    """Opening a short credits the bid premium to cash."""
+    portfolio = make_portfolio(cash=10_000.0)
+    single = make_single()
+    single.option.bid, single.option.ask, single.option.price = 0.82, 0.90, 0.86
+
+    portfolio.open_position(single, quantity=-1)
+
+    assert portfolio.cash == pytest.approx(10_000.0 + 0.82 * 100)
+
+
+# ── Close side (the bug) ───────────────────────────────────────────────────
+
+def test_long_close_adds_cash(make_portfolio, make_single):
+    """
+    CORE REGRESSION: closing a long must add cash.
+    Before fix: cash += -75 (decreases). After fix: cash += +75 (increases).
+    """
+    portfolio = make_portfolio(cash=10_000.0)
+    single = make_single()
+    opt = single.option
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+
+    portfolio.open_position(single, quantity=1)
+    cash_after_open = portfolio.cash  # 10_000 − 90 = 9_910
+
+    #_set_close_quote(opt, bid=0.75, ask=0.82)
+    bid = 0.75
+    ask = 0.82
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    portfolio.close_position(single, quantity=1)
+
+    # Sold at bid=0.75 → receive $75
+    expected = cash_after_open + 75.0
+    assert portfolio.cash == pytest.approx(expected), (
+        f"LONG close should add $75 to cash. "
+        f"Expected {expected:.2f}, got {portfolio.cash:.2f}. "
+        f"close_premium sign is likely still inverted."
+    )
+
+
+def test_short_close_deducts_cash(make_portfolio, make_single):
+    """
+    CORE REGRESSION: closing a short (buying back) must cost cash.
+    Before fix: cash += +82 (increases). After fix: cash += -82 (decreases).
+    """
+    portfolio = make_portfolio(cash=10_000.0)
+    single = make_single()
+    opt = single.option
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+
+    portfolio.open_position(single, quantity=-1)
+    cash_after_open = portfolio.cash  # 10_000 + 82 = 10_082
+
+    bid = 0.75
+    ask = 0.82
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    portfolio.close_position(single, quantity=1)
+
+    # Bought back at ask=0.82 → pay $82
+    expected = cash_after_open - 82.0
+    assert portfolio.cash == pytest.approx(expected), (
+        f"SHORT close should deduct $82 from cash. "
+        f"Expected {expected:.2f}, got {portfolio.cash:.2f}. "
+        f"close_premium sign is likely still inverted."
+    )
+
+
+# ── Full round-trips ───────────────────────────────────────────────────────
+
+def test_long_round_trip_loss(make_portfolio, make_single):
+    """Buy high, sell low → net loss reflected in cash."""
+    portfolio = make_portfolio(cash=10_000.0)
+    single = make_single()
+    opt = single.option
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+
+    portfolio.open_position(single, quantity=1)  # pay $90
+
+    bid = 0.70
+    ask = 0.78
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    portfolio.close_position(single, quantity=1)  # receive $70
+
+    # Net: −90 + 70 = −$20
+    assert portfolio.cash == pytest.approx(10_000.0 - 90.0 + 70.0)
+
+
+def test_short_round_trip_profit(make_portfolio, make_single):
+    """Sell high, buy back lower → net profit in cash."""
+    portfolio = make_portfolio(cash=10_000.0)
+    single = make_single()
+    opt = single.option
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+
+    portfolio.open_position(single, quantity=-1)  # receive $82
+
+    bid = 0.55
+    ask = 0.62
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    portfolio.close_position(single, quantity=1)  # pay $62
+
+    # Net: +82 − 62 = +$20
+    assert portfolio.cash == pytest.approx(10_000.0 + 82.0 - 62.0)
+
+
+def test_long_round_trip_profit(make_portfolio, make_single):
+    """Buy low, sell high → net profit in cash."""
+    portfolio = make_portfolio(cash=10_000.0)
+    single = make_single()
+    opt = single.option
+    opt.bid, opt.ask, opt.price = 0.40, 0.50, 0.45
+
+    portfolio.open_position(single, quantity=1)  # pay $50
+
+    bid = 0.80
+    ask = 0.90
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    portfolio.close_position(single, quantity=1)  # receive $80
+
+    # Net: −50 + 80 = +$30
+    assert portfolio.cash == pytest.approx(10_000.0 - 50.0 + 80.0)
+
+
+def test_short_round_trip_loss(make_portfolio, make_single):
+    """Sell low, buy back higher → net loss in cash."""
+    portfolio = make_portfolio(cash=10_000.0)
+    single = make_single()
+    opt = single.option
+    opt.bid, opt.ask, opt.price = 0.40, 0.50, 0.45
+
+    portfolio.open_position(single, quantity=-1)  # receive $40
+
+    bid = 0.75
+    ask = 0.85
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    portfolio.close_position(single, quantity=1)  # pay $85
+
+    # Net: +40 − 85 = −$45
+    assert portfolio.cash == pytest.approx(10_000.0 + 40.0 - 85.0)
+
+
+# ── Multi-contract ─────────────────────────────────────────────────────────
+
+def test_long_multi_contract_close(make_portfolio, make_single):
+    """Premium scales correctly with contract count."""
+    portfolio = make_portfolio(cash=10_000.0)
+    single = make_single()
+    opt = single.option
+    opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
+
+    portfolio.open_position(single, quantity=3)  # pay 3 × $90 = $270
+
+    # _set_close_quote(opt, bid=0.70, ask=0.78)
+    bid = 0.70
+    ask = 0.78
+    price = round((bid + ask) / 2, 4)
+    opt.bid, opt.ask, opt.price = bid, ask, price
+    portfolio.close_position(single, quantity=3)  # receive 3 × $70 = $210
+
+    assert portfolio.cash == pytest.approx(10_000.0 - 270.0 + 210.0)

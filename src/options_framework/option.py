@@ -404,7 +404,7 @@ class Option(Dispatcher):
             raise ValueError(f"Non-positive close price for {self.option_id}.")
 
         open_price = decimalize_2(self.trade_open_info.price)
-        close_premium = decimalize_2(close_price * 100 * action_qty)
+        close_premium = decimalize_2(-(close_price * 100 * action_qty))
 
         # PnL for this close lot:
         # Long: (close - open)*100*close_qty
