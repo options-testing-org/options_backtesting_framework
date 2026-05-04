@@ -123,14 +123,14 @@ class OptionPortfolio(Dispatcher):
     def on_option_open_transaction_completed(self, trade_open_info: TradeOpenInfo):
         open_premium = trade_open_info.premium
         self.cash = self.cash - open_premium
-        #print(f'opened option. ${open_premium:,.2f} subtracted from cash')
+        # print(f'opened option. ${open_premium:,.2f} subtracted from cash')
         # print(f"portfolio: option position was opened {trade_open_info.option_id}")
 
 
     def on_option_close_transaction_completed(self, trade_close_info: TradeCloseInfo):
         close_premium = trade_close_info.premium
         self.cash = self.cash + close_premium
-        #print(f'closed option. ${close_premium:,.2f} added to cash')
+        # print(f'closed option. ${close_premium:,.2f} added to cash')
         # print(f"portfolio: option position was closed {trade_close_info.option_id}")
 
 
