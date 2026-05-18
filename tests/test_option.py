@@ -1709,3 +1709,212 @@ def test_long_multi_contract_close(make_portfolio, make_single):
     portfolio.close_position(single, quantity=3)  # receive 3 × $70 = $210
 
     assert portfolio.cash == pytest.approx(10_000.0 - 270.0 + 210.0)
+
+
+# ── first open now populates trade_open_records ───────────────────────────────
+
+def test_open_trade_first_open_appends_to_trade_open_records(make_put_option_380):
+    option = make_put_option_380()
+    option.open_trade(quantity=-1)
+    assert len(option.trade_open_records) == 1
+
+
+def test_open_trade_first_open_record_is_returned_value(make_put_option_380):
+    option = make_put_option_380()
+    rec = option.open_trade(quantity=-1)
+    assert option.trade_open_records[0] is rec
+
+
+def test_open_trade_first_open_trade_open_info_matches_record(make_put_option_380):
+    option = make_put_option_380()
+    rec = option.open_trade(quantity=-1)
+    assert option.trade_open_info.price == rec.price
+    assert option.trade_open_info.quantity == rec.quantity
+    assert option.trade_open_info.premium == rec.premium
+    assert option.trade_open_info.fees == rec.fees
+
+
+# ── scale-in: quantity accumulation ──────────────────────────────────────────
+
+def test_open_trade_scale_in_long_accumulates_quantity(make_call_option_380):
+    option = make_call_option_380()
+    option.open_trade(quantity=2)
+    option.open_trade(quantity=3)
+    assert option.quantity == 5
+
+
+def test_open_trade_scale_in_short_accumulates_quantity(make_put_option_380):
+    option = make_put_option_380()
+    option.open_trade(quantity=-2)
+    option.open_trade(quantity=-1)
+    assert option.quantity == -3
+
+
+# ── scale-in: trade_open_records ─────────────────────────────────────────────
+
+def test_open_trade_scale_in_appends_a_record_per_open(make_put_option_380):
+    option = make_put_option_380()
+    option.open_trade(quantity=-1)
+    option.open_trade(quantity=-2)
+    assert len(option.trade_open_records) == 2
+
+
+def test_open_trade_scale_in_records_store_individual_lot_quantities(make_put_option_380):
+    option = make_put_option_380()
+    option.open_trade(quantity=-1)
+    option.open_trade(quantity=-2)
+    assert option.trade_open_records[0].quantity == -1
+    assert option.trade_open_records[1].quantity == -2
+
+
+# ── scale-in: trade_open_info weighted average ───────────────────────────────
+
+def test_open_trade_scale_in_trade_open_info_weighted_average_price(make_call_option_380):
+    # First open:  ask=2.10, qty=2  → fill=2.10, notional=4.20
+    # Second open: ask=3.20, qty=3  → fill=3.20, notional=9.60
+    # Weighted avg = 13.80 / 5 = 2.76
+    option = make_call_option_380(bid=1.90, ask=2.10, price=2.00, fill_factor=0)
+    option.open_trade(quantity=2)
+
+    option.bid = 2.80
+    option.ask = 3.20
+    option.price = 3.00
+    option.open_trade(quantity=3)
+
+    assert option.trade_open_info.price == pytest.approx(2.76, abs=0.01)
+
+
+def test_open_trade_scale_in_trade_open_info_total_premium(make_call_option_380):
+    # First open:  fill=2.10, qty=2  → premium = 2.10 * 100 * 2 = 420.00
+    # Second open: fill=3.20, qty=3  → premium = 3.20 * 100 * 3 = 960.00
+    # Total premium = 1380.00
+    option = make_call_option_380(bid=1.90, ask=2.10, price=2.00, fill_factor=0)
+    option.open_trade(quantity=2)
+
+    option.bid = 2.80
+    option.ask = 3.20
+    option.price = 3.00
+    option.open_trade(quantity=3)
+
+    assert option.trade_open_info.premium == pytest.approx(1380.0, abs=0.01)
+
+
+def test_open_trade_scale_in_trade_open_info_total_quantity(make_call_option_380,):
+    option = make_call_option_380()
+    option.open_trade(quantity=2)
+    option.open_trade(quantity=3)
+    assert option.trade_open_info.quantity == 5
+
+
+def test_open_trade_scale_in_trade_open_info_uses_latest_date(make_put_option_380):
+    # trade_open_info.date should reflect the most recent open lot's datetime
+    option = make_put_option_380()
+    option.open_trade(quantity=-1)
+    first_date = option.trade_open_info.date
+    option.open_trade(quantity=-1)
+    # both opens happen at the same quote_datetime in this fixture, so dates match;
+    # what matters is that date comes from records[-1], not records[0]
+    assert option.trade_open_info.date == option.trade_open_records[-1].date
+
+
+# ── scale-in: event emission ──────────────────────────────────────────────────
+
+def test_open_trade_scale_in_emits_individual_lot_not_aggregate(make_put_option_380):
+    # open_transaction_completed must carry the individual scale-in lot,
+    # NOT the aggregate trade_open_info.
+    option = make_put_option_380(bid=1.90, ask=2.10, price=2.00, fill_factor=0)
+    option.open_trade(quantity=-1)
+
+    option.bid = 1.50
+    option.ask = 1.70
+    option.price = 1.60
+
+    emitted_lots = []
+
+    def _capture(lot):
+        emitted_lots.append(lot)
+
+    option.bind(open_transaction_completed=_capture)
+
+    rec = option.open_trade(quantity=-2)
+
+    assert len(emitted_lots) == 1
+    emitted = emitted_lots[0]
+    # emitted is the individual lot
+    assert emitted is rec
+    assert emitted.quantity == -2
+    # SHORT fills at bid — 1.50 with fill_factor=0
+    assert emitted.price == pytest.approx(1.50, abs=0.01)
+    # aggregate would have quantity=-3 and a blended price; confirm it's not that
+    assert emitted is not option.trade_open_info
+
+
+# ── scale-in: DB not reloaded ─────────────────────────────────────────────────
+
+def test_open_trade_db_loaded_only_on_first_open(make_put_option_380):
+    option = make_put_option_380()
+    option.open_trade(quantity=-1)
+    call_count = option.db.get_contract_updates.call_count
+    option.open_trade(quantity=-1)
+    assert option.db.get_contract_updates.call_count == call_count
+
+
+# ── scale-in: fees ───────────────────────────────────────────────────────────
+
+def test_open_trade_scale_in_fees_accumulate_in_trade_open_info(make_put_option_380):
+    # 2 contracts + 3 contracts at $0.65/contract = $3.25
+    option = make_put_option_380(incur_fees=True, standard_fee=0.65)
+    option.open_trade(quantity=-2)
+    option.open_trade(quantity=-3)
+    assert option.trade_open_info.fees == pytest.approx(3.25, abs=0.01)
+
+
+def test_open_trade_scale_in_total_fees_field_accumulates(make_put_option_380):
+    option = make_put_option_380(incur_fees=True, standard_fee=0.65)
+    option.open_trade(quantity=-2)
+    option.open_trade(quantity=-3)
+    assert option.total_fees == pytest.approx(3.25, abs=0.01)
+
+
+# ── scale-in: downstream PnL consumers ───────────────────────────────────────
+
+def test_open_trade_scale_in_unrealized_pnl_uses_weighted_average_price(make_call_option_380):
+    # First open:  fill=2.10, qty=2
+    # Second open: fill=3.20, qty=3  →  weighted avg = 2.76, total qty = 5
+    # current price after second open = 3.00
+    # unrealized PnL = (3.00 - 2.76) * 100 * 5 = 120.00
+    option = make_call_option_380(bid=1.90, ask=2.10, price=2.00, fill_factor=0)
+    option.open_trade(quantity=2)
+
+    option.bid = 2.80
+    option.ask = 3.20
+    option.price = 3.00
+    option.open_trade(quantity=3)
+
+    assert option.get_unrealized_profit_loss() == pytest.approx(120.0, abs=0.01)
+
+
+# ── guard conditions ──────────────────────────────────────────────────────────
+
+def test_open_trade_opposite_direction_raises(make_put_option_380):
+    option = make_put_option_380()
+    option.open_trade(quantity=-1)
+    with pytest.raises(ValueError, match="opposite direction"):
+        option.open_trade(quantity=1)
+
+
+def test_open_trade_on_closed_position_raises(make_put_option_380):
+
+    option = make_put_option_380()
+    option.open_trade(quantity=-1)
+    option.close_trade(quote_datetime=option.quote_datetime)
+    with pytest.raises(ValueError, match="closed"):
+        option.open_trade(quantity=-1)
+
+
+def test_open_trade_status_remains_trade_is_open_after_scale_in(make_put_option_380):
+    option = make_put_option_380()
+    option.open_trade(quantity=-1)
+    option.open_trade(quantity=-2)
+    assert OptionStatus.TRADE_IS_OPEN in option.status
+    assert OptionStatus.INITIALIZED not in option.status

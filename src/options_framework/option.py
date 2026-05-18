@@ -78,7 +78,9 @@ class Option(Dispatcher):
     position_type: Optional[OptionPositionType] = field(init=False, default=None, compare=False)
     """Debit or Credit"""
     trade_open_info: Optional[TradeOpenInfo] = field(init=False, default=None, compare=False)
-    """The information about the trade open: date, quantity, price, premium, and fees"""
+    """The weighted average information about the trade open: date, quantity, price, premium, and fees"""
+    trade_open_records: Optional[list] = field(init=False, default_factory=list, compare=False)
+    """The trade open information for each opening transaction"""
     trade_close_info: Optional[TradeCloseInfo] = field(init=False, default=None, compare=False)
     """
     The weighted average information about the trade close transactions: date, quantity price, profit_loss, 
@@ -265,10 +267,13 @@ class Option(Dispatcher):
 
         additional keyword arguments are added to the user_defined list of values
         """
-        if OptionStatus.TRADE_IS_OPEN in self.status:
-            raise ValueError(f"Cannot open position. A position is already open. ({self.symbol})")
+        if OptionStatus.TRADE_IS_CLOSED in self.status:
+            raise ValueError(f"Cannot open a closed position. ({self.symbol})")
         if (quantity is None) or not (isinstance(quantity, numbers.Integral)) or (quantity == 0) or (quantity != int(quantity)):
             raise ValueError(f"Quantity must be a non-zero integer. ({self.symbol}) Quantity: {quantity}")
+        if (self.quantity != 0) and (quantity * self.quantity < 0):
+            direction = 'positive' if quantity > 0 else 'negative'
+            raise ValueError(f"Quantity cannot be in the opposite direction to scale in. Quantity entered is {direction}. It must match the existing {self.position_type.name} position.")
         quantity = int(quantity)
 
         # Quote sanity
@@ -311,14 +316,18 @@ class Option(Dispatcher):
                                         fees=fees,
                                         spot_price=float(self.spot_price))
 
-        self.trade_open_info = trade_open_info
-        self.quantity = quantity
+        self.trade_open_records.append(trade_open_info)
+        self.quantity += quantity
 
+        is_first_open = OptionStatus.TRADE_IS_OPEN not in self.status
         self.status |= OptionStatus.TRADE_IS_OPEN
         self.status &= ~OptionStatus.INITIALIZED
 
-        self.updates = self.db.get_contract_updates(self.option_id, self.quote_datetime.isoformat(), self.expiration.isoformat())
+        # Only load price history on the first open; it covers the full remaining life
+        if is_first_open:
+            self.updates = self.db.get_contract_updates(self.option_id, self.quote_datetime.isoformat(), self.expiration.isoformat())
 
+        self._calculate_trade_open_info()
         self.emit("open_transaction_completed", trade_open_info)
         # print(f'emit open {self.option_id}')
         return trade_open_info
@@ -534,6 +543,32 @@ class Option(Dispatcher):
             profit_loss_percent=float(profit_loss_percent),
             fees=fees,
             spot_price=float(self.spot_price),
+        )
+
+
+    def _calculate_trade_open_info(self) -> None:
+        """Recompute trade_open_info as the weighted average across all open lots in
+        trade_open_records. Called after every open_trade (first open or scale-in)."""
+        if not self.trade_open_records:
+            return
+        records = self.trade_open_records
+        date = records[-1].date
+        total_abs_qty = decimalize_0(sum(abs(r.quantity) for r in records))
+        notional = sum(decimalize_2(r.price) * decimalize_0(abs(r.quantity)) for r in records)
+        price = decimalize_2(notional / total_abs_qty)
+        quantity = int(sum(r.quantity for r in records))
+        premium = float(decimalize_2(sum(decimalize_2(r.premium) for r in records)))
+        fees = sum(r.fees for r in records)
+
+        self.trade_open_info = TradeOpenInfo(
+            option_id=self.option_id,
+            instance_id=self.instance_id,
+            date=date,
+            quantity=quantity,
+            price=float(price),
+            premium=premium,
+            fees=fees,
+            spot_price=float(records[-1].spot_price),
         )
 
 

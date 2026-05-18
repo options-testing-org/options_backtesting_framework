@@ -128,7 +128,6 @@ class SpreadBase(ABC):
         #sum(o.get_profit_loss_percent() for o in self.options)
         return round(pnl_pct, 4)
 
-
     def get_unrealized_profit_loss_percent(self) -> float:
         pnl_pct = sum(o.get_unrealized_profit_loss_percent() for o in self.options)
         return round(pnl_pct, 4)
