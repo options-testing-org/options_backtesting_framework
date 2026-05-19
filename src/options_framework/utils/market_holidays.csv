@@ -1,0 +1,1212 @@
+﻿date,exchange,status,start_time,end_time,holiday_name
+1/17/2000,NYSE,closed,,,Martin Luther King's Birthday
+2/21/2000,NYSE,closed,,,Washington's Birthday
+4/21/2000,NYSE,closed,,,Good Friday
+5/29/2000,NYSE,closed,,,Memorial Day
+7/3/2000,NYSE,short day,9:30,13:00,Independence Day
+7/4/2000,NYSE,closed,,,Independence Day
+9/4/2000,NYSE,closed,,,Labor Day
+11/23/2000,NYSE,closed,,,Thanksgiving Day
+11/24/2000,NYSE,short day,9:30,13:00,Black Friday
+12/25/2000,NYSE,closed,,,Christmas Day
+1/1/2001,NYSE,closed,,,New Year's Day
+1/15/2001,NYSE,closed,,,Martin Luther King's Birthday
+2/19/2001,NYSE,closed,,,Washington's Birthday
+4/13/2001,NYSE,closed,,,Good Friday
+5/28/2001,NYSE,closed,,,Memorial Day
+7/3/2001,NYSE,short day,9:30,13:00,Independence Day
+7/4/2001,NYSE,closed,,,Independence Day
+9/3/2001,NYSE,closed,,,Labor Day
+9/11/2001,NYSE,closed,,,Special Holiday
+9/12/2001,NYSE,closed,,,Special Holiday
+9/13/2001,NYSE,closed,,,Special Holiday
+9/14/2001,NYSE,closed,,,Special Holiday
+11/22/2001,NYSE,closed,,,Thanksgiving Day
+11/23/2001,NYSE,short day,9:30,13:00,Black Friday
+12/24/2001,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2001,NYSE,closed,,,Christmas Day
+1/1/2002,NYSE,closed,,,New Year's Day
+1/15/2002,NYSE,economic,,,ppi
+1/16/2002,NYSE,economic,,,cpi
+1/21/2002,NYSE,closed,,,Martin Luther King's Birthday
+1/30/2002,NYSE,economic,,,fomc
+2/18/2002,NYSE,closed,,,Washington's Birthday
+2/19/2002,NYSE,economic,,,ppi
+2/20/2002,NYSE,economic,,,cpi
+3/15/2002,NYSE,economic,,,witching
+3/19/2002,NYSE,economic,,,fomc|ppi
+3/20/2002,NYSE,economic,,,cpi
+3/29/2002,NYSE,closed,,,Good Friday
+4/12/2002,NYSE,economic,,,ppi
+4/17/2002,NYSE,economic,,,cpi
+5/7/2002,NYSE,economic,,,fomc
+5/10/2002,NYSE,economic,,,ppi
+5/14/2002,NYSE,economic,,,cpi
+5/27/2002,NYSE,closed,,,Memorial Day
+6/13/2002,NYSE,economic,,,ppi
+6/14/2002,NYSE,economic,,,cpi
+6/21/2002,NYSE,economic,,,witching
+6/26/2002,NYSE,economic,,,fomc
+7/4/2002,NYSE,closed,,,Independence Day
+7/5/2002,NYSE,short day,9:30,13:00,Independence Day
+7/12/2002,NYSE,economic,,,ppi
+7/17/2002,NYSE,economic,,,cpi
+8/13/2002,NYSE,economic,,,fomc|ppi
+8/14/2002,NYSE,economic,,,cpi
+9/2/2002,NYSE,closed,,,Labor Day
+9/11/2002,NASDAQ,short day,11:00,16:00,September 11 Anniversary
+9/11/2002,NYSE,short day,12:00,16:00,September 11 Anniversary
+9/13/2002,NYSE,economic,,,ppi
+9/17/2002,NYSE,economic,,,cpi
+9/20/2002,NYSE,economic,,,witching
+9/24/2002,NYSE,economic,,,fomc
+10/11/2002,NYSE,economic,,,ppi
+10/16/2002,NYSE,economic,,,cpi
+11/6/2002,NYSE,economic,,,fomc
+11/14/2002,NYSE,economic,,,ppi
+11/15/2002,NYSE,economic,,,cpi
+11/28/2002,NYSE,closed,,,Thanksgiving Day
+11/29/2002,NYSE,short day,9:30,13:00,Black Friday
+12/10/2002,NYSE,economic,,,fomc
+12/12/2002,NYSE,economic,,,ppi
+12/17/2002,NYSE,economic,,,cpi
+12/20/2002,NYSE,economic,,,witching
+12/24/2002,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2002,NYSE,closed,,,Christmas Day
+1/1/2003,NYSE,closed,,,New Year's Day
+1/15/2003,NYSE,economic,,,ppi
+1/16/2003,NYSE,economic,,,cpi
+1/20/2003,NYSE,closed,,,Martin Luther King's Birthday
+1/29/2003,NYSE,economic,,,fomc
+2/17/2003,NYSE,closed,,,Washington's Birthday
+2/19/2003,NYSE,economic,,,ppi
+2/20/2003,NYSE,economic,,,cpi
+3/18/2003,NYSE,economic,,,fomc|ppi
+3/21/2003,NYSE,economic,,,cpi|witching
+4/15/2003,NYSE,economic,,,ppi
+4/16/2003,NYSE,economic,,,cpi
+4/18/2003,NYSE,closed,,,Good Friday
+5/6/2003,NYSE,economic,,,fomc
+5/14/2003,NYSE,economic,,,ppi
+5/15/2003,NYSE,economic,,,cpi
+5/26/2003,NYSE,closed,,,Memorial Day
+6/13/2003,NYSE,economic,,,ppi
+6/17/2003,NYSE,economic,,,cpi
+6/20/2003,NYSE,economic,,,witching
+6/25/2003,NYSE,economic,,,fomc
+7/3/2003,NYSE,short day,9:30,13:00,Independence Day
+7/4/2003,NYSE,closed,,,Independence Day
+7/15/2003,NYSE,economic,,,ppi
+7/16/2003,NYSE,economic,,,cpi
+8/12/2003,NYSE,economic,,,fomc
+8/13/2003,NYSE,economic,,,ppi
+8/14/2003,NYSE,economic,,,cpi
+9/1/2003,NYSE,closed,,,Labor Day
+9/12/2003,NYSE,economic,,,ppi
+9/16/2003,NYSE,economic,,,fomc|cpi
+9/19/2003,NYSE,economic,,,witching
+10/14/2003,NYSE,economic,,,ppi
+10/16/2003,NYSE,economic,,,cpi
+10/28/2003,NYSE,economic,,,fomc
+11/18/2003,NYSE,economic,,,ppi
+11/19/2003,NYSE,economic,,,cpi
+11/27/2003,NYSE,closed,,,Thanksgiving Day
+11/28/2003,NYSE,short day,9:30,13:00,Black Friday
+12/9/2003,NYSE,economic,,,fomc
+12/11/2003,NYSE,economic,,,ppi
+12/16/2003,NYSE,economic,,,cpi
+12/19/2003,NYSE,economic,,,witching
+12/24/2003,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2003,NYSE,closed,,,Christmas Day
+12/26/2003,NYSE,short day,9:30,13:00,Christmas Hangover
+1/1/2004,NYSE,closed,,,New Year's Day
+1/15/2004,NYSE,economic,,,ppi
+1/16/2004,NYSE,economic,,,cpi
+1/19/2004,NYSE,closed,,,Martin Luther King's Birthday
+1/28/2004,NYSE,economic,,,fomc
+2/16/2004,NYSE,closed,,,Washington's Birthday
+2/18/2004,NYSE,economic,,,ppi
+2/19/2004,NYSE,economic,,,cpi
+3/16/2004,NYSE,economic,,,fomc|ppi
+3/17/2004,NYSE,economic,,,cpi
+3/19/2004,NYSE,economic,,,witching
+4/9/2004,NYSE,closed,,,Good Friday
+4/13/2004,NYSE,economic,,,ppi
+4/14/2004,NYSE,economic,,,cpi
+5/4/2004,NYSE,economic,,,fomc
+5/13/2004,NYSE,economic,,,ppi
+5/14/2004,NYSE,economic,,,cpi
+5/31/2004,NYSE,closed,,,Memorial Day
+6/11/2004,NYSE,closed,,,Exchange Holiday
+6/14/2004,NYSE,economic,,,ppi
+6/15/2004,NYSE,economic,,,cpi
+6/18/2004,NYSE,economic,,,witching
+6/30/2004,NYSE,economic,,,fomc
+7/5/2004,NYSE,closed,,,Independence Day Observed
+7/13/2004,NYSE,economic,,,ppi
+7/14/2004,NYSE,economic,,,cpi
+8/10/2004,NYSE,economic,,,fomc
+8/18/2004,NYSE,economic,,,ppi
+8/19/2004,NYSE,economic,,,cpi
+9/6/2004,NYSE,closed,,,Labor Day
+9/15/2004,NYSE,economic,,,ppi
+9/16/2004,NYSE,economic,,,cpi
+9/17/2004,NYSE,economic,,,witching
+9/21/2004,NYSE,economic,,,fomc
+10/13/2004,NYSE,economic,,,ppi
+10/14/2004,NYSE,economic,,,cpi
+11/10/2004,NYSE,economic,,,fomc
+11/16/2004,NYSE,economic,,,ppi
+11/17/2004,NYSE,economic,,,cpi
+11/25/2004,NYSE,closed,,,Thanksgiving Day
+11/26/2004,NYSE,short day,9:30,13:00,Black Friday
+12/14/2004,NYSE,economic,,,fomc|ppi
+12/15/2004,NYSE,economic,,,cpi
+12/17/2004,NYSE,economic,,,witching
+12/24/2004,NYSE,closed,,,Christmas Day Observed
+1/13/2005,NYSE,economic,,,ppi
+1/14/2005,NYSE,economic,,,cpi
+1/17/2005,NYSE,closed,,,Martin Luther King's Birthday
+2/2/2005,NYSE,economic,,,fomc
+2/16/2005,NYSE,economic,,,ppi
+2/21/2005,NYSE,closed,,,Washington's Birthday
+2/23/2005,NYSE,economic,,,cpi
+3/18/2005,NYSE,economic,,,witching
+3/22/2005,NYSE,economic,,,fomc|ppi
+3/23/2005,NYSE,economic,,,cpi
+3/25/2005,NYSE,closed,,,Good Friday
+4/19/2005,NYSE,economic,,,ppi
+4/20/2005,NYSE,economic,,,cpi
+5/3/2005,NYSE,economic,,,fomc
+5/17/2005,NYSE,economic,,,ppi
+5/18/2005,NYSE,economic,,,cpi
+5/30/2005,NYSE,closed,,,Memorial Day
+6/14/2005,NYSE,economic,,,ppi
+6/15/2005,NYSE,economic,,,cpi
+6/17/2005,NYSE,economic,,,witching
+6/30/2005,NYSE,economic,,,fomc
+7/4/2005,NYSE,closed,,,Independence Day
+7/14/2005,NYSE,economic,,,ppi
+7/15/2005,NYSE,economic,,,cpi
+8/9/2005,NYSE,economic,,,fomc
+8/15/2005,NYSE,economic,,,ppi
+8/16/2005,NYSE,economic,,,cpi
+9/5/2005,NYSE,closed,,,Labor Day
+9/14/2005,NYSE,economic,,,ppi
+9/15/2005,NYSE,economic,,,cpi
+9/16/2005,NYSE,economic,,,witching
+9/20/2005,NYSE,economic,,,fomc
+10/14/2005,NYSE,economic,,,cpi
+10/18/2005,NYSE,economic,,,ppi
+11/1/2005,NYSE,economic,,,fomc
+11/15/2005,NYSE,economic,,,ppi
+11/16/2005,NYSE,economic,,,cpi
+11/24/2005,NYSE,closed,,,Thanksgiving Day
+11/25/2005,NYSE,short day,9:30,13:00,Black Friday
+12/13/2005,NYSE,economic,,,fomc|ppi
+12/14/2005,NYSE,economic,,,cpi
+12/16/2005,NYSE,economic,,,witching
+12/26/2005,NYSE,closed,,,Christmas Day Observed
+1/2/2006,NYSE,closed,,,New Year's Day Observed
+1/16/2006,NYSE,closed,,,Martin Luther King's Birthday
+1/17/2006,NYSE,economic,,,ppi
+1/18/2006,NYSE,economic,,,cpi
+1/31/2006,NYSE,economic,,,fomc
+2/20/2006,NYSE,closed,,,Washington's Birthday
+2/21/2006,NYSE,economic,,,ppi
+2/22/2006,NYSE,economic,,,cpi
+3/17/2006,NYSE,economic,,,witching
+3/21/2006,NYSE,economic,,,ppi
+3/22/2006,NYSE,economic,,,cpi
+3/28/2006,NYSE,economic,,,fomc
+4/14/2006,NYSE,closed,,,Good Friday
+4/18/2006,NYSE,economic,,,ppi
+4/19/2006,NYSE,economic,,,cpi
+5/10/2006,NYSE,economic,,,fomc
+5/11/2006,NYSE,economic,,,ppi
+5/17/2006,NYSE,economic,,,cpi
+5/29/2006,NYSE,closed,,,Memorial Day
+6/13/2006,NYSE,economic,,,ppi
+6/14/2006,NYSE,economic,,,cpi
+6/16/2006,NYSE,economic,,,witching
+6/29/2006,NYSE,economic,,,fomc
+7/3/2006,NYSE,short day,9:30,13:00,Independence Day
+7/4/2006,NYSE,closed,,,Independence Day
+7/18/2006,NYSE,economic,,,ppi
+7/19/2006,NYSE,economic,,,cpi
+8/8/2006,NYSE,economic,,,fomc
+8/15/2006,NYSE,economic,,,ppi
+8/16/2006,NYSE,economic,,,cpi
+9/4/2006,NYSE,closed,,,Labor Day
+9/14/2006,NYSE,economic,,,ppi
+9/15/2006,NYSE,economic,,,cpi|witching
+9/20/2006,NYSE,economic,,,fomc
+10/17/2006,NYSE,economic,,,ppi
+10/18/2006,NYSE,economic,,,cpi
+10/25/2006,NYSE,economic,,,fomc
+11/14/2006,NYSE,economic,,,ppi
+11/16/2006,NYSE,economic,,,cpi
+11/23/2006,NYSE,closed,,,Thanksgiving Day
+11/24/2006,NYSE,short day,9:30,13:00,Black Friday
+12/12/2006,NYSE,economic,,,fomc
+12/14/2006,NYSE,economic,,,ppi
+12/15/2006,NYSE,economic,,,cpi|witching
+12/25/2006,NYSE,closed,,,Christmas Day
+1/1/2007,NYSE,closed,,,New Year's Day
+1/2/2007,NYSE,closed,,,Exchange Holiday
+1/15/2007,NYSE,closed,,,Martin Luther King's Birthday
+1/17/2007,NYSE,economic,,,ppi
+1/18/2007,NYSE,economic,,,cpi
+1/31/2007,NYSE,economic,,,fomc
+2/16/2007,NYSE,economic,,,ppi
+2/19/2007,NYSE,closed,,,Washington's Birthday
+2/21/2007,NYSE,economic,,,cpi
+3/16/2007,NYSE,economic,,,ppi|witching
+3/20/2007,NYSE,economic,,,cpi
+3/21/2007,NYSE,economic,,,fomc
+4/6/2007,NYSE,closed,,,Good Friday
+4/17/2007,NYSE,economic,,,cpi|ppi
+5/9/2007,NYSE,economic,,,fomc
+5/14/2007,NYSE,economic,,,ppi
+5/15/2007,NYSE,economic,,,cpi
+5/28/2007,NYSE,closed,,,Memorial Day
+6/14/2007,NYSE,economic,,,ppi
+6/15/2007,NYSE,economic,,,cpi|witching
+6/28/2007,NYSE,economic,,,fomc
+7/3/2007,NYSE,short day,9:30,13:00,Independence Day
+7/4/2007,NYSE,closed,,,Independence Day
+7/17/2007,NYSE,economic,,,ppi
+7/18/2007,NYSE,economic,,,cpi
+8/7/2007,NYSE,economic,,,fomc
+8/14/2007,NYSE,economic,,,cpi|ppi
+8/17/2007,NYSE,economic,,,fomc
+9/3/2007,NYSE,closed,,,Labor Day
+9/18/2007,NYSE,economic,,,fomc|ppi
+9/19/2007,NYSE,economic,,,cpi
+9/21/2007,NYSE,economic,,,witching
+10/16/2007,NYSE,economic,,,ppi
+10/17/2007,NYSE,economic,,,cpi
+10/31/2007,NYSE,economic,,,fomc
+11/14/2007,NYSE,economic,,,ppi
+11/15/2007,NYSE,economic,,,cpi
+11/22/2007,NYSE,closed,,,Thanksgiving Day
+11/23/2007,NYSE,short day,9:30,13:00,Black Friday
+12/11/2007,NYSE,economic,,,fomc
+12/13/2007,NYSE,economic,,,ppi
+12/14/2007,NYSE,economic,,,cpi
+12/21/2007,NYSE,economic,,,witching
+12/24/2007,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2007,NYSE,closed,,,Christmas Day
+1/1/2008,NYSE,closed,,,New Year's Day
+1/15/2008,NYSE,economic,,,ppi
+1/16/2008,NYSE,economic,,,cpi
+1/21/2008,NYSE,closed,,,Martin Luther King's Birthday
+1/22/2008,NYSE,economic,,,fomc
+1/30/2008,NYSE,economic,,,fomc
+2/18/2008,NYSE,closed,,,Washington's Birthday
+2/19/2008,NYSE,economic,,,ppi
+2/20/2008,NYSE,economic,,,cpi
+3/14/2008,NYSE,economic,,,cpi
+3/18/2008,NYSE,economic,,,fomc|ppi
+3/21/2008,NYSE,closed,,,Good Friday
+3/21/2008,NYSE,economic,,,witching
+4/15/2008,NYSE,economic,,,ppi
+4/16/2008,NYSE,economic,,,cpi
+4/30/2008,NYSE,economic,,,fomc
+5/13/2008,NYSE,economic,,,ppi
+5/14/2008,NYSE,economic,,,cpi
+5/26/2008,NYSE,closed,,,Memorial Day
+6/13/2008,NYSE,economic,,,cpi
+6/17/2008,NYSE,economic,,,ppi
+6/20/2008,NYSE,economic,,,witching
+6/25/2008,NYSE,economic,,,fomc
+7/3/2008,NYSE,short day,9:30,13:00,
+7/4/2008,NYSE,closed,,,Independence Day
+7/15/2008,NYSE,economic,,,ppi
+7/16/2008,NYSE,economic,,,cpi
+8/5/2008,NYSE,economic,,,fomc
+8/14/2008,NYSE,economic,,,cpi
+8/19/2008,NYSE,economic,,,ppi
+9/1/2008,NYSE,closed,,,Labor Day
+9/12/2008,NYSE,economic,,,ppi
+9/16/2008,NYSE,economic,,,fomc|cpi
+9/19/2008,NYSE,economic,,,witching
+10/8/2008,NYSE,economic,,,fomc
+10/14/2008,NYSE,economic,,,ppi
+10/16/2008,NYSE,economic,,,cpi
+10/29/2008,NYSE,economic,,,fomc
+11/18/2008,NYSE,economic,,,ppi
+11/19/2008,NYSE,economic,,,cpi
+11/27/2008,NYSE,closed,,,Thanksgiving Day
+11/28/2008,NYSE,short day,9:30,13:00,Black Friday
+12/11/2008,NYSE,economic,,,ppi
+12/16/2008,NYSE,economic,,,fomc|cpi
+12/19/2008,NYSE,economic,,,witching
+12/24/2008,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2008,NYSE,closed,,,Christmas Day
+1/1/2009,NYSE,closed,,,New Year's Day
+1/15/2009,NYSE,economic,,,ppi
+1/16/2009,NYSE,economic,,,cpi
+1/19/2009,NYSE,closed,,,Martin Luther King's Birthday
+1/28/2009,NYSE,economic,,,fomc
+2/16/2009,NYSE,closed,,,Washington's Birthday
+2/19/2009,NYSE,economic,,,ppi
+2/20/2009,NYSE,economic,,,cpi
+3/17/2009,NYSE,economic,,,ppi
+3/18/2009,NYSE,economic,,,fomc|cpi
+3/20/2009,NYSE,economic,,,witching
+4/10/2009,NYSE,closed,,,Good Friday
+4/14/2009,NYSE,economic,,,ppi
+4/15/2009,NYSE,economic,,,cpi
+4/29/2009,NYSE,economic,,,fomc
+5/14/2009,NYSE,economic,,,ppi
+5/15/2009,NYSE,economic,,,cpi
+5/25/2009,NYSE,closed,,,Memorial Day
+6/16/2009,NYSE,economic,,,ppi
+6/17/2009,NYSE,economic,,,cpi
+6/19/2009,NYSE,economic,,,witching
+6/24/2009,NYSE,economic,,,fomc
+7/3/2009,NYSE,closed,,,Independence Day Observed
+7/14/2009,NYSE,economic,,,ppi
+7/15/2009,NYSE,economic,,,cpi
+8/12/2009,NYSE,economic,,,fomc
+8/14/2009,NYSE,economic,,,cpi
+8/18/2009,NYSE,economic,,,ppi
+9/7/2009,NYSE,closed,,,Labor Day
+9/15/2009,NYSE,economic,,,ppi
+9/16/2009,NYSE,economic,,,cpi
+9/18/2009,NYSE,economic,,,witching
+9/23/2009,NYSE,economic,,,fomc
+10/14/2009,NYSE,economic,,,ppi
+10/15/2009,NYSE,economic,,,cpi
+11/4/2009,NYSE,economic,,,fomc
+11/17/2009,NYSE,economic,,,ppi
+11/18/2009,NYSE,economic,,,cpi
+11/26/2009,NYSE,closed,,,Thanksgiving Day
+11/27/2009,NYSE,short day,9:30,13:00,Black Friday
+12/15/2009,NYSE,economic,,,ppi
+12/16/2009,NYSE,economic,,,fomc|cpi
+12/18/2009,NYSE,economic,,,witching
+12/24/2009,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2009,NYSE,closed,,,Christmas Day
+1/1/2010,NYSE,closed,,,New Year's Day
+1/14/2010,NYSE,economic,,,ppi
+1/15/2010,NYSE,economic,,,cpi
+1/18/2010,NYSE,closed,,,Martin Luther King's Birthday
+1/27/2010,NYSE,economic,,,fomc
+2/15/2010,NYSE,closed,,,Washington's Birthday
+2/18/2010,NYSE,economic,,,ppi
+2/19/2010,NYSE,economic,,,cpi
+3/16/2010,NYSE,economic,,,fomc
+3/17/2010,NYSE,economic,,,ppi
+3/18/2010,NYSE,economic,,,cpi
+3/19/2010,NYSE,economic,,,witching
+4/2/2010,NYSE,closed,,,Good Friday
+4/13/2010,NYSE,economic,,,ppi
+4/14/2010,NYSE,economic,,,cpi
+4/28/2010,NYSE,economic,,,fomc
+5/18/2010,NYSE,economic,,,ppi
+5/19/2010,NYSE,economic,,,cpi
+5/31/2010,NYSE,closed,,,Memorial Day
+6/15/2010,NYSE,economic,,,ppi
+6/17/2010,NYSE,economic,,,cpi
+6/18/2010,NYSE,economic,,,witching
+6/23/2010,NYSE,economic,,,fomc
+7/5/2010,NYSE,closed,,,Independence Day Observed
+7/15/2010,NYSE,economic,,,ppi
+7/16/2010,NYSE,economic,,,cpi
+8/10/2010,NYSE,economic,,,fomc
+8/13/2010,NYSE,economic,,,cpi
+8/17/2010,NYSE,economic,,,ppi
+9/6/2010,NYSE,closed,,,Labor Day
+9/16/2010,NYSE,economic,,,ppi
+9/17/2010,NYSE,economic,,,cpi|witching
+9/21/2010,NYSE,economic,,,fomc
+10/14/2010,NYSE,economic,,,ppi
+10/15/2010,NYSE,economic,,,cpi
+11/3/2010,NYSE,economic,,,fomc
+11/16/2010,NYSE,economic,,,ppi
+11/17/2010,NYSE,economic,,,cpi
+11/25/2010,NYSE,closed,,,Thanksgiving Day
+11/26/2010,NYSE,short day,9:30,13:00,Black Friday
+12/14/2010,NYSE,economic,,,fomc|ppi
+12/15/2010,NYSE,economic,,,cpi
+12/17/2010,NYSE,economic,,,witching
+12/24/2010,NYSE,closed,,,Christmas Day Observed
+1/13/2011,NYSE,economic,,,ppi
+1/14/2011,NYSE,economic,,,cpi
+1/17/2011,NYSE,closed,,,Martin Luther King's Birthday
+1/26/2011,NYSE,economic,,,fomc
+2/16/2011,NYSE,economic,,,ppi
+2/17/2011,NYSE,economic,,,cpi
+2/21/2011,NYSE,closed,,,Washington's Birthday
+3/15/2011,NYSE,economic,,,fomc
+3/16/2011,NYSE,economic,,,ppi
+3/17/2011,NYSE,economic,,,cpi
+3/18/2011,NYSE,economic,,,witching
+4/14/2011,NYSE,economic,,,ppi
+4/15/2011,NYSE,economic,,,cpi
+4/22/2011,NYSE,closed,,,Good Friday
+4/27/2011,NYSE,economic,,,fomc
+5/12/2011,NYSE,economic,,,ppi
+5/13/2011,NYSE,economic,,,cpi
+5/30/2011,NYSE,closed,,,Memorial Day
+6/14/2011,NYSE,economic,,,ppi
+6/15/2011,NYSE,economic,,,cpi
+6/17/2011,NYSE,economic,,,witching
+6/22/2011,NYSE,economic,,,fomc
+7/4/2011,NYSE,closed,,,Independence Day
+7/14/2011,NYSE,economic,,,ppi
+7/15/2011,NYSE,economic,,,cpi
+8/9/2011,NYSE,economic,,,fomc
+8/17/2011,NYSE,economic,,,ppi
+8/18/2011,NYSE,economic,,,cpi
+9/5/2011,NYSE,closed,,,Labor Day
+9/14/2011,NYSE,economic,,,ppi
+9/15/2011,NYSE,economic,,,cpi
+9/16/2011,NYSE,economic,,,witching
+9/21/2011,NYSE,economic,,,fomc
+10/18/2011,NYSE,economic,,,ppi
+10/19/2011,NYSE,economic,,,cpi
+11/2/2011,NYSE,economic,,,fomc
+11/15/2011,NYSE,economic,,,ppi
+11/16/2011,NYSE,economic,,,cpi
+11/24/2011,NYSE,closed,,,Thanksgiving Day
+11/25/2011,NYSE,short day,9:30,13:00,Black Friday
+12/13/2011,NYSE,economic,,,fomc
+12/14/2011,NYSE,economic,,,ppi
+12/16/2011,NYSE,economic,,,cpi|witching
+12/26/2011,NYSE,closed,,,Christmas Day Observed
+1/2/2012,NYSE,closed,,,New Year's Day Observed
+1/16/2012,NYSE,closed,,,Martin Luther King's Birthday
+1/18/2012,NYSE,economic,,,ppi
+1/19/2012,NYSE,economic,,,cpi
+1/25/2012,NYSE,economic,,,fomc
+2/16/2012,NYSE,economic,,,ppi
+2/17/2012,NYSE,economic,,,cpi
+2/20/2012,NYSE,closed,,,Washington's Birthday
+3/13/2012,NYSE,economic,,,fomc
+3/14/2012,NYSE,economic,,,ppi
+3/16/2012,NYSE,economic,,,cpi|witching
+4/6/2012,NYSE,closed,,,Good Friday
+4/12/2012,NYSE,economic,,,ppi
+4/13/2012,NYSE,economic,,,cpi
+4/25/2012,NYSE,economic,,,fomc
+5/10/2012,NYSE,economic,,,ppi
+5/15/2012,NYSE,economic,,,cpi
+5/28/2012,NYSE,closed,,,Memorial Day
+6/13/2012,NYSE,economic,,,ppi
+6/14/2012,NYSE,economic,,,cpi
+6/15/2012,NYSE,economic,,,witching
+6/20/2012,NYSE,economic,,,fomc
+7/3/2012,NYSE,short day,9:30,13:00,Independence Day
+7/4/2012,NYSE,closed,,,Independence Day
+7/13/2012,NYSE,economic,,,ppi
+7/17/2012,NYSE,economic,,,cpi
+8/1/2012,NYSE,economic,,,fomc
+8/14/2012,NYSE,economic,,,ppi
+8/15/2012,NYSE,economic,,,cpi
+9/3/2012,NYSE,closed,,,Labor Day
+9/13/2012,NYSE,economic,,,fomc|ppi
+9/14/2012,NYSE,economic,,,cpi
+9/21/2012,NYSE,economic,,,witching
+10/12/2012,NYSE,economic,,,ppi
+10/16/2012,NYSE,economic,,,cpi
+10/24/2012,NYSE,economic,,,fomc
+10/29/2012,NYSE,closed,,,Special Holiday
+10/30/2012,NYSE,closed,,,Special Holiday
+11/14/2012,NYSE,economic,,,ppi
+11/15/2012,NYSE,economic,,,cpi
+11/22/2012,NYSE,closed,,,Thanksgiving Day
+11/23/2012,NYSE,short day,9:30,13:00,Black Friday
+12/12/2012,NYSE,economic,,,fomc
+12/13/2012,NYSE,economic,,,ppi
+12/14/2012,NYSE,economic,,,cpi
+12/21/2012,NYSE,economic,,,witching
+12/24/2012,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2012,NYSE,closed,,,Christmas Day
+1/1/2013,NYSE,closed,,,New Year's Day
+1/15/2013,NYSE,economic,,,ppi
+1/16/2013,NYSE,economic,,,cpi
+1/21/2013,NYSE,closed,,,Martin Luther King's Birthday
+1/30/2013,NYSE,economic,,,fomc
+2/18/2013,NYSE,closed,,,Washington's Birthday
+2/20/2013,NYSE,economic,,,ppi
+2/21/2013,NYSE,economic,,,cpi
+3/14/2013,NYSE,economic,,,ppi
+3/15/2013,NYSE,economic,,,cpi|witching
+3/20/2013,NYSE,economic,,,fomc
+3/29/2013,NYSE,closed,,,Good Friday
+4/12/2013,NYSE,economic,,,ppi
+4/16/2013,NYSE,economic,,,cpi
+5/1/2013,NYSE,economic,,,fomc
+5/14/2013,NYSE,economic,,,ppi
+5/16/2013,NYSE,economic,,,cpi
+5/27/2013,NYSE,closed,,,Memorial Day
+6/14/2013,NYSE,economic,,,ppi
+6/18/2013,NYSE,economic,,,cpi
+6/19/2013,NYSE,economic,,,fomc
+6/21/2013,NYSE,economic,,,witching
+7/3/2013,NYSE,short day,9:30,13:00,Independence Day
+7/4/2013,NYSE,closed,,,Independence Day
+7/12/2013,NYSE,economic,,,ppi
+7/16/2013,NYSE,economic,,,cpi
+7/31/2013,NYSE,economic,,,fomc
+8/13/2013,NYSE,economic,,,ppi
+8/15/2013,NYSE,economic,,,cpi
+9/2/2013,NYSE,closed,,,Labor Day
+9/13/2013,NYSE,economic,,,ppi
+9/17/2013,NYSE,economic,,,cpi
+9/18/2013,NYSE,economic,,,fomc
+9/20/2013,NYSE,economic,,,witching
+10/29/2013,NYSE,economic,,,ppi
+10/30/2013,NYSE,economic,,,fomc|cpi
+11/19/2013,NYSE,economic,,,ppi
+11/20/2013,NYSE,economic,,,cpi
+11/28/2013,NYSE,closed,,,Thanksgiving Day
+11/29/2013,NYSE,short day,9:30,13:00,Black Friday
+12/13/2013,NYSE,economic,,,ppi
+12/17/2013,NYSE,economic,,,cpi
+12/18/2013,NYSE,economic,,,fomc
+12/20/2013,NYSE,economic,,,witching
+12/24/2013,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2013,NYSE,closed,,,Christmas Day
+1/1/2014,NYSE,closed,,,New Year's Day
+1/15/2014,NYSE,economic,,,ppi
+1/16/2014,NYSE,economic,,,cpi
+1/20/2014,NYSE,closed,,,Martin Luther King's Birthday
+1/29/2014,NYSE,economic,,,fomc
+2/17/2014,NYSE,closed,,,Washington's Birthday
+2/20/2014,NYSE,economic,,,cpi|ppi
+3/18/2014,NYSE,economic,,,cpi|ppi
+3/19/2014,NYSE,economic,,,fomc
+3/21/2014,NYSE,economic,,,witching
+4/11/2014,NYSE,economic,,,ppi
+4/15/2014,NYSE,economic,,,cpi
+4/18/2014,NYSE,closed,,,Good Friday
+4/30/2014,NYSE,economic,,,fomc
+5/14/2014,NYSE,economic,,,ppi
+5/15/2014,NYSE,economic,,,cpi
+5/26/2014,NYSE,closed,,,Memorial Day
+6/13/2014,NYSE,economic,,,ppi
+6/17/2014,NYSE,economic,,,cpi
+6/18/2014,NYSE,economic,,,fomc
+6/20/2014,NYSE,economic,,,witching
+7/3/2014,NYSE,short day,9:30,13:00,Independence Day
+7/4/2014,NYSE,closed,,,Independence Day
+7/15/2014,NYSE,economic,,,ppi
+7/22/2014,NYSE,economic,,,cpi
+7/30/2014,NYSE,economic,,,fomc
+8/19/2014,NYSE,economic,,,cpi|ppi
+9/1/2014,NYSE,closed,,,Labor Day
+9/16/2014,NYSE,economic,,,ppi
+9/17/2014,NYSE,economic,,,fomc|cpi
+9/19/2014,NYSE,economic,,,witching
+10/15/2014,NYSE,economic,,,ppi
+10/22/2014,NYSE,economic,,,cpi
+10/29/2014,NYSE,economic,,,fomc
+11/18/2014,NYSE,economic,,,ppi
+11/20/2014,NYSE,economic,,,cpi
+11/27/2014,NYSE,closed,,,Thanksgiving Day
+11/28/2014,NYSE,short day,9:30,13:00,Black Friday
+12/12/2014,NYSE,economic,,,ppi
+12/17/2014,NYSE,economic,,,fomc|cpi
+12/19/2014,NYSE,economic,,,witching
+12/24/2014,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2014,NYSE,closed,,,Christmas Day
+1/1/2015,NYSE,closed,,,New Year's Day
+1/14/2015,NYSE,economic,,,ppi
+1/16/2015,NYSE,economic,,,cpi
+1/19/2015,NYSE,closed,,,Martin Luther King's Birthday
+1/28/2015,NYSE,economic,,,fomc
+2/16/2015,NYSE,closed,,,Washington's Birthday
+2/20/2015,NYSE,economic,,,ppi
+2/26/2015,NYSE,economic,,,cpi
+3/13/2015,NYSE,economic,,,ppi
+3/18/2015,NYSE,economic,,,fomc
+3/20/2015,NYSE,economic,,,witching
+3/24/2015,NYSE,economic,,,cpi
+4/3/2015,NYSE,closed,,,Good Friday
+4/14/2015,NYSE,economic,,,ppi
+4/17/2015,NYSE,economic,,,cpi
+4/29/2015,NYSE,economic,,,fomc
+5/14/2015,NYSE,economic,,,ppi
+5/22/2015,NYSE,economic,,,cpi
+5/25/2015,NYSE,closed,,,Memorial Day
+6/16/2015,NYSE,economic,,,ppi
+6/17/2015,NYSE,economic,,,fomc
+6/18/2015,NYSE,economic,,,cpi
+6/19/2015,NYSE,economic,,,witching
+7/3/2015,NYSE,closed,,,Independence Day Observed
+7/14/2015,NYSE,economic,,,ppi
+7/17/2015,NYSE,economic,,,cpi
+7/29/2015,NYSE,economic,,,fomc
+8/13/2015,NYSE,economic,,,ppi
+8/19/2015,NYSE,economic,,,cpi
+9/7/2015,NYSE,closed,,,Labor Day
+9/14/2015,NYSE,economic,,,ppi
+9/16/2015,NYSE,economic,,,cpi
+9/17/2015,NYSE,economic,,,fomc
+9/18/2015,NYSE,economic,,,witching
+10/14/2015,NYSE,economic,,,ppi
+10/15/2015,NYSE,economic,,,cpi
+10/28/2015,NYSE,economic,,,fomc
+11/13/2015,NYSE,economic,,,ppi
+11/17/2015,NYSE,economic,,,cpi
+11/26/2015,NYSE,closed,,,Thanksgiving Day
+11/27/2015,NYSE,short day,9:30,13:00,Black Friday
+12/11/2015,NYSE,economic,,,ppi
+12/15/2015,NYSE,economic,,,cpi
+12/16/2015,NYSE,economic,,,fomc
+12/18/2015,NYSE,economic,,,witching
+12/24/2015,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2015,NYSE,closed,,,Christmas Day
+1/1/2016,NYSE,closed,,,New Year's Day
+1/14/2016,NYSE,economic,,,ppi
+1/18/2016,NYSE,closed,,,Martin Luther King's Birthday
+1/20/2016,NYSE,economic,,,cpi
+1/27/2016,NYSE,economic,,,fomc
+2/15/2016,NYSE,closed,,,Washington's Birthday
+2/18/2016,NYSE,economic,,,ppi
+2/19/2016,NYSE,economic,,,cpi
+3/15/2016,NYSE,economic,,,ppi
+3/16/2016,NYSE,economic,,,fomc|cpi
+3/18/2016,NYSE,economic,,,witching
+3/25/2016,NYSE,closed,,,Good Friday
+4/13/2016,NYSE,economic,,,ppi
+4/14/2016,NYSE,economic,,,cpi
+4/27/2016,NYSE,economic,,,fomc
+5/12/2016,NYSE,economic,,,ppi
+5/17/2016,NYSE,economic,,,cpi
+5/30/2016,NYSE,closed,,,Memorial Day
+6/14/2016,NYSE,economic,,,ppi
+6/15/2016,NYSE,economic,,,fomc
+6/16/2016,NYSE,economic,,,cpi
+6/17/2016,NYSE,economic,,,witching
+7/4/2016,NYSE,closed,,,Independence Day
+7/14/2016,NYSE,economic,,,ppi
+7/15/2016,NYSE,economic,,,cpi
+7/27/2016,NYSE,economic,,,fomc
+8/11/2016,NYSE,economic,,,ppi
+8/16/2016,NYSE,economic,,,cpi
+9/5/2016,NYSE,closed,,,Labor Day
+9/14/2016,NYSE,economic,,,ppi
+9/16/2016,NYSE,economic,,,cpi|witching
+9/21/2016,NYSE,economic,,,fomc
+10/18/2016,NYSE,economic,,,cpi|ppi
+11/2/2016,NYSE,economic,,,fomc
+11/15/2016,NYSE,economic,,,ppi
+11/17/2016,NYSE,economic,,,cpi
+11/24/2016,NYSE,closed,,,Thanksgiving Day
+11/25/2016,NYSE,short day,9:30,13:00,Black Friday
+12/13/2016,NYSE,economic,,,ppi
+12/14/2016,NYSE,economic,,,fomc
+12/15/2016,NYSE,economic,,,cpi
+12/16/2016,NYSE,economic,,,witching
+12/26/2016,NYSE,closed,,,Christmas Day Observed
+1/2/2017,NYSE,closed,,,New Year's Day Observed
+1/12/2017,NYSE,economic,,,ppi
+1/16/2017,NYSE,closed,,,Martin Luther King's Birthday
+1/18/2017,NYSE,economic,,,cpi
+2/1/2017,NYSE,economic,,,fomc
+2/14/2017,NYSE,economic,,,ppi
+2/15/2017,NYSE,economic,,,cpi
+2/20/2017,NYSE,closed,,,Washington's Birthday
+3/14/2017,NYSE,economic,,,ppi
+3/15/2017,NYSE,economic,,,fomc|cpi
+3/17/2017,NYSE,economic,,,witching
+4/13/2017,NYSE,economic,,,ppi
+4/14/2017,NYSE,closed,,,Good Friday
+4/14/2017,NYSE,economic,,,cpi
+5/3/2017,NYSE,economic,,,fomc
+5/11/2017,NYSE,economic,,,ppi
+5/12/2017,NYSE,economic,,,cpi
+5/29/2017,NYSE,closed,,,Memorial Day
+6/13/2017,NYSE,economic,,,ppi
+6/14/2017,NYSE,economic,,,fomc|cpi
+6/16/2017,NYSE,economic,,,witching
+7/3/2017,NYSE,short day,9:30,13:00,Independence Day
+7/4/2017,NYSE,closed,,,Independence Day
+7/13/2017,NYSE,economic,,,ppi
+7/14/2017,NYSE,economic,,,cpi
+7/26/2017,NYSE,economic,,,fomc
+8/10/2017,NYSE,economic,,,ppi
+8/11/2017,NYSE,economic,,,cpi
+9/4/2017,NYSE,closed,,,Labor Day
+9/13/2017,NYSE,economic,,,ppi
+9/14/2017,NYSE,economic,,,cpi
+9/15/2017,NYSE,economic,,,witching
+9/20/2017,NYSE,economic,,,fomc
+10/12/2017,NYSE,economic,,,ppi
+10/13/2017,NYSE,economic,,,cpi
+11/1/2017,NYSE,economic,,,fomc
+11/14/2017,NYSE,economic,,,ppi
+11/15/2017,NYSE,economic,,,cpi
+11/23/2017,NYSE,closed,,,Thanksgiving Day
+11/24/2017,NYSE,short day,9:30,13:00,Black Friday
+12/12/2017,NYSE,economic,,,ppi
+12/13/2017,NYSE,economic,,,fomc|cpi
+12/15/2017,NYSE,economic,,,witching
+12/25/2017,NYSE,closed,,,Christmas Day
+1/1/2018,NYSE,closed,,,New Year's Day
+1/11/2018,NYSE,economic,,,ppi
+1/12/2018,NYSE,economic,,,cpi
+1/15/2018,NYSE,closed,,,Martin Luther King's Birthday
+1/31/2018,NYSE,economic,,,fomc
+2/13/2018,NYSE,economic,,,ppi
+2/14/2018,NYSE,economic,,,cpi
+2/19/2018,NYSE,closed,,,Washington's Birthday
+3/13/2018,NYSE,economic,,,cpi
+3/14/2018,NYSE,economic,,,ppi
+3/16/2018,NYSE,economic,,,witching
+3/21/2018,NYSE,economic,,,fomc
+3/30/2018,NYSE,closed,,,Good Friday
+4/10/2018,NYSE,economic,,,ppi
+4/11/2018,NYSE,economic,,,cpi
+5/2/2018,NYSE,economic,,,fomc
+5/9/2018,NYSE,economic,,,ppi
+5/10/2018,NYSE,economic,,,cpi
+5/28/2018,NYSE,closed,,,Memorial Day
+6/12/2018,NYSE,economic,,,cpi|ppi
+6/13/2018,NYSE,economic,,,fomc
+6/15/2018,NYSE,economic,,,witching
+7/3/2018,NYSE,short day,9:30,13:00,Independence Day
+7/4/2018,NYSE,closed,,,Independence Day
+7/11/2018,NYSE,economic,,,ppi
+7/12/2018,NYSE,economic,,,cpi
+8/1/2018,NYSE,economic,,,fomc
+8/9/2018,NYSE,economic,,,ppi
+8/10/2018,NYSE,economic,,,cpi
+9/3/2018,NYSE,closed,,,Labor Day
+9/12/2018,NYSE,economic,,,ppi
+9/13/2018,NYSE,economic,,,cpi
+9/21/2018,NYSE,economic,,,witching
+9/26/2018,NYSE,economic,,,fomc
+10/10/2018,NYSE,economic,,,ppi
+10/11/2018,NYSE,economic,,,cpi
+11/8/2018,NYSE,economic,,,fomc
+11/9/2018,NYSE,economic,,,ppi
+11/14/2018,NYSE,economic,,,cpi
+11/22/2018,NYSE,closed,,,Thanksgiving Day
+11/23/2018,NYSE,short day,9:30,13:00,Black Friday
+12/5/2018,NYSE,closed,,,Exchange Holiday
+12/11/2018,NYSE,economic,,,ppi
+12/12/2018,NYSE,economic,,,cpi
+12/19/2018,NYSE,economic,,,fomc
+12/21/2018,NYSE,economic,,,witching
+12/24/2018,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2018,NYSE,closed,,,Christmas Day
+1/1/2019,NYSE,closed,,,New Year's Day
+1/11/2019,NYSE,economic,,,cpi
+1/15/2019,NYSE,economic,,,ppi
+1/21/2019,NYSE,closed,,,Martin Luther King's Birthday
+1/30/2019,NYSE,economic,,,fomc
+2/13/2019,NYSE,economic,,,cpi
+2/14/2019,NYSE,economic,,,ppi
+2/18/2019,NYSE,closed,,,Washington's Birthday
+3/12/2019,NYSE,economic,,,cpi
+3/13/2019,NYSE,economic,,,ppi
+3/15/2019,NYSE,economic,,,witching
+3/20/2019,NYSE,economic,,,fomc
+4/10/2019,NYSE,economic,,,cpi
+4/11/2019,NYSE,economic,,,ppi
+4/19/2019,NYSE,closed,,,Good Friday
+5/1/2019,NYSE,economic,,,fomc
+5/9/2019,NYSE,economic,,,ppi
+5/10/2019,NYSE,economic,,,cpi
+5/27/2019,NYSE,closed,,,Memorial Day
+6/11/2019,NYSE,economic,,,ppi
+6/12/2019,NYSE,economic,,,cpi
+6/19/2019,NYSE,economic,,,fomc
+6/21/2019,NYSE,economic,,,witching
+7/3/2019,NYSE,short day,9:30,13:00,Independence Day
+7/4/2019,NYSE,closed,,,Independence Day
+7/10/2019,NYSE,economic,,,ppi
+7/11/2019,NYSE,economic,,,cpi
+7/31/2019,NYSE,economic,,,fomc
+8/9/2019,NYSE,economic,,,ppi
+8/13/2019,NYSE,economic,,,cpi
+9/2/2019,NYSE,closed,,,Labor Day
+9/11/2019,NYSE,economic,,,ppi
+9/12/2019,NYSE,economic,,,cpi
+9/18/2019,NYSE,economic,,,fomc
+9/20/2019,NYSE,economic,,,witching
+10/8/2019,NYSE,economic,,,ppi
+10/10/2019,NYSE,economic,,,cpi
+10/30/2019,NYSE,economic,,,fomc
+11/13/2019,NYSE,economic,,,cpi
+11/14/2019,NYSE,economic,,,ppi
+11/28/2019,NYSE,closed,,,Thanksgiving Day
+11/29/2019,NYSE,short day,9:30,13:00,Black Friday
+12/10/2019,NYSE,economic,,,ppi
+12/11/2019,NYSE,economic,,,fomc|cpi
+12/20/2019,NYSE,economic,,,witching
+12/24/2019,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2019,NYSE,closed,,,Christmas Day
+1/1/2020,NYSE,closed,,,New Year's Day
+1/14/2020,NYSE,economic,,,cpi|ppi
+1/20/2020,NYSE,closed,,,Martin Luther King's Birthday
+1/29/2020,NYSE,economic,,,fomc
+2/13/2020,NYSE,economic,,,cpi|ppi
+2/17/2020,NYSE,closed,,,Washington's Birthday
+3/3/2020,NYSE,economic,,,fomc
+3/11/2020,NYSE,economic,,,cpi
+3/12/2020,NYSE,economic,,,ppi
+3/15/2020,NYSE,economic,,,fomc
+3/16/2020,NYSE,economic,,,fomc
+3/20/2020,NYSE,economic,,,witching
+4/9/2020,NYSE,economic,,,ppi
+4/10/2020,NYSE,closed,,,Good Friday
+4/10/2020,NYSE,economic,,,cpi
+4/29/2020,NYSE,economic,,,fomc
+5/12/2020,NYSE,economic,,,cpi|ppi
+5/25/2020,NYSE,closed,,,Memorial Day
+6/10/2020,NYSE,economic,,,fomc|cpi|ppi
+6/19/2020,NYSE,economic,,,witching
+7/3/2020,NYSE,closed,,,Independence Day Observed
+7/14/2020,NYSE,economic,,,cpi|ppi
+7/29/2020,NYSE,economic,,,fomc
+8/11/2020,NYSE,economic,,,ppi
+8/12/2020,NYSE,economic,,,cpi
+9/7/2020,NYSE,closed,,,Labor Day
+9/11/2020,NYSE,economic,,,cpi|ppi
+9/16/2020,NYSE,economic,,,fomc
+9/18/2020,NYSE,economic,,,witching
+10/13/2020,NYSE,economic,,,cpi
+10/14/2020,NYSE,economic,,,ppi
+11/5/2020,NYSE,economic,,,fomc
+11/12/2020,NYSE,economic,,,cpi|ppi
+11/26/2020,NYSE,closed,,,Thanksgiving Day
+11/27/2020,NYSE,short day,9:30,13:00,Black Friday
+12/10/2020,NYSE,economic,,,cpi|ppi
+12/16/2020,NYSE,economic,,,fomc
+12/18/2020,NYSE,economic,,,witching
+12/24/2020,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2020,NYSE,closed,,,Christmas Day
+1/1/2021,NYSE,closed,,,New Year's Day
+1/13/2021,NYSE,economic,,,cpi
+1/14/2021,NYSE,economic,,,ppi
+1/18/2021,NYSE,closed,,,Martin Luther King's Birthday
+1/27/2021,NYSE,economic,,,fomc
+2/10/2021,NYSE,economic,,,cpi
+2/15/2021,NYSE,closed,,,Washington's Birthday
+2/17/2021,NYSE,economic,,,ppi
+3/10/2021,NYSE,economic,,,cpi
+3/12/2021,NYSE,economic,,,ppi
+3/17/2021,NYSE,economic,,,fomc
+3/19/2021,NYSE,economic,,,witching
+4/2/2021,NYSE,closed,,,Good Friday
+4/9/2021,NYSE,economic,,,ppi
+4/13/2021,NYSE,economic,,,cpi
+4/28/2021,NYSE,economic,,,fomc
+5/12/2021,NYSE,economic,,,cpi
+5/13/2021,NYSE,economic,,,ppi
+5/31/2021,NYSE,closed,,,Memorial Day
+6/10/2021,NYSE,economic,,,cpi
+6/15/2021,NYSE,economic,,,ppi
+6/16/2021,NYSE,economic,,,fomc
+6/18/2021,NYSE,economic,,,witching
+7/5/2021,NYSE,closed,,,Independence Day Observed
+7/13/2021,NYSE,economic,,,cpi
+7/14/2021,NYSE,economic,,,ppi
+7/28/2021,NYSE,economic,,,fomc
+8/11/2021,NYSE,economic,,,cpi
+8/12/2021,NYSE,economic,,,ppi
+9/6/2021,NYSE,closed,,,Labor Day
+9/10/2021,NYSE,economic,,,ppi
+9/14/2021,NYSE,economic,,,cpi
+9/17/2021,NYSE,economic,,,witching
+9/22/2021,NYSE,economic,,,fomc
+10/13/2021,NYSE,economic,,,cpi
+10/14/2021,NYSE,economic,,,ppi
+11/3/2021,NYSE,economic,,,fomc
+11/9/2021,NYSE,economic,,,ppi
+11/10/2021,NYSE,economic,,,cpi
+11/25/2021,NYSE,closed,,,Thanksgiving Day
+11/26/2021,NYSE,short day,9:30,13:00,Black Friday
+12/10/2021,NYSE,economic,,,cpi
+12/14/2021,NYSE,economic,,,ppi
+12/15/2021,NYSE,economic,,,fomc
+12/17/2021,NYSE,economic,,,witching
+12/24/2021,NYSE,closed,,,Christmas Day Observed
+1/12/2022,NYSE,economic,,,cpi
+1/13/2022,NYSE,economic,,,ppi
+1/17/2022,NYSE,closed,,,Martin Luther King's Birthday
+1/26/2022,NYSE,economic,,,fomc
+2/10/2022,NYSE,economic,,,cpi
+2/15/2022,NYSE,economic,,,ppi
+2/21/2022,NYSE,closed,,,Washington's Birthday
+3/10/2022,NYSE,economic,,,cpi
+3/15/2022,NYSE,economic,,,ppi
+3/16/2022,NYSE,economic,,,fomc
+3/18/2022,NYSE,economic,,,witching
+4/12/2022,NYSE,economic,,,cpi
+4/13/2022,NYSE,economic,,,ppi
+4/15/2022,NYSE,closed,,,Good Friday
+5/4/2022,NYSE,economic,,,fomc
+5/11/2022,NYSE,economic,,,cpi
+5/12/2022,NYSE,economic,,,ppi
+5/30/2022,NYSE,closed,,,Memorial Day
+6/10/2022,NYSE,economic,,,cpi
+6/14/2022,NYSE,economic,,,ppi
+6/15/2022,NYSE,economic,,,fomc
+6/17/2022,NYSE,economic,,,witching
+6/20/2022,NYSE,closed,,,Juneteenth
+7/4/2022,NYSE,closed,,,Independence Day
+7/13/2022,NYSE,economic,,,cpi
+7/14/2022,NYSE,economic,,,ppi
+7/27/2022,NYSE,economic,,,fomc
+8/10/2022,NYSE,economic,,,cpi
+8/11/2022,NYSE,economic,,,ppi
+9/5/2022,NYSE,closed,,,Labor Day
+9/13/2022,NYSE,economic,,,cpi
+9/14/2022,NYSE,economic,,,ppi
+9/16/2022,NYSE,economic,,,witching
+9/21/2022,NYSE,economic,,,fomc
+10/12/2022,NYSE,economic,,,ppi
+10/13/2022,NYSE,economic,,,cpi
+11/2/2022,NYSE,economic,,,fomc
+11/10/2022,NYSE,economic,,,cpi
+11/15/2022,NYSE,economic,,,ppi
+11/24/2022,NYSE,closed,,,Thanksgiving Day
+11/25/2022,NYSE,short day,9:30,13:00,Black Friday
+12/9/2022,NYSE,economic,,,ppi
+12/13/2022,NYSE,economic,,,cpi
+12/14/2022,NYSE,economic,,,fomc
+12/16/2022,NYSE,economic,,,witching
+12/26/2022,NYSE,closed,,,Christmas Day Observed
+1/2/2023,NYSE,closed,,,New Year's Day Observed
+1/12/2023,NYSE,economic,,,cpi
+1/16/2023,NYSE,closed,,,Martin Luther King's Birthday
+1/18/2023,NYSE,economic,,,ppi
+2/1/2023,NYSE,economic,,,fomc
+2/14/2023,NYSE,economic,,,cpi
+2/16/2023,NYSE,economic,,,ppi
+2/20/2023,NYSE,closed,,,Washington's Birthday
+3/14/2023,NYSE,economic,,,cpi
+3/15/2023,NYSE,economic,,,ppi
+3/17/2023,NYSE,economic,,,witching
+3/22/2023,NYSE,economic,,,fomc
+4/7/2023,NYSE,closed,,,Good Friday
+4/12/2023,NYSE,economic,,,cpi
+4/13/2023,NYSE,economic,,,ppi
+5/3/2023,NYSE,economic,,,fomc
+5/10/2023,NYSE,economic,,,cpi
+5/11/2023,NYSE,economic,,,ppi
+5/29/2023,NYSE,closed,,,Memorial Day
+6/13/2023,NYSE,economic,,,cpi
+6/14/2023,NYSE,economic,,,fomc|ppi
+6/16/2023,NYSE,economic,,,witching
+6/19/2023,NYSE,closed,,,Juneteenth
+7/3/2023,NYSE,short day,9:30,13:00,Independence Day
+7/4/2023,NYSE,closed,,,Independence Day
+7/12/2023,NYSE,economic,,,cpi
+7/13/2023,NYSE,economic,,,ppi
+7/26/2023,NYSE,economic,,,fomc
+8/10/2023,NYSE,economic,,,cpi
+8/11/2023,NYSE,economic,,,ppi
+9/4/2023,NYSE,closed,,,Labor Day
+9/13/2023,NYSE,economic,,,cpi
+9/14/2023,NYSE,economic,,,ppi
+9/15/2023,NYSE,economic,,,witching
+9/20/2023,NYSE,economic,,,fomc
+10/11/2023,NYSE,economic,,,ppi
+10/12/2023,NYSE,economic,,,cpi
+11/1/2023,NYSE,economic,,,fomc
+11/14/2023,NYSE,economic,,,cpi
+11/15/2023,NYSE,economic,,,ppi
+11/23/2023,NYSE,closed,,,Thanksgiving Day
+11/24/2023,NYSE,short day,9:30,13:00,Black Friday
+12/12/2023,NYSE,economic,,,cpi
+12/13/2023,NYSE,economic,,,fomc|ppi
+12/15/2023,NYSE,economic,,,witching
+12/25/2023,NYSE,closed,,,Christmas Day
+1/1/2024,NYSE,closed,,,New Year's Day
+1/11/2024,NYSE,economic,,,cpi
+1/12/2024,NYSE,economic,,,ppi
+1/15/2024,NYSE,closed,,,Martin Luther King's Birthday
+1/31/2024,NYSE,economic,,,fomc
+2/13/2024,NYSE,economic,,,cpi
+2/16/2024,NYSE,economic,,,ppi
+2/19/2024,NYSE,closed,,,Washington's Birthday
+3/12/2024,NYSE,economic,,,cpi
+3/14/2024,NYSE,economic,,,ppi
+3/15/2024,NYSE,economic,,,witching
+3/20/2024,NYSE,economic,,,fomc
+3/29/2024,NYSE,closed,,,Good Friday
+4/10/2024,NYSE,economic,,,cpi
+4/11/2024,NYSE,economic,,,ppi
+5/1/2024,NYSE,economic,,,fomc
+5/14/2024,NYSE,economic,,,ppi
+5/15/2024,NYSE,economic,,,cpi
+5/27/2024,NYSE,closed,,,Memorial Day
+6/12/2024,NYSE,economic,,,fomc|cpi
+6/13/2024,NYSE,economic,,,ppi
+6/19/2024,NYSE,closed,,,Juneteenth
+6/21/2024,NYSE,economic,,,witching
+7/3/2024,NYSE,short day,9:30,13:00,Independence Day
+7/4/2024,NYSE,closed,,,Independence Day
+7/11/2024,NYSE,economic,,,cpi
+7/12/2024,NYSE,economic,,,ppi
+7/31/2024,NYSE,economic,,,fomc
+8/13/2024,NYSE,economic,,,ppi
+8/14/2024,NYSE,economic,,,cpi
+9/2/2024,NYSE,closed,,,Labor Day
+9/11/2024,NYSE,economic,,,cpi
+9/12/2024,NYSE,economic,,,ppi
+9/18/2024,NYSE,economic,,,fomc
+9/20/2024,NYSE,economic,,,witching
+10/10/2024,NYSE,economic,,,cpi
+10/11/2024,NYSE,economic,,,ppi
+11/7/2024,NYSE,economic,,,fomc
+11/13/2024,NYSE,economic,,,cpi
+11/14/2024,NYSE,economic,,,ppi
+11/28/2024,NYSE,closed,,,Thanksgiving Day
+11/29/2024,NYSE,short day,9:30,13:00,Black Friday
+12/11/2024,NYSE,economic,,,cpi
+12/12/2024,NYSE,economic,,,ppi
+12/18/2024,NYSE,economic,,,fomc
+12/20/2024,NYSE,economic,,,witching
+12/24/2024,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2024,NYSE,closed,,,Christmas Day
+1/1/2025,NYSE,closed,,,New Year's Day
+1/9/2025,NYSE,closed,,,Jimmy Carter
+1/14/2025,NYSE,economic,,,ppi
+1/15/2025,NYSE,economic,,,cpi
+1/20/2025,NYSE,closed,,,Martin Luther King's Birthday
+1/29/2025,NYSE,economic,,,fomc
+2/12/2025,NYSE,economic,,,cpi
+2/13/2025,NYSE,economic,,,ppi
+2/17/2025,NYSE,closed,,,Washington's Birthday
+3/12/2025,NYSE,economic,,,cpi
+3/13/2025,NYSE,economic,,,ppi
+3/19/2025,NYSE,economic,,,fomc
+3/21/2025,NYSE,economic,,,witching
+4/9/2025,NYSE,economic,,,ppi
+4/10/2025,NYSE,economic,,,cpi
+4/18/2025,NYSE,closed,,,Good Friday
+5/7/2025,NYSE,economic,,,fomc
+5/13/2025,NYSE,economic,,,cpi
+5/15/2025,NYSE,economic,,,ppi
+5/26/2025,NYSE,closed,,,Memorial Day
+6/11/2025,NYSE,economic,,,cpi
+6/12/2025,NYSE,economic,,,ppi
+6/18/2025,NYSE,economic,,,fomc
+6/20/2025,NYSE,economic,,,witching
+6/29/2025,NYSE,closed,,,Juneteenth
+7/3/2025,NYSE,short day,9:30,13:00,Independence Day
+7/4/2025,NYSE,closed,,,Independence Day
+7/11/2025,NYSE,economic,,,cpi
+7/15/2025,NYSE,economic,,,ppi
+7/30/2025,NYSE,economic,,,fomc
+8/12/2025,NYSE,economic,,,cpi|ppi
+9/1/2025,NYSE,closed,,,Labor Day
+9/10/2025,NYSE,economic,,,cpi
+9/11/2025,NYSE,economic,,,ppi
+9/17/2025,NYSE,economic,,,fomc
+9/19/2025,NYSE,economic,,,witching
+10/14/2025,NYSE,economic,,,cpi
+10/15/2025,NYSE,economic,,,ppi
+10/29/2025,NYSE,economic,,,fomc
+11/12/2025,NYSE,economic,,,cpi
+11/13/2025,NYSE,economic,,,ppi
+11/27/2025,NYSE,closed,,,Thanksgiving Day
+11/28/2025,NYSE,short day,9:30,13:00,Black Friday
+12/10/2025,NYSE,economic,,,fomc|cpi
+12/11/2025,NYSE,economic,,,ppi
+12/19/2025,NYSE,economic,,,witching
+12/24/2025,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2025,NYSE,closed,,,Christmas Day
+1/1/2026,NYSE,closed,,,New Year's Day
+1/13/2026,NYSE,economic,,,cpi
+1/14/2026,NYSE,economic,,,ppi
+1/19/2026,NYSE,closed,,,Martin Luther King's Birthday
+1/28/2026,NYSE,economic,,,fomc
+2/12/2026,NYSE,economic,,,ppi
+2/13/2026,NYSE,economic,,,cpi
+2/16/2026,NYSE,closed,,,Washington's Birthday
+3/11/2026,NYSE,economic,,,cpi
+3/12/2026,NYSE,economic,,,ppi
+3/18/2026,NYSE,economic,,,fomc
+3/20/2026,NYSE,economic,,,witching
+4/3/2026,NYSE,closed,,,Good Friday
+4/9/2026,NYSE,economic,,,ppi
+4/10/2026,NYSE,economic,,,cpi
+5/6/2026,NYSE,economic,,,fomc
+5/12/2026,NYSE,economic,,,cpi
+5/14/2026,NYSE,economic,,,ppi
+5/25/2026,NYSE,closed,,,Memorial Day
+6/10/2026,NYSE,economic,,,cpi
+6/11/2026,NYSE,economic,,,ppi
+6/17/2026,NYSE,economic,,,fomc
+6/19/2026,NYSE,closed,,,Juneteenth
+6/19/2026,NYSE,economic,,,witching
+7/3/2026,NYSE,closed,,,Independence Day
+7/14/2026,NYSE,economic,,,cpi|ppi
+7/29/2026,NYSE,economic,,,fomc
+8/12/2026,NYSE,economic,,,cpi
+8/13/2026,NYSE,economic,,,ppi
+9/7/2026,NYSE,closed,,,Labor Day
+9/11/2026,NYSE,economic,,,cpi
+9/15/2026,NYSE,economic,,,ppi
+9/16/2026,NYSE,economic,,,fomc
+9/18/2026,NYSE,economic,,,witching
+10/14/2026,NYSE,economic,,,cpi
+10/15/2026,NYSE,economic,,,ppi
+10/28/2026,NYSE,economic,,,fomc
+11/10/2026,NYSE,economic,,,cpi
+11/12/2026,NYSE,economic,,,ppi
+11/26/2026,NYSE,closed,,,Thanksgiving Day
+11/27/2026,NYSE,short day,9:30,13:00,Black Friday
+12/9/2026,NYSE,economic,,,fomc
+12/10/2026,NYSE,economic,,,cpi
+12/11/2026,NYSE,economic,,,ppi
+12/18/2026,NYSE,economic,,,witching
+12/24/2026,NYSE,short day,9:30,13:00,Christmas Eve
+12/25/2026,NYSE,closed,,,Christmas Day
+1/1/2027,NYSE,closed,,,New Year's Day
+1/18/2027,NYSE,closed,,,Martin Luther King's Birthday
+1/27/2027,NYSE,economic,,,fomc
+2/15/2027,NYSE,closed,,,Washington's Birthday
+3/17/2027,NYSE,economic,,,fomc
+3/19/2027,NYSE,economic,,,witching
+3/26/2027,NYSE,closed,,,Good Friday
+4/28/2027,NYSE,economic,,,fomc
+5/31/2027,NYSE,closed,,,Memorial Day
+6/9/2027,NYSE,economic,,,fomc
+6/18/2027,NYSE,closed,,,Juneteenth
+6/18/2027,NYSE,economic,,,witching
+7/5/2027,NYSE,closed,,,Independence Day
+7/28/2027,NYSE,economic,,,fomc
+9/6/2027,NYSE,closed,,,Labor Day
+9/15/2027,NYSE,economic,,,fomc
+9/17/2027,NYSE,economic,,,witching
+10/27/2027,NYSE,economic,,,fomc
+11/25/2027,NYSE,closed,,,Thanksgiving Day
+11/26/2027,NYSE,short day,9:30,13:00,Black Friday
+12/8/2027,NYSE,economic,,,fomc
+12/17/2027,NYSE,economic,,,witching
+12/24/2027,NYSE,closed,,,Christmas Day
+1/1/2028,NYSE,closed,,,New Year's Day
+1/17/2028,NYSE,closed,,,Martin Luther King's Birthday
+1/26/2028,NYSE,economic,,,fomc
+2/21/2028,NYSE,closed,,,Washington's Birthday
+3/15/2028,NYSE,economic,,,fomc
+3/17/2028,NYSE,economic,,,witching
+4/14/2028,NYSE,closed,,,Good Friday
+5/3/2028,NYSE,economic,,,fomc
+5/29/2028,NYSE,closed,,,Memorial Day
+6/14/2028,NYSE,economic,,,fomc
+6/16/2028,NYSE,economic,,,witching
+6/19/2028,NYSE,closed,,,Juneteenth
+7/4/2028,NYSE,closed,,,Independence Day
+7/26/2028,NYSE,economic,,,fomc
+9/4/2028,NYSE,closed,,,Labor Day
+9/15/2028,NYSE,economic,,,witching
+9/20/2028,NYSE,economic,,,fomc
+11/1/2028,NYSE,economic,,,fomc
+11/23/2028,NYSE,closed,,,Thanksgiving Day
+11/24/2028,NYSE,short day,9:30,13:00,Black Friday
+12/13/2028,NYSE,economic,,,fomc
+12/15/2028,NYSE,economic,,,witching
+12/25/2028,NYSE,closed,,,Christmas Day

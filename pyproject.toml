@@ -2,14 +2,14 @@
 requires = ["setuptools", "setuptools-scm"]
 
 [project]
-name = "options_backtesting_framework"
-version= "0.0.1"
+name = "options-framework"
+version= "1.0.1"
 authors = [
     {name = "Annie Bougie", email = "anne.bougie@gmail.com"}
 ]
 description = "Options testing framework library to back test options trading strategies"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.12"
 keywords = ["backtrader", "options", "backtesting", "trading"]
 license = { file = "LICENSE" }
 classifiers = [
@@ -17,4 +17,10 @@ classifiers = [
     "Programming Language :: Python",
     "Programming Language :: Python :: 3",
 ]
-dependencies = ["pandas", "python-dispatch"]
+dependencies = ["duckdb", "pandas", "python-dispatch"]
+[tool.setuptools.package-data]
+"options_framework.utils" = ["*.csv"]
+[project.urls]
+Homepage = "https://github.com/options-testing-org/options_backtesting_framework"
+Repository = "https://github.com/options-testing-org/options_backtesting_framework"
+Issues = "https://github.com/options-testing-org/options_backtesting_framework/issues"

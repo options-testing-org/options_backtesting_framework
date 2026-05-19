@@ -5,8 +5,7 @@ from decimal import Decimal
 from typing import Any, Generator
 from pathlib import Path
 import calendar
-import duckdb
-
+from importlib.resources import files
 import pandas as pd
 
 from ..config import settings
@@ -89,41 +88,48 @@ def get_witching_dates(start_date: datetime.date, end_date: datetime.date) -> li
     return dates
 
 
-def get_market_dates(start_date: datetime.date, end_date: datetime.date) -> list[datetime.date]:
-    options_dir = Path(settings['options_directory'])
-    market_dates_fn = options_dir.joinpath('market_holidays.csv')
-    df_holidays = pd.read_csv(market_dates_fn, parse_dates=['date'])
+def get_market_dates(start_date: datetime.datetime | datetime.date, end_date: datetime.datetime | datetime.date) -> list[datetime.date]:
+
+    # Normalize to date for comparison
+    if isinstance(start_date, datetime.datetime):
+        start_date = start_date.date()
+    if isinstance(end_date, datetime.datetime):
+        end_date = end_date.date()
+
+    csv_path = files("options_framework.utils").joinpath("market_holidays.csv")
+    with csv_path.open("r") as f:
+        df_holidays = pd.read_csv(f, parse_dates=['date'])
+
+    df_holidays['date'] = df_holidays['date'].dt.date
     df_holidays = df_holidays[(df_holidays['date'] >= pd.Timestamp(start_date)) & (df_holidays['date'] <= pd.Timestamp(end_date))]
     exclude_shortdays = settings.get('exclude_shortdays')
-    exclude_economic = settings.get('exclude_economic')
 
     # always exclude market closed days
     mask = df_holidays['status'] == 'closed'
     if exclude_shortdays:
         shortdays_mask = df_holidays['status'] == 'short day'
         mask = mask | shortdays_mask
-    # exclude all economic days - witching, fomc, ppi, cpi
-    if exclude_economic:
-        economic_mask = df_holidays['status'] == 'economic'
-        mask = mask | economic_mask
-    else:
-        # selectively exclude economic days
-        exclude_witching = settings.get('exclude_witching')
-        if exclude_witching:
-            witching_mask = df_holidays['holiday_name'].str.contains('witching')
-            mask = mask | witching_mask
-        exclude_fomc = settings.get('exclude_fomc')
-        if exclude_fomc:
-            fomc_mask = df_holidays['holiday_name'].str.contains('fomc')
-            mask = mask | fomc_mask
-        exclude_ppi = settings.get('exclude_ppi')
-        if exclude_ppi:
-            ppi_mask = df_holidays['holiday_name'].str.contains('ppi')
-            mask = mask | ppi_mask
-        exclude_cpi = settings.get('exclude_cpi')
-        if exclude_cpi:
-            cpi_mask = df_holidays['holiday_name'].str.contains('cpi')
-            mask = mask | cpi_mask
+
+    # selectively exclude economic days
+    exclude_witching = settings.get('exclude_witching')
+    if exclude_witching:
+        witching_mask = df_holidays['holiday_name'].str.contains('witching')
+        mask = mask | witching_mask
+
+    exclude_fomc = settings.get('exclude_fomc')
+    if exclude_fomc:
+        fomc_mask = df_holidays['holiday_name'].str.contains('fomc')
+        mask = mask | fomc_mask
+
+    exclude_ppi = settings.get('exclude_ppi')
+    if exclude_ppi:
+        ppi_mask = df_holidays['holiday_name'].str.contains('ppi')
+        mask = mask | ppi_mask
+
+    exclude_cpi = settings.get('exclude_cpi')
+    if exclude_cpi:
+        cpi_mask = df_holidays['holiday_name'].str.contains('cpi')
+        mask = mask | cpi_mask
 
     df_holidays = df_holidays[mask]
 
