@@ -81,18 +81,18 @@ class Vertical(SpreadBase):
         return s
 
 
-    def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
+    def _open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
         if quantity <= 0:
             raise ValueError("Quantity must be positive. The position type determines the direction of each leg.")
         self.quantity = quantity if quantity is not None else self.long_option.quantity
-        self.long_option.open_trade(quantity=self.quantity)
-        self.short_option.open_trade(quantity=self.quantity * -1)
+        self.long_option._open_trade(quantity=self.quantity)
+        self.short_option._open_trade(quantity=self.quantity * -1)
         super(Vertical, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
         quantity = quantity if quantity is not None else self.long_option.quantity
-        self.long_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.short_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.long_option._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.short_option._close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.quantity -= quantity
         super(Vertical, self)._save_user_defined_values(self, **kwargs)
 

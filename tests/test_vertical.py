@@ -146,48 +146,48 @@ def test_create_sets_position_type(get_mock_option_chain):
 def test_open_trade_raises_on_non_positive_quantity(make_vertical):
     v = make_vertical()
     with pytest.raises(ValueError, match="Quantity must be positive"):
-        v.open_trade(quantity=0)
+        v._open_trade(quantity=0)
 
 
 def test_open_trade_raises_on_negative_quantity(make_vertical):
     v = make_vertical()
     with pytest.raises(ValueError, match="Quantity must be positive"):
-        v.open_trade(quantity=-1)
+        v._open_trade(quantity=-1)
 
 
 def test_open_trade_sets_quantity(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=2)
+    v._open_trade(quantity=2)
     assert v.quantity == 2
 
 
 def test_open_trade_long_leg_gets_positive_quantity(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=2)
+    v._open_trade(quantity=2)
     assert v.long_option.quantity == 2
 
 
 def test_open_trade_short_leg_gets_negative_quantity(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=2)
+    v._open_trade(quantity=2)
     assert v.short_option.quantity == -2
 
 
 def test_open_trade_does_not_overwrite_position_type(make_vertical):
     v = make_vertical(position_type=OptionPositionType.SHORT)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     assert v.position_type == OptionPositionType.SHORT
 
 
 def test_open_trade_long_leg_status_is_open(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     assert OptionStatus.TRADE_IS_OPEN in v.long_option.status
 
 
 def test_open_trade_short_leg_status_is_open(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     assert OptionStatus.TRADE_IS_OPEN in v.short_option.status
 
 
@@ -195,23 +195,23 @@ def test_open_trade_short_leg_status_is_open(make_vertical):
 
 def test_close_trade_closes_both_legs(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=1)
-    v.close_trade(quote_datetime=QUOTE_DT)
+    v._open_trade(quantity=1)
+    v._close_trade(quote_datetime=QUOTE_DT)
     assert OptionStatus.TRADE_IS_CLOSED in v.long_option.status
     assert OptionStatus.TRADE_IS_CLOSED in v.short_option.status
 
 
 def test_close_trade_decrements_quantity(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=2)
-    v.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+    v._open_trade(quantity=2)
+    v._close_trade(quote_datetime=QUOTE_DT, quantity=1)
     assert v.quantity == 1
 
 
 def test_close_trade_full_close_sets_quantity_to_zero(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=1)
-    v.close_trade(quote_datetime=QUOTE_DT)
+    v._open_trade(quantity=1)
+    v._close_trade(quote_datetime=QUOTE_DT)
     assert v.quantity == 0
 
 
@@ -232,7 +232,7 @@ def test_get_trade_price_returns_none_before_open(make_vertical):
 
 def test_get_trade_price_returns_net_debit_after_open(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     expected = round(
         v.long_option.trade_open_info.price - v.short_option.trade_open_info.price, 2
     )
@@ -243,15 +243,15 @@ def test_get_trade_price_returns_net_debit_after_open(make_vertical):
 
 def test_get_closed_price_returns_none_before_close(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     assert v.get_closed_price() is None
 
 
 def test_get_closed_price_returns_net_price_after_close(make_vertical):
     v = make_vertical()
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     dt = QUOTE_DT + datetime.timedelta(days=1)
-    v.close_trade(quote_datetime=QUOTE_DT)
+    v._close_trade(quote_datetime=QUOTE_DT)
     expected = round(
         v.long_option.trade_close_info.price - v.short_option.trade_close_info.price, 2
     )
@@ -274,7 +274,7 @@ def test_max_profit_raises_if_position_type_is_none(make_put_option_380):
 def test_max_profit_short_equals_net_credit(make_vertical):
     """For a credit spread, max profit is the net premium received."""
     v = make_vertical(position_type=OptionPositionType.SHORT)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     # trade_value is negative for a credit spread (net credit received)
     expected = v.trade_value * -1
     assert v.max_profit == pytest.approx(expected)
@@ -283,7 +283,7 @@ def test_max_profit_short_equals_net_credit(make_vertical):
 def test_max_profit_long_equals_spread_width_minus_debit(make_vertical):
     """For a debit spread, max profit is spread width minus net debit paid."""
     v = make_vertical(position_type=OptionPositionType.LONG)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     long_price = v.long_option.trade_open_info.price
     short_price = v.short_option.trade_open_info.price
     expected = round((STRIKE_WIDTH - abs(long_price - short_price)) * 100, 2)
@@ -305,14 +305,14 @@ def test_max_loss_raises_if_position_type_is_none(make_put_option_380):
 def test_max_loss_long_equals_trade_value(make_vertical):
     """For a debit spread, max loss is what you paid."""
     v = make_vertical(position_type=OptionPositionType.LONG)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     assert v.max_loss == pytest.approx(v.trade_value)
 
 
 def test_max_loss_short_equals_spread_width_minus_credit(make_vertical):
     """For a credit spread, max loss is spread width minus credit received."""
     v = make_vertical(position_type=OptionPositionType.SHORT)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     long_price = v.long_option.trade_open_info.price
     short_price = v.short_option.trade_open_info.price
     expected = round((STRIKE_WIDTH - abs(long_price - short_price)) * 100 * 1, 2)
@@ -328,13 +328,13 @@ def test_get_required_margin_returns_zero_before_open(make_vertical):
 
 def test_get_required_margin_returns_zero_for_long(make_vertical):
     v = make_vertical(position_type=OptionPositionType.LONG)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     assert v.get_required_margin(1) == 0
 
 
 def test_get_required_margin_short_equals_strike_width_times_quantity(make_vertical):
     v = make_vertical(position_type=OptionPositionType.SHORT)
-    v.open_trade(quantity=2)
+    v._open_trade(quantity=2)
     expected = abs((SHORT_STRIKE - LONG_STRIKE) * 100 * 2)
     assert v.get_required_margin(2) == pytest.approx(expected)
 
@@ -372,24 +372,24 @@ def test_get_price_history_raises_before_open(make_vertical, daily_updates_put_3
 
 def test_get_price_history_returns_list(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     history = v.get_price_history()
     assert isinstance(history, list)
 
 
 def test_get_price_history_entries_are_dicts(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     history = v.get_price_history()
     assert all(isinstance(entry, dict) for entry in history)
 
 
 def test_get_price_history_entry_count_matches_updates(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
-    v.long_option.next(quote_datetime=last_date)
-    v.short_option.next(quote_datetime=last_date)
+    v.long_option._next(quote_datetime=last_date)
+    v.short_option._next(quote_datetime=last_date)
     history = v.get_price_history()
     expected_keys = set(daily_updates_put_370.keys()) & set(daily_updates_put_380.keys())
     assert len(history) == len(expected_keys)
@@ -397,14 +397,14 @@ def test_get_price_history_entry_count_matches_updates(make_vertical, daily_upda
 
 def test_get_price_history_first_entry_quote_datetime(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     history = v.get_price_history()
     assert history[0]['quote_datetime'] == OPEN_DT
 
 
 def test_get_price_history_spread_price_is_long_minus_short(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     history = v.get_price_history()
     # 370 put price=2.31, 380 put price=3.78 at open
     assert history[0]['price'] == pytest.approx(-1.47, abs=0.01)
@@ -412,17 +412,17 @@ def test_get_price_history_spread_price_is_long_minus_short(make_vertical, daily
 
 def test_get_price_history_pnl_is_zero_on_open_day(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380, fill_factor=1.0)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     history = v.get_price_history()
     assert history[0]['pnl'] == pytest.approx(0.0, abs=0.01)
 
 
 def test_get_price_history_pnl_second_entry(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380, fill_factor=1.0)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
-    v.long_option.next(quote_datetime=last_date)
-    v.short_option.next(quote_datetime=last_date)
+    v.long_option._next(quote_datetime=last_date)
+    v.short_option._next(quote_datetime=last_date)
     history = v.get_price_history()
     # long pnl: (3.72 - 2.31) * 100 * 1 = 141.0
     # short pnl: (5.93 - 3.78) * 100 * -1 = -215.0
@@ -432,7 +432,7 @@ def test_get_price_history_pnl_second_entry(make_vertical, daily_updates_put_370
 
 def test_get_price_history_contains_expected_keys(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     history = v.get_price_history()
     expected_keys = {'quote_datetime', 'price', 'spot_price', 'pnl', 'pnl_pct',
                      'delta', 'gamma', 'theta', 'vega', 'rho', 'iv'}
@@ -441,7 +441,7 @@ def test_get_price_history_contains_expected_keys(make_vertical, daily_updates_p
 
 def test_get_price_history_greeks_are_netted(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     history = v.get_price_history()
     # delta: -0.1426 - (-0.2218) = 0.0792
     assert history[0]['delta'] == pytest.approx(0.0792, abs=0.0001)
@@ -449,21 +449,21 @@ def test_get_price_history_greeks_are_netted(make_vertical, daily_updates_put_37
 
 def test_get_price_history_bounded_by_close_date(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     close_dt = datetime.datetime(2026, 3, 19)
-    v.long_option.next(quote_datetime=close_dt)
-    v.short_option.next(quote_datetime=close_dt)
-    v.close_trade(quote_datetime=close_dt)
+    v.long_option._next(quote_datetime=close_dt)
+    v.short_option._next(quote_datetime=close_dt)
+    v._close_trade(quote_datetime=close_dt)
     history = v.get_price_history()
     assert all(entry['quote_datetime'] <= close_dt for entry in history)
     assert history[-1]['quote_datetime'] == close_dt
 
 def test_get_price_history_pnl_pct_second_entry(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380, fill_factor=1.0)
-    v.open_trade(quantity=1)
+    v._open_trade(quantity=1)
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
-    v.long_option.next(quote_datetime=last_date)
-    v.short_option.next(quote_datetime=last_date)
+    v.long_option._next(quote_datetime=last_date)
+    v.short_option._next(quote_datetime=last_date)
     history = v.get_price_history()
     actual_pnl = history[1]['pnl']
     trade_price = abs(v.get_trade_price())

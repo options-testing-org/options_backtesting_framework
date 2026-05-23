@@ -46,11 +46,11 @@ class SpreadBase(ABC):
         raise NotImplementedError
 
     @abstractmethod
-    def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
+    def _open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
         raise NotImplementedError
 
     @abstractmethod
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
         raise NotImplementedError
 
     @property

@@ -11,9 +11,9 @@ def test_long_call_option_profitable_pnl(make_call_option_380, settings_override
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single_call = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single_call.open_trade(quantity=1)
+    single_call._open_trade(quantity=1)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    single_call.close_trade(quote_datetime=CHAIN_DT)
+    single_call._close_trade(quote_datetime=CHAIN_DT)
     pnl = single_call.get_profit_loss()
     pnl_pct = single_call.get_profit_loss_percent()
 
@@ -24,9 +24,9 @@ def test_long_call_option_unprofitable_pnl(make_call_option_380, settings_overri
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single_call = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single_call.open_trade(quantity=1)
+    single_call._open_trade(quantity=1)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
-    single_call.close_trade(quote_datetime=CHAIN_DT)
+    single_call._close_trade(quote_datetime=CHAIN_DT)
     pnl = single_call.get_profit_loss()
     pnl_pct = single_call.get_profit_loss_percent()
 
@@ -37,9 +37,9 @@ def test_short_call_option_profitable_pnl(make_call_option_380, settings_overrid
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single_call = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single_call.open_trade(quantity=-1)
+    single_call._open_trade(quantity=-1)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
-    single_call.close_trade(quote_datetime=CHAIN_DT)
+    single_call._close_trade(quote_datetime=CHAIN_DT)
     pnl = single_call.get_profit_loss()
     pnl_pct = single_call.get_profit_loss_percent()
 
@@ -50,9 +50,9 @@ def test_short_call_option_unprofitable_pnl(make_call_option_380, settings_overr
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single_call = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single_call.open_trade(quantity=-1)
+    single_call._open_trade(quantity=-1)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    single_call.close_trade(quote_datetime=CHAIN_DT)
+    single_call._close_trade(quote_datetime=CHAIN_DT)
     pnl = single_call.get_profit_loss()
     pnl_pct = single_call.get_profit_loss_percent()
 
@@ -64,9 +64,9 @@ def test_short_call_option_unprofitable_pnl(make_call_option_380, settings_overr
 def test_close_trade_long_full_close_default_quantity(make_put_option_380):
     option = make_put_option_380()  # assumes default is a call or put, doesn't matter
     single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
-    single.close_trade(quote_datetime=single.option.quote_datetime)
+    single._close_trade(quote_datetime=single.option.quote_datetime)
 
     assert OptionStatus.TRADE_IS_CLOSED in single.option.status
     assert single.option.quantity == 0
@@ -79,9 +79,9 @@ def test_close_trade_short_full_close_default_quantity(make_put_option_380):
     #   quantity = abs(self.option.quantity)
     option = make_put_option_380()
     single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-1)
+    single._open_trade(quantity=-1)
 
-    single.close_trade(quote_datetime=single.option.quote_datetime)
+    single._close_trade(quote_datetime=single.option.quote_datetime)
 
     assert OptionStatus.TRADE_IS_CLOSED in single.option.status
     assert single.option.quantity == 0
@@ -93,9 +93,9 @@ def test_close_trade_short_full_close_default_quantity(make_put_option_380):
 def test_close_trade_long_explicit_quantity(make_put_option_380):
     option = make_put_option_380()
     single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
-    single.close_trade(quote_datetime=single.option.quote_datetime, quantity=1)
+    single._close_trade(quote_datetime=single.option.quote_datetime, quantity=1)
 
     assert OptionStatus.TRADE_IS_CLOSED in single.option.status
     assert single.option.quantity == 0
@@ -106,9 +106,9 @@ def test_close_trade_short_explicit_quantity(make_put_option_380):
     # Explicit positive quantity bypasses the bug entirely — should pass today
     option = make_put_option_380()
     single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-1)
+    single._open_trade(quantity=-1)
 
-    single.close_trade(quote_datetime=single.option.quote_datetime, quantity=1)
+    single._close_trade(quote_datetime=single.option.quote_datetime, quantity=1)
 
     assert OptionStatus.TRADE_IS_CLOSED in single.option.status
     assert single.option.quantity == 0
@@ -120,9 +120,9 @@ def test_close_trade_short_explicit_quantity(make_put_option_380):
 def test_close_trade_long_partial_close(make_put_option_380):
     option = make_put_option_380()
     single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=3)
+    single._open_trade(quantity=3)
 
-    single.close_trade(quote_datetime=single.option.quote_datetime, quantity=1)
+    single._close_trade(quote_datetime=single.option.quote_datetime, quantity=1)
 
     assert OptionStatus.TRADE_IS_CLOSED not in single.option.status
     assert single.option.quantity == 2
@@ -132,9 +132,9 @@ def test_close_trade_long_partial_close(make_put_option_380):
 def test_close_trade_short_partial_close(make_put_option_380):
     option = make_put_option_380()
     single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-3)
+    single._open_trade(quantity=-3)
 
-    single.close_trade(quote_datetime=single.option.quote_datetime, quantity=1)
+    single._close_trade(quote_datetime=single.option.quote_datetime, quantity=1)
 
     assert OptionStatus.TRADE_IS_CLOSED not in single.option.status
     assert single.option.quantity == -2
@@ -146,10 +146,10 @@ def test_close_trade_short_partial_close(make_put_option_380):
 def test_close_trade_over_close_raises(make_put_option_380):
     option = make_put_option_380()
     single = Single(options=[option], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
     with pytest.raises(ValueError):
-        single.close_trade(quote_datetime=single.option.quote_datetime, quantity=99)
+        single._close_trade(quote_datetime=single.option.quote_datetime, quantity=99)
 
 def test_get_trade_premium_raises_when_not_opened(make_call_option_380):
     opt = make_call_option_380(strike=100)
@@ -206,7 +206,7 @@ def test_max_profit_long_call_is_none(make_call_option_380, settings_overrides):
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
     assert single.max_profit is None
 
@@ -215,7 +215,7 @@ def test_max_loss_long_call_is_premium_paid(make_call_option_380, settings_overr
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
     # premium paid = 2.00 * 100 * 1 = 200.00
     assert single.max_loss == 200.00
@@ -227,7 +227,7 @@ def test_max_profit_long_put_is_finite(make_put_option_380, settings_overrides):
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
     # strike * 100 * qty - premium paid = (100 * 100 * 1) - 200 = 9800.00
     assert single.max_profit == 9800.00
@@ -237,7 +237,7 @@ def test_max_loss_long_put_is_premium_paid(make_put_option_380, settings_overrid
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
     assert single.max_loss == 200.00
 
@@ -248,7 +248,7 @@ def test_max_profit_short_call_is_premium_received(make_call_option_380, setting
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-1)
+    single._open_trade(quantity=-1)
 
     # premium received = 2.00 * 100 * 1 = 200.00
     assert single.max_profit == 200.00
@@ -258,7 +258,7 @@ def test_max_loss_short_call_is_none(make_call_option_380, settings_overrides):
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-1)
+    single._open_trade(quantity=-1)
 
     assert single.max_loss is None
 
@@ -269,7 +269,7 @@ def test_max_profit_short_put_is_premium_received(make_put_option_380, settings_
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-1)
+    single._open_trade(quantity=-1)
 
     assert single.max_profit == 200.00
 
@@ -278,7 +278,7 @@ def test_max_loss_short_put_is_finite(make_put_option_380, settings_overrides):
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-1)
+    single._open_trade(quantity=-1)
 
     # (strike * 100 * qty) - premium received = (100 * 100 * 1) - 200 = 9800.00
     assert single.max_loss == 9800.00
@@ -290,7 +290,7 @@ def test_max_loss_long_call_scales_with_quantity(make_call_option_380, settings_
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=3)
+    single._open_trade(quantity=3)
 
     # premium paid = 2.00 * 100 * 3 = 600.00
     assert single.max_loss == 600.00
@@ -300,7 +300,7 @@ def test_max_profit_short_put_scales_with_quantity(make_put_option_380, settings
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-3)
+    single._open_trade(quantity=-3)
 
     # (100 * 100 * 3) - (2.00 * 100 * 3) = 30000 - 600 = 29400.00
     assert single.max_loss == 29400.00
@@ -321,7 +321,7 @@ def test_get_price_history_returns_list_of_dicts(make_call_option_380, settings_
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
     history = single.get_price_history()
 
@@ -334,7 +334,7 @@ def test_get_price_history_contains_expected_keys(make_call_option_380, settings
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
     history = single.get_price_history()
     expected_keys = {'quote_datetime', 'price', 'spot_price', 'bid', 'ask',
@@ -349,11 +349,11 @@ def test_get_price_history_stops_at_close_date(make_call_option_380, settings_ov
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
     close_dt = datetime.datetime(2026, 4, 1, 0, 0)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
     opt.quote_datetime = close_dt
-    single.close_trade(quote_datetime=close_dt)
+    single._close_trade(quote_datetime=close_dt)
 
     history = single.get_price_history()
 
@@ -367,7 +367,7 @@ def test_get_price_history_pnl_long_profitable(make_call_option_380, settings_ov
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
     # inject a known update directly so the test isn't coupled to mock_db shape
     update_dt = opt.quote_datetime + datetime.timedelta(days=1)
@@ -387,7 +387,7 @@ def test_get_price_history_pnl_long_losing(make_call_option_380, settings_overri
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=1)
+    single._open_trade(quantity=1)
 
     update_dt = opt.quote_datetime + datetime.timedelta(days=1)
     opt.quote_datetime = update_dt
@@ -408,7 +408,7 @@ def test_get_price_history_pnl_short_profitable(make_put_option_380, settings_ov
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-1)
+    single._open_trade(quantity=-1)
 
     update_dt = opt.quote_datetime + datetime.timedelta(days=1)
     opt.quote_datetime = update_dt
@@ -427,7 +427,7 @@ def test_get_price_history_pnl_short_losing(make_put_option_380, settings_overri
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=-1)
+    single._open_trade(quantity=-1)
 
     update_dt = opt.quote_datetime + datetime.timedelta(days=1)
     opt.quote_datetime = update_dt
@@ -449,14 +449,14 @@ def test_get_price_history_pnl_after_partial_close(make_call_option_380, setting
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
-    single.open_trade(quantity=2)
+    single._open_trade(quantity=2)
 
     t1 = opt.quote_datetime + datetime.timedelta(days=1)
     opt.updates[t1] = {'price': 2.50, 'spot_price': 102.0, 'bid': 2.50, 'ask': 2.50}
 
     # partial close at t1
     opt.quote_datetime = t1
-    single.close_trade(quote_datetime=t1, quantity=1)
+    single._close_trade(quote_datetime=t1, quantity=1)
 
     t2 = opt.quote_datetime + datetime.timedelta(days=1)
     opt.quote_datetime = t2

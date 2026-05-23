@@ -84,7 +84,7 @@ class IronButterfly(SpreadBase):
     def center_strike(self) -> int | float:
         return self.center_put.strike
 
-    def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
+    def _open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         qty = abs(quantity)
         if self.position_type == OptionPositionType.SHORT:
             # SHORT iron butterfly: long wings, short center
@@ -95,19 +95,19 @@ class IronButterfly(SpreadBase):
             wing_qty   = -qty
             center_qty =  qty
 
-        self.lower_put.open_trade(quantity=wing_qty)
-        self.center_put.open_trade(quantity=center_qty)
-        self.center_call.open_trade(quantity=center_qty)
-        self.upper_call.open_trade(quantity=wing_qty)
+        self.lower_put._open_trade(quantity=wing_qty)
+        self.center_put._open_trade(quantity=center_qty)
+        self.center_call._open_trade(quantity=center_qty)
+        self.upper_call._open_trade(quantity=wing_qty)
 
         self.quantity = self.lower_put.quantity
         super(IronButterfly, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
-        self.lower_put.close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.center_put.close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.center_call.close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.upper_call.close_trade(quote_datetime=quote_datetime, quantity=quantity)
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+        self.lower_put._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.center_put._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.center_call._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.upper_call._close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.quantity = self.lower_put.quantity
         super(IronButterfly, self)._save_user_defined_values(self, **kwargs)
 

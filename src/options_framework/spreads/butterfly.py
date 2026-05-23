@@ -92,7 +92,7 @@ class Butterfly(SpreadBase):
     # BUG 2 FIX: removed symbol override — SpreadBase.symbol is non-abstract and returns
     # self.options[0].symbol; the override here used center_option and diverged from the contract.
 
-    def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
+    def _open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         qty = abs(quantity)
         if self.position_type == OptionPositionType.LONG:
             # Long butterfly: buy lower (+qty), sell 2x center (-2*qty), buy upper (+qty)
@@ -104,16 +104,16 @@ class Butterfly(SpreadBase):
             center_qty = qty * 2
             qty = qty * -1
 
-        self.lower_option.open_trade(quantity=qty)
-        self.center_option.open_trade(quantity=center_qty)
-        self.upper_option.open_trade(quantity=qty)
+        self.lower_option._open_trade(quantity=qty)
+        self.center_option._open_trade(quantity=center_qty)
+        self.upper_option._open_trade(quantity=qty)
 
         self.quantity = self.lower_option.quantity
         super(Butterfly, self)._save_user_defined_values(self, **kwargs)
 
     # BUG 5 FIX: signature was (self, quantity=None, *args, **kwargs) — missing the keyword-only
     # separator and the required quote_datetime parameter mandated by SpreadBase contract.
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
 
         # BUG 6 FIX: was center_qty = quantity * 2 — crashed when quantity is None,
         # and the sign was wrong. center_qty = qty * -2 correctly mirrors the open:
@@ -123,9 +123,9 @@ class Butterfly(SpreadBase):
         # self.lower_option.quantity already carries the correct sign from open_trade.
         center_quantity = None if quantity is None else quantity * 2
 
-        self.lower_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.center_option.close_trade(quote_datetime=quote_datetime, quantity=center_quantity)
-        self.upper_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.lower_option._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.center_option._close_trade(quote_datetime=quote_datetime, quantity=center_quantity)
+        self.upper_option._close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.quantity = self.lower_option.quantity
         super(Butterfly, self)._save_user_defined_values(self, **kwargs)
 

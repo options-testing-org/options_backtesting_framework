@@ -81,7 +81,7 @@ def test_open_trade_raises(make_custom):
     """open_trade must raise — create() is the entry point."""
     c = make_custom()
     with pytest.raises(RuntimeError, match="Custom.create"):
-        c.open_trade()
+        c._open_trade()
 
 
 def test_symbol_delegates_to_first_option(make_custom):
@@ -136,14 +136,14 @@ def test_trade_price_matches_signed_sum_formula(make_custom):
 
 def test_close_trade_closes_all_legs(make_custom):
     c = make_custom()
-    c.close_trade(quote_datetime=c.options[0].quote_datetime)
+    c._close_trade(quote_datetime=c.options[0].quote_datetime)
     for leg in c.options:
         assert OptionStatus.TRADE_IS_CLOSED in leg.status
 
 
 def test_close_trade_requires_keyword_only_quote_datetime(make_custom):
     c = make_custom()
-    c.close_trade(quote_datetime=c.options[0].quote_datetime)
+    c._close_trade(quote_datetime=c.options[0].quote_datetime)
 
 
 def test_get_closed_price_returns_none_before_close(make_custom):
@@ -152,13 +152,13 @@ def test_get_closed_price_returns_none_before_close(make_custom):
 
 def test_get_closed_price_returns_float_after_close(make_custom):
     c = make_custom()
-    c.close_trade(quote_datetime=c.options[0].quote_datetime)
+    c._close_trade(quote_datetime=c.options[0].quote_datetime)
     assert isinstance(c.get_closed_price(), float)
 
 
 def test_closed_price_matches_formula(make_custom):
     c = make_custom()
-    c.close_trade(quote_datetime=c.options[0].quote_datetime)
+    c._close_trade(quote_datetime=c.options[0].quote_datetime)
     lp = c.options[0].trade_close_info.price
     sp = c.options[1].trade_close_info.price
     up = c.options[2].trade_close_info.price

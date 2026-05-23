@@ -92,18 +92,18 @@ class Strangle(SpreadBase):
         return f'<{self.spread_type.name}({self.instance_id}) {self.symbol} {self.strike} {self.expiration}{long_short}>'
 
 
-    def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
-        self.call.open_trade(quantity=quantity)
-        self.put.open_trade(quantity=quantity)
+    def _open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
+        self.call._open_trade(quantity=quantity)
+        self.put._open_trade(quantity=quantity)
         self.position_type = self.call.position_type
         self.quantity = self.call.quantity
 
         super(Strangle, self)._save_user_defined_values(self, **kwargs)
 
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
-        self.call.close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.put.close_trade(quote_datetime=quote_datetime, quantity=quantity)
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+        self.call._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.put._close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.quantity = self.call.quantity
 
         super(Strangle, self)._save_user_defined_values(self, **kwargs)

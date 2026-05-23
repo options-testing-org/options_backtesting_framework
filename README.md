@@ -271,12 +271,12 @@ Positions can be scaled incrementally. Call `open_trade()` multiple times on the
 
 ```python
 # Scale in: open 2 contracts, then add 3 more later
-option.open_trade(quantity=-2)
+option._open_trade(quantity=-2)
 # ... time passes ...
-option.open_trade(quantity=-3)  # now short 5 contracts
+option._open_trade(quantity=-3)  # now short 5 contracts
 
 # Scale out: close 2 of the 5 contracts
-option.close_trade(quote_datetime=current_datetime, quantity=2)
+option._close_trade(quote_datetime=current_datetime, quantity=2)
 ```
 
 `trade_open_info` always reflects the weighted average price and total quantity across all open lots.

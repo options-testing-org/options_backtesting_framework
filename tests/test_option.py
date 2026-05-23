@@ -64,9 +64,9 @@ def _make_close_record(opt, *, quantity, price):
 def test_close_without_quantity_closes_full_position(make_put_option_380, settings_overrides):
     settings_overrides(data_frequency='daily')
     option = make_put_option_380()
-    option.open_trade(quantity=10)
+    option._open_trade(quantity=10)
 
-    option.close_trade(quote_datetime=QUOTE_DT)
+    option._close_trade(quote_datetime=QUOTE_DT)
 
     assert option.quantity == 0
     assert OptionStatus.TRADE_IS_CLOSED in option.status
@@ -74,8 +74,8 @@ def test_close_without_quantity_closes_full_position(make_put_option_380, settin
 
 def test_long_partial_close_reduces_quantity(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=10)
-    rec = option.close_trade(quote_datetime=QUOTE_DT, quantity=4)
+    option._open_trade(quantity=10)
+    rec = option._close_trade(quote_datetime=QUOTE_DT, quantity=4)
 
     assert option.quantity == 6
     assert rec.quantity == 4
@@ -85,8 +85,8 @@ def test_long_partial_close_reduces_quantity(make_put_option_380):
 
 def test_short_partial_close_reduces_quantity(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=-10)
-    rec = option.close_trade(quote_datetime=QUOTE_DT, quantity=3)
+    option._open_trade(quantity=-10)
+    rec = option._close_trade(quote_datetime=QUOTE_DT, quantity=3)
 
     assert option.quantity == -7
     assert rec.quantity == 3
@@ -96,13 +96,13 @@ def test_short_partial_close_reduces_quantity(make_put_option_380):
 
 def test_successive_partial_closes_fully_close_position(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=10)
-    option.close_trade(quote_datetime=QUOTE_DT, quantity=2)
+    option._open_trade(quantity=10)
+    option._close_trade(quote_datetime=QUOTE_DT, quantity=2)
 
     assert option.quantity == 8
     assert OptionStatus.TRADE_PARTIALLY_CLOSED in option.status
 
-    option.close_trade(quote_datetime=QUOTE_DT, quantity=8)
+    option._close_trade(quote_datetime=QUOTE_DT, quantity=8)
 
 
     assert option.quantity == 0
@@ -112,41 +112,41 @@ def test_successive_partial_closes_fully_close_position(make_put_option_380):
 
 def test_close_quantity_greater_than_open_raises(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=5)
+    option._open_trade(quantity=5)
 
     with pytest.raises(ValueError, match="greater than"):
-        option.close_trade(quote_datetime=QUOTE_DT, quantity=15)
+        option._close_trade(quote_datetime=QUOTE_DT, quantity=15)
 
 
 def test_close_quantity_zero_raises(make_put_option_380):
     opt = make_put_option_380()
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     close_datetime = datetime.datetime(2026, 3, 18, 0, 0)
 
     with pytest.raises(ValueError):
-        opt.close_trade(quote_datetime=close_datetime, quantity=0)
+        opt._close_trade(quote_datetime=close_datetime, quantity=0)
 
 def test_close_quantity_negative_raises(make_put_option_380):
     opt = make_put_option_380()
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     close_datetime = datetime.datetime(2026, 3, 18, 0, 0)
 
     with pytest.raises(ValueError):
-        opt.close_trade(quote_datetime=close_datetime, quantity=-3)
+        opt._close_trade(quote_datetime=close_datetime, quantity=-3)
 
 def test_close_quantity_non_integer_raises(make_put_option_380):
     opt = make_put_option_380()
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     close_datetime = datetime.datetime(2026, 3, 18, 0, 0)
 
     with pytest.raises((ValueError, TypeError)):
-        opt.close_trade(quote_datetime=close_datetime, quantity=2.5)
+        opt._close_trade(quote_datetime=close_datetime, quantity=2.5)
 
 def test_partial_close_records_preserve_each_close(make_put_option_380):
     opt = make_put_option_380()
-    opt.open_trade(quantity=10)
-    opt.close_trade(quote_datetime=QUOTE_DT, quantity=4)
-    opt.close_trade(quote_datetime=QUOTE_DT, quantity=3)
+    opt._open_trade(quantity=10)
+    opt._close_trade(quote_datetime=QUOTE_DT, quantity=4)
+    opt._close_trade(quote_datetime=QUOTE_DT, quantity=3)
 
     assert len(opt.trade_close_records) == 2
     assert opt.trade_close_records[0].quantity == 4
@@ -158,15 +158,15 @@ def test_close_before_open_raises(make_put_option_380):
     opt = make_put_option_380()
 
     with pytest.raises(ValueError, match="not open"):
-        opt.close_trade(quote_datetime=QUOTE_DT)
+        opt._close_trade(quote_datetime=QUOTE_DT)
 
 def test_close_after_full_close_returns_trade_close_info(make_put_option_380):
     opt = make_put_option_380()
-    opt.open_trade(quantity=5)
-    first = opt.close_trade(quote_datetime=QUOTE_DT)
+    opt._open_trade(quantity=5)
+    first = opt._close_trade(quote_datetime=QUOTE_DT)
 
     with pytest.raises(ValueError, match="already closed"):
-        second = opt.close_trade(quote_datetime=QUOTE_DT)
+        second = opt._close_trade(quote_datetime=QUOTE_DT)
 
 def test_get_closing_price_raises_error_when_not_opened(make_put_option_380):
     """INITIALIZED status - no trade ever opened."""
@@ -179,21 +179,21 @@ def test_get_closing_price_raises_error_when_not_opened(make_put_option_380):
 
 def test_get_closing_price_long_returns_bid_with_zero_fill_factor(make_put_option_380):
     opt = make_put_option_380()
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     opt.bid, opt.ask, opt.price = 2.00, 2.20, 2.10
 
     assert opt.get_closing_price() == pytest.approx(2.00)
 
 def test_get_closing_price_short_returns_ask_with_zero_fill_factor(make_put_option_380):
     opt = make_put_option_380()
-    opt.open_trade(quantity=-5)
+    opt._open_trade(quantity=-5)
     opt.bid, opt.ask, opt.price = 2.00, 2.20, 2.10
 
     assert opt.get_closing_price() == pytest.approx(2.20)
 
 def test_get_closing_price_long_fill_factor_blends_bid_toward_mid(make_put_option_380, settings_overrides):
     opt = make_put_option_380(fill_factor=0.5)
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     opt.bid, opt.ask, opt.price = 2.00, 2.20, 2.10
 
     # bid + 0.5*(price - bid) = 2.00 + 0.5*(2.10 - 2.00) = 2.05
@@ -201,7 +201,7 @@ def test_get_closing_price_long_fill_factor_blends_bid_toward_mid(make_put_optio
 
 def test_get_closing_price_short_fill_factor_blends_ask_toward_mid(make_put_option_380, settings_overrides):
     opt = make_put_option_380(fill_factor=0.5)
-    opt.open_trade(quantity=-5)
+    opt._open_trade(quantity=-5)
     opt.bid, opt.ask, opt.price = 2.00, 2.20, 2.10
 
     # ask - 0.5*(ask - price) = 2.20 - 0.5*(2.20 - 2.10) = 2.15
@@ -209,21 +209,21 @@ def test_get_closing_price_short_fill_factor_blends_ask_toward_mid(make_put_opti
 
 def test_get_closing_price_long_fill_factor_one_returns_mid(make_put_option_380, settings_overrides):
     opt = make_put_option_380(fill_factor=1.0)
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     opt.bid, opt.ask, opt.price = 2.00, 2.20, 2.10
 
     assert opt.get_closing_price() == pytest.approx(2.10)
 
 def test_get_closing_price_short_fill_factor_one_returns_mid(make_put_option_380, settings_overrides):
     opt = make_put_option_380(fill_factor=1.0)
-    opt.open_trade(quantity=-5)
+    opt._open_trade(quantity=-5)
     opt.bid, opt.ask, opt.price = 2.00, 2.20, 2.10
 
     assert opt.get_closing_price() == pytest.approx(2.10)
 
 def test_get_closing_price_itm_call_returns_intrinsic(make_call_option_380):
     opt = make_call_option_380(strike=100)
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     opt.spot_price = 105.0
     opt.status |= OptionStatus.EXPIRED
 
@@ -231,7 +231,7 @@ def test_get_closing_price_itm_call_returns_intrinsic(make_call_option_380):
 
 def test_get_closing_price_otm_call_returns_zero(make_call_option_380):
     opt = make_call_option_380(strike=100)
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     opt.spot_price = 95.0
     opt.status |= OptionStatus.EXPIRED
 
@@ -239,7 +239,7 @@ def test_get_closing_price_otm_call_returns_zero(make_call_option_380):
 
 def test_get_closing_price_atm_call_returns_zero(make_call_option_380):
     opt = make_call_option_380(strike=100)
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     opt.spot_price = 100.0
     opt.status |= OptionStatus.EXPIRED
 
@@ -247,7 +247,7 @@ def test_get_closing_price_atm_call_returns_zero(make_call_option_380):
 
 def test_get_closing_price_itm_put_returns_intrinsic(make_put_option_380):
     opt = make_put_option_380(strike=100)
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     opt.spot_price = 95.0
     opt.status |= OptionStatus.EXPIRED
 
@@ -255,7 +255,7 @@ def test_get_closing_price_itm_put_returns_intrinsic(make_put_option_380):
 
 def test_get_closing_price_otm_put_returns_zero(make_put_option_380):
     opt = make_put_option_380(strike=100)
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     opt.spot_price = 105.0
     opt.status |= OptionStatus.EXPIRED
 
@@ -263,7 +263,7 @@ def test_get_closing_price_otm_put_returns_zero(make_put_option_380):
 
 def test_get_closing_price_atm_put_returns_zero(make_put_option_380):
     opt = make_put_option_380(strike=100)
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     opt.spot_price = 100.0
     opt.status |= OptionStatus.EXPIRED
 
@@ -272,8 +272,8 @@ def test_get_closing_price_atm_put_returns_zero(make_put_option_380):
 def test_get_closing_price_expired_after_close_still_returns_intrinsic(make_put_option_380):
     """Status can be both TRADE_IS_CLOSED and EXPIRED. Intrinsic still applies."""
     opt = make_put_option_380(strike=100)
-    opt.open_trade(quantity=5)
-    opt.close_trade(quote_datetime=QUOTE_DT)
+    opt._open_trade(quantity=5)
+    opt._close_trade(quote_datetime=QUOTE_DT)
     opt.spot_price = 95.0
     opt.status |= OptionStatus.EXPIRED
 
@@ -290,7 +290,7 @@ def test_get_profit_loss_percent_long_no_closes_at_profit(make_put_option_380):
     # P&L: (3-2)*100*10 = $1000 -> 1000/2000 = +50%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.price = 3.00
 
     assert opt.get_profit_loss_percent() == pytest.approx(0.5)
@@ -300,7 +300,7 @@ def test_get_profit_loss_percent_long_no_closes_at_loss(make_put_option_380):
     # P&L: (1.50-2)*100*10 = -$500 -> -500/2000 = -25%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.price = 1.50
 
     assert opt.get_profit_loss_percent() == pytest.approx(-0.25)
@@ -312,7 +312,7 @@ def test_get_profit_loss_percent_long_partial_close_at_profit(make_put_option_38
     # Total: $750 -> 750/2000 = +37.5%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=5, price=2.50))
     opt.quantity = 5
@@ -327,7 +327,7 @@ def test_get_profit_loss_percent_long_partial_close_at_loss(make_put_option_380)
     # Total: -$750 -> -750/2000 = -37.5%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=5, price=1.50))
     opt.quantity = 5
@@ -342,7 +342,7 @@ def test_get_profit_loss_percent_long_partial_close_mixed_outcomes(make_put_opti
     # Total: -$200 -> -200/2000 = -10%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=5, price=1.50))
     opt.quantity = 5
@@ -360,7 +360,7 @@ def test_get_profit_loss_percent_long_multiple_partial_closes(make_put_option_38
     # Total: $475 -> 475/2000 = +23.75%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=3, price=2.50))
     opt.trade_close_records.append(_make_close_record(opt, quantity=4, price=2.25))
@@ -377,7 +377,7 @@ def test_get_profit_loss_percent_long_fully_closed_at_profit(make_put_option_380
     # Total: (3-2)*100*10 = $1000 -> 1000/2000 = +50%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=10, price=3.00))
     opt.quantity = 0
@@ -393,7 +393,7 @@ def test_get_profit_loss_percent_long_fully_closed_at_loss(make_put_option_380):
     # Total: (1.20-2)*100*10 = -$800 -> -800/2000 = -40%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=10, price=1.20))
     opt.quantity = 0
@@ -408,7 +408,7 @@ def test_get_profit_loss_percent_short_no_closes_at_profit(make_put_option_380):
     # Short profits when price drops: (2-1)*100*10 = +$1000 -> 1000/2000 = +50%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
     opt.price = 1.00
 
     assert opt.get_profit_loss_percent() == pytest.approx(0.5)
@@ -419,7 +419,7 @@ def test_get_profit_loss_percent_short_no_closes_at_loss(make_put_option_380):
     # Short loses when price rises: (2-2.75)*100*10 = -$750 -> -750/2000 = -37.5%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
     opt.price = 2.75
 
     assert opt.get_profit_loss_percent() == pytest.approx(-0.375)
@@ -435,7 +435,7 @@ def test_get_profit_loss_percent_short_partial_close_at_profit(make_put_option_3
     # Total: $750 -> 750/2000 = +37.5%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=5, price=1.50))
     opt.quantity = -5
@@ -451,7 +451,7 @@ def test_get_profit_loss_percent_short_partial_close_at_loss(make_put_option_380
     # Total: -$750 -> -750/2000 = -37.5%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=5, price=2.50))
     opt.quantity = -5
@@ -466,7 +466,7 @@ def test_get_profit_loss_percent_short_fully_closed_at_profit(make_put_option_38
     # Total: (2-1)*100*10 = +$1000 -> 1000/2000 = +50%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=10, price=1.00))
     opt.quantity = 0
@@ -480,7 +480,7 @@ def test_open_trade_premium_long_is_positive(make_put_option_380):
     # Open 10 @ $2.00: cash out $2000 -> premium = +2000
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    info = opt.open_trade(quantity=10)
+    info = opt._open_trade(quantity=10)
 
     assert info.premium == pytest.approx(2000.0)
 
@@ -488,7 +488,7 @@ def test_open_trade_premium_short_is_negative(make_put_option_380):
     # Open -10 @ $2.00: cash in $2000 -> premium = -2000
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    info = opt.open_trade(quantity=-10)
+    info = opt._open_trade(quantity=-10)
 
     assert info.premium == pytest.approx(-2000.0)
 
@@ -497,9 +497,9 @@ def test_close_trade_premium_long_full_close_is_positive(make_put_option_380):
     # premium should be -3000
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert rec.premium == pytest.approx(3000.0)
 
@@ -508,9 +508,9 @@ def test_close_trade_premium_short_full_close_is_negative(make_put_option_380):
     # premium should be +1000
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert rec.premium == pytest.approx(-1000.0)
 
@@ -520,9 +520,9 @@ def test_close_trade_premium_long_partial_close_is_negative(make_put_option_380)
     # premium should be -1000
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.bid, opt.ask, opt.price = 2.50, 2.50, 2.50
-    rec = opt.close_trade(quote_datetime=QUOTE_DT, quantity=4)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT, quantity=4)
 
 
 def test_close_trade_premium_short_partial_close_is_negative(make_put_option_380):
@@ -530,9 +530,9 @@ def test_close_trade_premium_short_partial_close_is_negative(make_put_option_380
     # premium should be +600
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
     opt.bid, opt.ask, opt.price = 1.50, 1.50, 1.50
-    rec = opt.close_trade(quote_datetime=QUOTE_DT, quantity=4)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT, quantity=4)
 
     assert rec.premium == pytest.approx(-600.0)
 
@@ -541,9 +541,9 @@ def test_close_trade_premium_sum_equals_pnl_long_profit(make_put_option_380):
     # sum = -1000  |  pnl = +1000  |  -pnl = -1000
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    open_info = opt.open_trade(quantity=10)
+    open_info = opt._open_trade(quantity=10)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    close_rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    close_rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     premium_sum = close_rec.premium - open_info.premium
     assert premium_sum == pytest.approx(close_rec.profit_loss)
@@ -553,9 +553,9 @@ def test_close_trade_premium_sum_equals_pnl_long_loss(make_put_option_380):
     # sum = +500  |  pnl = -500  |  -pnl = +500
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    open_info = opt.open_trade(quantity=10)
+    open_info = opt._open_trade(quantity=10)
     opt.bid, opt.ask, opt.price = 1.50, 1.50, 1.50
-    close_rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    close_rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     premium_sum = close_rec.premium - open_info.premium
     assert premium_sum == pytest.approx(close_rec.profit_loss)
@@ -566,9 +566,9 @@ def test_close_trade_premium_sum_equals_pnl_short_profit(make_put_option_380):
     # sum = -1000  |  pnl = +1000  |  -pnl = -1000
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    open_info = opt.open_trade(quantity=-10)
+    open_info = opt._open_trade(quantity=-10)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
-    close_rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    close_rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     premium_sum = close_rec.premium - open_info.premium
     assert premium_sum == pytest.approx(close_rec.profit_loss)
@@ -579,9 +579,9 @@ def test_close_trade_premium_sum_equals_pnl_short_loss(make_put_option_380):
     # sum = +1000  |  pnl = -1000  |  -pnl = +1000
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    open_info = opt.open_trade(quantity=-10)
+    open_info = opt._open_trade(quantity=-10)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    close_rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    close_rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     premium_sum = close_rec.premium - open_info.premium
     assert premium_sum == pytest.approx(close_rec.profit_loss)
@@ -594,13 +594,13 @@ def test_close_trade_premium_sum_equals_pnl_long_multiple_partials(make_put_opti
     # premium_sum = -800  |  total pnl = +800  |  -pnl = -800
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    open_info = opt.open_trade(quantity=10)
+    open_info = opt._open_trade(quantity=10)
 
     opt.bid, opt.ask, opt.price = 2.50, 2.50, 2.50
-    rec1 = opt.close_trade(quote_datetime=QUOTE_DT, quantity=4)
+    rec1 = opt._close_trade(quote_datetime=QUOTE_DT, quantity=4)
 
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    rec2 = opt.close_trade(quote_datetime=QUOTE_DT, quantity=6)
+    rec2 = opt._close_trade(quote_datetime=QUOTE_DT, quantity=6)
 
     premium_sum = (rec1.premium + rec2.premium) - open_info.premium
     total_pnl = rec1.profit_loss + rec2.profit_loss
@@ -611,12 +611,12 @@ def test_close_trade_premium_aggregate_matches_sum_of_records_long(make_put_opti
     # close record premiums, under the same convention.
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.bid, opt.ask, opt.price = 2.50, 2.50, 2.50
-    rec1 = opt.close_trade(quote_datetime=QUOTE_DT, quantity=4)
+    rec1 = opt._close_trade(quote_datetime=QUOTE_DT, quantity=4)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    rec2 = opt.close_trade(quote_datetime=QUOTE_DT, quantity=6)
+    rec2 = opt._close_trade(quote_datetime=QUOTE_DT, quantity=6)
 
     expected_sum = rec1.premium + rec2.premium
     assert opt.trade_close_info.premium == pytest.approx(expected_sum)
@@ -624,12 +624,12 @@ def test_close_trade_premium_aggregate_matches_sum_of_records_long(make_put_opti
 def test_close_trade_premium_aggregate_matches_sum_of_records_short(make_put_option_380):
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
 
     opt.bid, opt.ask, opt.price = 1.50, 1.50, 1.50
-    rec1 = opt.close_trade(quote_datetime=QUOTE_DT, quantity=4)
+    rec1 = opt._close_trade(quote_datetime=QUOTE_DT, quantity=4)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
-    rec2 = opt.close_trade(quote_datetime=QUOTE_DT, quantity=6)
+    rec2 = opt._close_trade(quote_datetime=QUOTE_DT, quantity=6)
 
     expected_sum = rec1.premium + rec2.premium
     assert opt.trade_close_info.premium == pytest.approx(expected_sum)
@@ -774,7 +774,7 @@ def test_is_expired_preserves_trade_is_open_flag(make_put_option_380):
         quote_datetime=datetime.datetime(2024, 3, 1, 10, 0),  # open before expiry
     )
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     assert OptionStatus.TRADE_IS_OPEN in opt.status
 
     # Advance to expiration
@@ -792,9 +792,9 @@ def test_is_expired_preserves_trade_is_closed_flag(make_put_option_380):
         quote_datetime=datetime.datetime(2024, 3, 1, 10, 0),
     )
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=5)
+    opt._open_trade(quantity=5)
     close_datetime = datetime.datetime(2024, 3, 1, 10, 0)
-    opt.close_trade(quote_datetime=close_datetime,)
+    opt._close_trade(quote_datetime=close_datetime, )
     assert OptionStatus.TRADE_IS_CLOSED in opt.status
 
     opt.quote_datetime = datetime.datetime(2024, 3, 15, 16, 0)
@@ -847,10 +847,10 @@ def test_is_expired_accepts_pd_timestamp_emits_event(make_put_option_380):
 def test_close_trade_accepts_matching_quote_datetime(make_put_option_380):
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     # Matching datetime - should succeed
-    rec = opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
+    rec = opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     assert rec.quantity == 10
     assert OptionStatus.TRADE_IS_CLOSED in opt.status
 
@@ -859,10 +859,10 @@ def test_close_trade_accepts_matching_pd_timestamp(make_put_option_380):
     """pd.Timestamp equals datetime.datetime for the same moment - should work."""
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     # Equivalent pd.Timestamp should satisfy the equality check
-    rec = opt.close_trade(quote_datetime=pd.Timestamp("2024-03-01 10:00:00"))
+    rec = opt._close_trade(quote_datetime=pd.Timestamp("2024-03-01 10:00:00"))
     assert rec.quantity == 10
 
 
@@ -870,9 +870,9 @@ def test_close_trade_accepts_matching_datetime_when_self_is_pd_timestamp(make_pu
     """Reverse: option's quote_datetime is pd.Timestamp, caller passes datetime."""
     opt = make_put_option_380(quote_datetime=pd.Timestamp("2024-03-01 10:00:00"))
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
-    rec = opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
+    rec = opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     assert rec.quantity == 10
 
 
@@ -880,9 +880,9 @@ def test_close_trade_accepts_matching_datetime_for_partial_close(make_put_option
     """Validation applies to partial closes too."""
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
-    rec = opt.close_trade(
+    rec = opt._close_trade(
         quote_datetime=datetime.datetime(2024, 3, 1, 10, 0),
         quantity=4,
     )
@@ -898,11 +898,11 @@ def test_close_trade_raises_when_quote_datetime_before_option_datetime(make_put_
     """Closing at an earlier datetime than the option's current clock - reject."""
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     # Option is at 10:00, try to close at 9:30
     with pytest.raises(ValueError, match="mismatch"):
-        opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 9, 30))
+        opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 9, 30))
 
 
 def test_close_trade_raises_when_quote_datetime_after_option_datetime(make_put_option_380):
@@ -913,20 +913,20 @@ def test_close_trade_raises_when_quote_datetime_after_option_datetime(make_put_o
     """
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     # Option is at 10:00, try to close at 14:00 without having called next()
     with pytest.raises(ValueError, match="mismatch"):
-        opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 14, 0))
+        opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 14, 0))
 
 
 def test_close_trade_raises_on_different_date(make_put_option_380):
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     with pytest.raises(ValueError, match="mismatch"):
-        opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 2, 10, 0))
+        opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 2, 10, 0))
 
 
 def test_close_trade_mismatch_does_not_mutate_state(make_put_option_380):
@@ -936,7 +936,7 @@ def test_close_trade_mismatch_does_not_mutate_state(make_put_option_380):
     """
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     original_qty = opt.quantity
     original_status = opt.status
@@ -944,7 +944,7 @@ def test_close_trade_mismatch_does_not_mutate_state(make_put_option_380):
     original_close_records = list(opt.trade_close_records)
 
     with pytest.raises(ValueError):
-        opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 14, 0))
+        opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 14, 0))
 
     assert opt.quantity == original_qty
     assert opt.status == original_status
@@ -960,38 +960,38 @@ def test_close_trade_raises_when_quote_datetime_missing(make_put_option_380):
     """quote_datetime is required - omitting it is a TypeError (kw-only, no default)."""
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     with pytest.raises(TypeError, match="quote_datetime"):
-        opt.close_trade()
+        opt._close_trade()
 
 
 def test_close_trade_raises_when_quote_datetime_is_none(make_put_option_380):
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     with pytest.raises(ValueError, match="quote_datetime"):
-        opt.close_trade(quote_datetime=None)
+        opt._close_trade(quote_datetime=None)
 
 
 def test_close_trade_raises_when_quote_datetime_is_wrong_type(make_put_option_380):
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     with pytest.raises(TypeError, match="datetime"):
-        opt.close_trade(quote_datetime="2024-03-01 10:00:00")
+        opt._close_trade(quote_datetime="2024-03-01 10:00:00")
 
 
 def test_close_trade_raises_when_quote_datetime_is_date_not_datetime(make_put_option_380):
     """A datetime.date is not a datetime.datetime - should raise."""
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     with pytest.raises(TypeError, match="datetime"):
-        opt.close_trade(quote_datetime=datetime.date(2024, 3, 1))
+        opt._close_trade(quote_datetime=datetime.date(2024, 3, 1))
 
 
 # ---------------------------------------------------------------------------
@@ -1006,12 +1006,12 @@ def test_close_trade_validation_happens_before_status_check(make_put_option_380)
     """
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
-    opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
+    opt._open_trade(quantity=10)
+    opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
 
     # Second close attempt with mismatched datetime - should still raise
     with pytest.raises((ValueError, TypeError)):
-        opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 14, 0))
+        opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 1, 14, 0))
 
 
 def test_close_trade_works_at_expiration_when_datetimes_match(make_call_option_380):
@@ -1023,7 +1023,7 @@ def test_close_trade_works_at_expiration_when_datetimes_match(make_call_option_3
     )
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
     opt.spot_price = 99.0
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     # Advance to expiration
     opt.quote_datetime = datetime.datetime(2024, 3, 15, 16, 0)
@@ -1031,7 +1031,7 @@ def test_close_trade_works_at_expiration_when_datetimes_match(make_call_option_3
     opt.status |= OptionStatus.EXPIRED
 
     # Must pass the matching datetime
-    rec = opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 15, 16, 0))
+    rec = opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 15, 16, 0))
     assert rec.price == pytest.approx(0.0)  # OTM call
 
 
@@ -1044,14 +1044,14 @@ def test_close_trade_rejects_mismatched_datetime_at_expiration(make_call_option_
     )
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
     opt.spot_price = 99.0
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.quote_datetime = datetime.datetime(2024, 3, 15, 16, 0)
     opt.spot_price = 95.0
     opt.status |= OptionStatus.EXPIRED
 
     with pytest.raises(ValueError, match="mismatch"):
-        opt.close_trade(quote_datetime=datetime.datetime(2024, 3, 14, 16, 0))
+        opt._close_trade(quote_datetime=datetime.datetime(2024, 3, 14, 16, 0))
 
 # ---------------------------------------------------------------------------
 # quote_datetime type enforcement
@@ -1179,21 +1179,21 @@ def test_is_expired_works_after_pd_timestamp_normalization(make_put_option_380):
 
 def test_next_accepts_datetime_datetime(make_put_option_380):
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
-    opt.next(datetime.datetime(2024, 3, 1, 10, 1))
+    opt._next(datetime.datetime(2024, 3, 1, 10, 1))
     assert type(opt.quote_datetime) is datetime.datetime
 
 
 def test_next_normalizes_pd_timestamp(make_put_option_380):
     """next() should apply the same normalization __post_init__ does."""
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
-    opt.next(pd.Timestamp("2024-03-01 10:01:00"))
+    opt._next(pd.Timestamp("2024-03-01 10:01:00"))
     assert type(opt.quote_datetime) is datetime.datetime
 
 
 def test_next_rejects_date(make_put_option_380):
     opt = make_put_option_380(quote_datetime=datetime.datetime(2024, 3, 1, 10, 0))
     with pytest.raises((TypeError, ValueError), match="datetime"):
-        opt.next(datetime.date(2024, 3, 1))
+        opt._next(datetime.date(2024, 3, 1))
 
 def test_open_transaction_completed_fires_after_state_is_consistent(make_call_option_380):
     """
@@ -1213,7 +1213,7 @@ def test_open_transaction_completed_fires_after_state_is_consistent(make_call_op
         observed["updates_populated"] = bool(opt.updates)
 
     opt.bind(open_transaction_completed=inspector)
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     assert observed["trade_open_info"] is not None
     assert observed["quantity"] == 10
@@ -1304,7 +1304,7 @@ def test_option_fee_fields_actually_affect_open_trade_fees(
     opt = make_call_option_380(incur_fees=True, standard_fee=0.45, fee_per_contract=2.00)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
 
-    info = opt.open_trade(quantity=10)
+    info = opt._open_trade(quantity=10)
 
     # 10 contracts * $2.00 override (not the $0.65 from settings) = $20
     assert info.fees == pytest.approx(20.00)
@@ -1316,7 +1316,7 @@ def test_option_incur_fees_false_override_disables_fees_even_when_settings_enabl
     opt = make_call_option_380(incur_fees=False)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
 
-    info = opt.open_trade(quantity=10)
+    info = opt._open_trade(quantity=10)
 
     assert info.fees == 0
     assert opt.total_fees == 0
@@ -1328,10 +1328,10 @@ def test_long_close_premium_is_positive(make_call_option_380):
     """Selling a long must yield a positive close_premium."""
     opt = make_call_option_380()
     opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
-    opt.open_trade(quantity=+1)
+    opt._open_trade(quantity=+1)
 
     opt.bid, opt.ask, opt.price = 0.75, 0.82, 0.79
-    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+    rec: TradeCloseInfo = opt._close_trade(quote_datetime=QUOTE_DT, quantity=1)
 
     # close_price = bid = 0.75  →  expected premium = +75
     assert rec.premium > 0, (
@@ -1346,13 +1346,13 @@ def test_long_close_premium_multi_contract(make_call_option_380):
     """Premium magnitude scales with number of contracts closed."""
     opt = make_call_option_380()
     opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
-    opt.open_trade(quantity=+3)
+    opt._open_trade(quantity=+3)
 
     bid = 0.60
     ask = 0.68
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=3)
+    rec: TradeCloseInfo = opt._close_trade(quote_datetime=QUOTE_DT, quantity=3)
 
     # 0.60 × 100 × 3 = 180
     assert rec.premium == pytest.approx(180.0)
@@ -1361,13 +1361,13 @@ def test_long_partial_close_premium(make_call_option_380):
     """Partial close of a long: only closed contracts contribute."""
     opt = make_call_option_380()
     opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
-    opt.open_trade(quantity=+4)
+    opt._open_trade(quantity=+4)
 
     bid = 0.70
     ask = 0.78
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=2)
+    rec: TradeCloseInfo = opt._close_trade(quote_datetime=QUOTE_DT, quantity=2)
 
     # 0.70 × 100 × 2 = 140
     assert rec.premium == pytest.approx(140.0)
@@ -1380,13 +1380,13 @@ def test_short_close_premium_is_negative(make_call_option_380):
     """Buying back a short must yield a negative close_premium."""
     opt = make_call_option_380()
     opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
-    opt.open_trade(quantity=-1)
+    opt._open_trade(quantity=-1)
 
     bid = 0.75
     ask = 0.82
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+    rec: TradeCloseInfo = opt._close_trade(quote_datetime=QUOTE_DT, quantity=1)
 
     # close_price = ask = 0.82  →  expected premium = -82
     assert rec.premium < 0, (
@@ -1401,13 +1401,13 @@ def test_short_close_premium_multi_contract(make_call_option_380):
     """Premium magnitude scales with number of contracts closed."""
     opt = make_call_option_380()
     opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
-    opt.open_trade(quantity=-3)
+    opt._open_trade(quantity=-3)
 
     bid = 0.70
     ask = 0.78
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=3)
+    rec: TradeCloseInfo = opt._close_trade(quote_datetime=QUOTE_DT, quantity=3)
 
     # 0.78 × 100 × 3 = 234
     assert rec.premium == pytest.approx(-234.0)
@@ -1416,13 +1416,13 @@ def test_short_partial_close_premium(make_call_option_380):
     """Partial close of a short: only closed contracts contribute."""
     opt = make_call_option_380()
     opt.bid, opt.ask, opt.price = 0.82, 0.90, 0.86
-    opt.open_trade(quantity=-4)
+    opt._open_trade(quantity=-4)
 
     bid = 0.70
     ask = 0.78
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=2)
+    rec: TradeCloseInfo = opt._close_trade(quote_datetime=QUOTE_DT, quantity=2)
 
     # 0.78 × 100 × 2 = 156
     assert rec.premium == pytest.approx(-156.0)
@@ -1436,14 +1436,14 @@ def test_long_profit_loss_sign_unaffected(make_call_option_380):
     Long: close < open → loss (negative PnL).
     """
     opt = make_call_option_380(bid=0.82, ask=0.90, price=0.86)  # open at ask=0.90
-    opt.open_trade(quantity=+1)
+    opt._open_trade(quantity=+1)
 
     #_set_close_quote(opt, bid=0.70, ask=0.78)  # close at bid=0.70
     bid = 0.70
     ask = 0.78
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+    rec: TradeCloseInfo = opt._close_trade(quote_datetime=QUOTE_DT, quantity=1)
 
     # (0.70 - 0.90) × 100 × 1 = -20
     assert rec.profit_loss == pytest.approx(-20.0)
@@ -1453,14 +1453,14 @@ def test_short_profit_loss_sign_unaffected(make_call_option_380):
     Short: close (ask) > open (bid) → loss (negative PnL).
     """
     opt = make_call_option_380(bid=0.82, ask=0.90, price=0.86)  # open at bid=0.82
-    opt.open_trade(quantity=-1)
+    opt._open_trade(quantity=-1)
 
     # close at ask=0.96
     bid = 0.88
     ask = 0.96
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    rec: TradeCloseInfo = opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+    rec: TradeCloseInfo = opt._close_trade(quote_datetime=QUOTE_DT, quantity=1)
 
     # (0.82 - 0.96) × 100 × 1 = -14
     assert rec.profit_loss == pytest.approx(-14.0)
@@ -1475,14 +1475,14 @@ def test_short_profit_loss_sign_unaffected(make_call_option_380):
 def test_single_close_aggregate_matches_record(make_call_option_380):
     """After a full one-lot close, trade_close_info.premium equals the record."""
     opt = make_call_option_380(bid=0.82, ask=0.90, price=0.86)
-    opt.open_trade(quantity=+1)
+    opt._open_trade(quantity=+1)
 
     #_set_close_quote(opt, bid=0.70, ask=0.78)
     bid = 0.70
     ask = 0.78
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    opt.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+    opt._close_trade(quote_datetime=QUOTE_DT, quantity=1)
 
     assert opt.trade_close_info.premium == pytest.approx(
         opt.trade_close_records[0].premium
@@ -1495,19 +1495,19 @@ def test_multi_partial_close_aggregate_sums_correctly(make_call_option_380):
     Both records must have the same sign (positive for long closes).
     """
     opt = make_call_option_380(bid=0.82, ask=0.90, price=0.86)
-    opt.open_trade(quantity=+4)
+    opt._open_trade(quantity=+4)
 
     bid = 0.70
     ask = 0.78
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    opt.close_trade(quote_datetime=QUOTE_DT, quantity=2)  # +140
+    opt._close_trade(quote_datetime=QUOTE_DT, quantity=2)  # +140
 
     bid = 0.65
     ask = 0.72
     price = round((bid + ask) / 2, 4)
     opt.bid, opt.ask, opt.price = bid, ask, price
-    opt.close_trade(quote_datetime=QUOTE_DT, quantity=2)  # +130
+    opt._close_trade(quote_datetime=QUOTE_DT, quantity=2)  # +130
 
     # Aggregate: 140 + 130 = 270
     total_record_premium = sum(r.premium for r in opt.trade_close_records)
@@ -1715,19 +1715,19 @@ def test_long_multi_contract_close(make_portfolio, make_single):
 
 def test_open_trade_first_open_appends_to_trade_open_records(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=-1)
+    option._open_trade(quantity=-1)
     assert len(option.trade_open_records) == 1
 
 
 def test_open_trade_first_open_record_is_returned_value(make_put_option_380):
     option = make_put_option_380()
-    rec = option.open_trade(quantity=-1)
+    rec = option._open_trade(quantity=-1)
     assert option.trade_open_records[0] is rec
 
 
 def test_open_trade_first_open_trade_open_info_matches_record(make_put_option_380):
     option = make_put_option_380()
-    rec = option.open_trade(quantity=-1)
+    rec = option._open_trade(quantity=-1)
     assert option.trade_open_info.price == rec.price
     assert option.trade_open_info.quantity == rec.quantity
     assert option.trade_open_info.premium == rec.premium
@@ -1738,15 +1738,15 @@ def test_open_trade_first_open_trade_open_info_matches_record(make_put_option_38
 
 def test_open_trade_scale_in_long_accumulates_quantity(make_call_option_380):
     option = make_call_option_380()
-    option.open_trade(quantity=2)
-    option.open_trade(quantity=3)
+    option._open_trade(quantity=2)
+    option._open_trade(quantity=3)
     assert option.quantity == 5
 
 
 def test_open_trade_scale_in_short_accumulates_quantity(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=-2)
-    option.open_trade(quantity=-1)
+    option._open_trade(quantity=-2)
+    option._open_trade(quantity=-1)
     assert option.quantity == -3
 
 
@@ -1754,15 +1754,15 @@ def test_open_trade_scale_in_short_accumulates_quantity(make_put_option_380):
 
 def test_open_trade_scale_in_appends_a_record_per_open(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=-1)
-    option.open_trade(quantity=-2)
+    option._open_trade(quantity=-1)
+    option._open_trade(quantity=-2)
     assert len(option.trade_open_records) == 2
 
 
 def test_open_trade_scale_in_records_store_individual_lot_quantities(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=-1)
-    option.open_trade(quantity=-2)
+    option._open_trade(quantity=-1)
+    option._open_trade(quantity=-2)
     assert option.trade_open_records[0].quantity == -1
     assert option.trade_open_records[1].quantity == -2
 
@@ -1774,12 +1774,12 @@ def test_open_trade_scale_in_trade_open_info_weighted_average_price(make_call_op
     # Second open: ask=3.20, qty=3  → fill=3.20, notional=9.60
     # Weighted avg = 13.80 / 5 = 2.76
     option = make_call_option_380(bid=1.90, ask=2.10, price=2.00, fill_factor=0)
-    option.open_trade(quantity=2)
+    option._open_trade(quantity=2)
 
     option.bid = 2.80
     option.ask = 3.20
     option.price = 3.00
-    option.open_trade(quantity=3)
+    option._open_trade(quantity=3)
 
     assert option.trade_open_info.price == pytest.approx(2.76, abs=0.01)
 
@@ -1789,29 +1789,29 @@ def test_open_trade_scale_in_trade_open_info_total_premium(make_call_option_380)
     # Second open: fill=3.20, qty=3  → premium = 3.20 * 100 * 3 = 960.00
     # Total premium = 1380.00
     option = make_call_option_380(bid=1.90, ask=2.10, price=2.00, fill_factor=0)
-    option.open_trade(quantity=2)
+    option._open_trade(quantity=2)
 
     option.bid = 2.80
     option.ask = 3.20
     option.price = 3.00
-    option.open_trade(quantity=3)
+    option._open_trade(quantity=3)
 
     assert option.trade_open_info.premium == pytest.approx(1380.0, abs=0.01)
 
 
 def test_open_trade_scale_in_trade_open_info_total_quantity(make_call_option_380,):
     option = make_call_option_380()
-    option.open_trade(quantity=2)
-    option.open_trade(quantity=3)
+    option._open_trade(quantity=2)
+    option._open_trade(quantity=3)
     assert option.trade_open_info.quantity == 5
 
 
 def test_open_trade_scale_in_trade_open_info_uses_latest_date(make_put_option_380):
     # trade_open_info.date should reflect the most recent open lot's datetime
     option = make_put_option_380()
-    option.open_trade(quantity=-1)
+    option._open_trade(quantity=-1)
     first_date = option.trade_open_info.date
-    option.open_trade(quantity=-1)
+    option._open_trade(quantity=-1)
     # both opens happen at the same quote_datetime in this fixture, so dates match;
     # what matters is that date comes from records[-1], not records[0]
     assert option.trade_open_info.date == option.trade_open_records[-1].date
@@ -1823,7 +1823,7 @@ def test_open_trade_scale_in_emits_individual_lot_not_aggregate(make_put_option_
     # open_transaction_completed must carry the individual scale-in lot,
     # NOT the aggregate trade_open_info.
     option = make_put_option_380(bid=1.90, ask=2.10, price=2.00, fill_factor=0)
-    option.open_trade(quantity=-1)
+    option._open_trade(quantity=-1)
 
     option.bid = 1.50
     option.ask = 1.70
@@ -1836,7 +1836,7 @@ def test_open_trade_scale_in_emits_individual_lot_not_aggregate(make_put_option_
 
     option.bind(open_transaction_completed=_capture)
 
-    rec = option.open_trade(quantity=-2)
+    rec = option._open_trade(quantity=-2)
 
     assert len(emitted_lots) == 1
     emitted = emitted_lots[0]
@@ -1853,9 +1853,9 @@ def test_open_trade_scale_in_emits_individual_lot_not_aggregate(make_put_option_
 
 def test_open_trade_db_loaded_only_on_first_open(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=-1)
+    option._open_trade(quantity=-1)
     call_count = option.db.get_contract_updates.call_count
-    option.open_trade(quantity=-1)
+    option._open_trade(quantity=-1)
     assert option.db.get_contract_updates.call_count == call_count
 
 
@@ -1864,15 +1864,15 @@ def test_open_trade_db_loaded_only_on_first_open(make_put_option_380):
 def test_open_trade_scale_in_fees_accumulate_in_trade_open_info(make_put_option_380):
     # 2 contracts + 3 contracts at $0.65/contract = $3.25
     option = make_put_option_380(incur_fees=True, standard_fee=0.65)
-    option.open_trade(quantity=-2)
-    option.open_trade(quantity=-3)
+    option._open_trade(quantity=-2)
+    option._open_trade(quantity=-3)
     assert option.trade_open_info.fees == pytest.approx(3.25, abs=0.01)
 
 
 def test_open_trade_scale_in_total_fees_field_accumulates(make_put_option_380):
     option = make_put_option_380(incur_fees=True, standard_fee=0.65)
-    option.open_trade(quantity=-2)
-    option.open_trade(quantity=-3)
+    option._open_trade(quantity=-2)
+    option._open_trade(quantity=-3)
     assert option.total_fees == pytest.approx(3.25, abs=0.01)
 
 
@@ -1884,12 +1884,12 @@ def test_open_trade_scale_in_unrealized_pnl_uses_weighted_average_price(make_cal
     # current price after second open = 3.00
     # unrealized PnL = (3.00 - 2.76) * 100 * 5 = 120.00
     option = make_call_option_380(bid=1.90, ask=2.10, price=2.00, fill_factor=0)
-    option.open_trade(quantity=2)
+    option._open_trade(quantity=2)
 
     option.bid = 2.80
     option.ask = 3.20
     option.price = 3.00
-    option.open_trade(quantity=3)
+    option._open_trade(quantity=3)
 
     assert option.get_unrealized_profit_loss() == pytest.approx(120.0, abs=0.01)
 
@@ -1898,23 +1898,23 @@ def test_open_trade_scale_in_unrealized_pnl_uses_weighted_average_price(make_cal
 
 def test_open_trade_opposite_direction_raises(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=-1)
+    option._open_trade(quantity=-1)
     with pytest.raises(ValueError, match="opposite direction"):
-        option.open_trade(quantity=1)
+        option._open_trade(quantity=1)
 
 
 def test_open_trade_on_closed_position_raises(make_put_option_380):
 
     option = make_put_option_380()
-    option.open_trade(quantity=-1)
-    option.close_trade(quote_datetime=option.quote_datetime)
+    option._open_trade(quantity=-1)
+    option._close_trade(quote_datetime=option.quote_datetime)
     with pytest.raises(ValueError, match="closed"):
-        option.open_trade(quantity=-1)
+        option._open_trade(quantity=-1)
 
 
 def test_open_trade_status_remains_trade_is_open_after_scale_in(make_put_option_380):
     option = make_put_option_380()
-    option.open_trade(quantity=-1)
-    option.open_trade(quantity=-2)
+    option._open_trade(quantity=-1)
+    option._open_trade(quantity=-2)
     assert OptionStatus.TRADE_IS_OPEN in option.status
     assert OptionStatus.INITIALIZED not in option.status

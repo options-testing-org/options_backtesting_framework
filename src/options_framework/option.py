@@ -28,9 +28,7 @@ class Option(Dispatcher):
     Quote information can be set when the option is created and also using the update method.
     The trade_open and trade_close methods are used to capture open/close price and dates.
     """
-
     _events_ = ["open_transaction_completed", "close_transaction_completed", "option_expired", "fees_incurred"]
-
 
     # immutable fields
     option_id: str | int = field(compare=True)
@@ -202,7 +200,7 @@ class Option(Dispatcher):
             return True
         return False
 
-    def next(self, quote_datetime: datetime.datetime) -> None:
+    def _next(self, quote_datetime: datetime.datetime) -> None:
         """Advance the option's clock to quote_datetime and refresh its quote
             state from the pre-loaded updates.
 
@@ -248,7 +246,7 @@ class Option(Dispatcher):
         self.implied_volatility = updates.get('implied_volatility')
 
 
-    def open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
+    def _open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
         """
         Opens a trade with a given quantity. Returns the premium amount of the trade.
         The premium is the cost to open the trade.
@@ -325,7 +323,7 @@ class Option(Dispatcher):
 
         # Only load price history on the first open; it covers the full remaining life
         if is_first_open:
-            self.updates = self.db.get_contract_updates(self.option_id, self.quote_datetime.isoformat(), self.expiration.isoformat())
+            self.updates = self.db.get_contract_updates(self.option_id, self.quote_datetime.isoformat())
 
         self._calculate_trade_open_info()
         self.emit("open_transaction_completed", trade_open_info)
@@ -352,7 +350,7 @@ class Option(Dispatcher):
             return None
 
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> TradeCloseInfo:
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> TradeCloseInfo:
         """
         Calculates the closing price and sets the close date, price and profit/loss info for the
         quantity closed.

@@ -100,7 +100,7 @@ class Calendar(SpreadBase):
     def option_type(self) -> str:
         return self.near_option.option_type
 
-    def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
+    def _open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         qty = abs(quantity)
         if self.position_type == OptionPositionType.LONG:
             # LONG calendar: short near, long far
@@ -111,8 +111,8 @@ class Calendar(SpreadBase):
             near_qty =  qty
             far_qty  = -qty
 
-        self.near_option.open_trade(quantity=near_qty)
-        self.far_option.open_trade(quantity=far_qty)
+        self.near_option._open_trade(quantity=near_qty)
+        self.far_option._open_trade(quantity=far_qty)
 
         self.quantity = self.far_option.quantity
         self.net_cost_basis = self.get_trade_price()
@@ -123,9 +123,9 @@ class Calendar(SpreadBase):
 
         super(Calendar, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
-        self.near_option.close_trade(quantity=quantity, quote_datetime=quote_datetime)
-        self.far_option.close_trade(quantity=quantity, quote_datetime=quote_datetime)
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+        self.near_option._close_trade(quantity=quantity, quote_datetime=quote_datetime)
+        self.far_option._close_trade(quantity=quantity, quote_datetime=quote_datetime)
         self.quantity = self.far_option.quantity
         super(Calendar, self)._save_user_defined_values(self, **kwargs)
 
@@ -148,10 +148,10 @@ class Calendar(SpreadBase):
         qty = old_near.quantity  # signed — negative for LONG calendar near leg
 
         # Close the old near leg
-        old_near.close_trade(quantity=None, quote_datetime=quote_datetime)
+        old_near._close_trade(quantity=None, quote_datetime=quote_datetime)
 
         # Open the new near leg with the same signed quantity
-        new_near_option.open_trade(quantity=qty)
+        new_near_option._open_trade(quantity=qty)
 
         # Compute the credit received from the roll.
         # LONG calendar (near is short, qty < 0):

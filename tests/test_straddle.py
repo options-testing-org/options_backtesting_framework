@@ -72,25 +72,25 @@ def test_post_init_assigns_call_and_put(make_straddle):
 
 def test_open_trade_short_sets_position_type(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     assert s.position_type == OptionPositionType.SHORT
 
 
 def test_open_trade_long_sets_position_type(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=1)
+    s._open_trade(quantity=1)
     assert s.position_type == OptionPositionType.LONG
 
 
 def test_open_trade_sets_quantity(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     assert s.quantity == -1
 
 
 def test_open_trade_both_legs_open(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     assert OptionStatus.TRADE_IS_OPEN in s.call.status
     assert OptionStatus.TRADE_IS_OPEN in s.put.status
 
@@ -99,16 +99,16 @@ def test_open_trade_both_legs_open(make_straddle):
 
 def test_close_trade_closes_both_legs(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
-    s.close_trade(quote_datetime=QUOTE_DT)
+    s._open_trade(quantity=-1)
+    s._close_trade(quote_datetime=QUOTE_DT)
     assert OptionStatus.TRADE_IS_CLOSED in s.call.status
     assert OptionStatus.TRADE_IS_CLOSED in s.put.status
 
 
 def test_close_trade_updates_quantity(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-2)
-    s.close_trade(quote_datetime=QUOTE_DT, quantity=1)
+    s._open_trade(quantity=-2)
+    s._close_trade(quote_datetime=QUOTE_DT, quantity=1)
     assert s.quantity == -1
 
 
@@ -129,7 +129,7 @@ def test_get_trade_price_returns_none_before_open(make_straddle):
 
 def test_get_trade_price_returns_sum_after_open(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     expected = round(
         s.call.trade_open_info.price + s.put.trade_open_info.price, 2
     )
@@ -140,14 +140,14 @@ def test_get_trade_price_returns_sum_after_open(make_straddle):
 
 def test_get_closed_price_returns_none_before_close(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     assert s.get_closed_price() is None
 
 
 def test_get_closed_price_returns_sum_after_close(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
-    s.close_trade(quote_datetime=QUOTE_DT)
+    s._open_trade(quantity=-1)
+    s._close_trade(quote_datetime=QUOTE_DT)
     expected = round(
         s.call.trade_close_info.price + s.put.trade_close_info.price, 2
     )
@@ -158,25 +158,25 @@ def test_get_closed_price_returns_sum_after_close(make_straddle):
 
 def test_max_profit_short_equals_premium_received(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     assert s.max_profit == pytest.approx(s.get_trade_premium() * -1)
 
 
 def test_max_profit_long_is_none(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=1)
+    s._open_trade(quantity=1)
     assert s.max_profit is None
 
 
 def test_max_loss_long_equals_premium_paid(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=1)
+    s._open_trade(quantity=1)
     assert s.max_loss == pytest.approx(s.get_trade_premium() * -1)
 
 
 def test_max_loss_short_is_none(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     assert s.max_loss is None
 
 
@@ -184,13 +184,13 @@ def test_max_loss_short_is_none(make_straddle):
 
 def test_get_required_margin_zero_for_long(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=1)
+    s._open_trade(quantity=1)
     assert s.get_required_margin(1) == 0
 
 
 def test_get_required_margin_positive_for_short(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     assert s.get_required_margin(-1) > 0
 
 
@@ -200,7 +200,7 @@ def test_get_required_margin_short_larger_leg_plus_other_premium(make_straddle):
     from options_framework.utils.helpers import decimalize_4, decimalize_2, decimalize_0
 
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
 
     legs = [s.call, s.put]
     leg_margins = []
@@ -256,16 +256,16 @@ def test_get_price_history_raises_before_open(make_straddle):
 
 def test_get_price_history_returns_list(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     assert isinstance(s.get_price_history(), list)
 
 
 def test_get_price_history_entry_count_matches_updates(make_straddle, daily_updates_call_380, daily_updates_put_380):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
-    s.call.next(last_date)
-    s.put.next(last_date)
+    s.call._next(last_date)
+    s.put._next(last_date)
     history = s.get_price_history()
     expected = len(set(daily_updates_call_380.keys()) & set(daily_updates_put_380.keys()))
     assert len(history) == expected
@@ -273,7 +273,7 @@ def test_get_price_history_entry_count_matches_updates(make_straddle, daily_upda
 
 def test_get_price_history_contains_expected_keys(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     history = s.get_price_history()
     expected_keys = {'quote_datetime', 'price', 'spot_price', 'pnl', 'pnl_pct',
                      'delta', 'gamma', 'theta', 'vega', 'rho', 'iv'}
@@ -282,7 +282,7 @@ def test_get_price_history_contains_expected_keys(make_straddle):
 
 def test_get_price_history_spread_price_is_call_plus_put(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1, fill_factor=1.0)
+    s._open_trade(quantity=-1, fill_factor=1.0)
     history = s.get_price_history()
     # call=24.45, put=3.78 at open
     assert history[0]['price'] == pytest.approx(28.22, abs=0.02)
@@ -290,17 +290,17 @@ def test_get_price_history_spread_price_is_call_plus_put(make_straddle):
 
 def test_get_price_history_pnl_zero_on_open_day(make_straddle):
     s = make_straddle(fill_factor=1.0)
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     history = s.get_price_history()
     assert history[0]['pnl'] == pytest.approx(0.0, abs=0.01)
 
 
 def test_get_price_history_pnl_second_entry(make_straddle):
     s = make_straddle(fill_factor=1.0)
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
-    s.call.next(last_date)
-    s.put.next(last_date)
+    s.call._next(last_date)
+    s.put._next(last_date)
     history = s.get_price_history()
     # call pnl: (18.80 - 24.45) * 100 * -1 = 565.0
     # put pnl:  (5.93 - 3.78) * 100 * -1  = -215.0
@@ -310,7 +310,7 @@ def test_get_price_history_pnl_second_entry(make_straddle):
 
 def test_get_price_history_greeks_are_netted(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     history = s.get_price_history()
     # delta: 0.7708 + (-0.2218) = 0.549
     assert history[0]['delta'] == pytest.approx(0.549, abs=0.0001)
@@ -318,11 +318,11 @@ def test_get_price_history_greeks_are_netted(make_straddle):
 
 def test_get_price_history_bounded_by_close_date(make_straddle):
     s = make_straddle()
-    s.open_trade(quantity=-1)
+    s._open_trade(quantity=-1)
     close_dt = datetime.datetime(2026, 3, 19)
-    s.call.next(close_dt)
-    s.put.next(close_dt)
-    s.close_trade(quote_datetime=close_dt)
+    s.call._next(close_dt)
+    s.put._next(close_dt)
+    s._close_trade(quote_datetime=close_dt)
     history = s.get_price_history()
     assert all(entry['quote_datetime'] <= close_dt for entry in history)
     assert history[-1]['quote_datetime'] == close_dt

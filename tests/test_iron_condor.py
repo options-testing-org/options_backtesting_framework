@@ -90,7 +90,7 @@ def test_long_iron_condor_price_formula(make_iron_condor):
 def test_short_iron_condor_leg_quantities(make_iron_condor):
     """SHORT: long wings (+1), short body (-1)"""
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade(quantity=1)
+    ic._open_trade(quantity=1)
     assert ic.lower_put.quantity == +1
     assert ic.upper_put.quantity == -1
     assert ic.lower_call.quantity == -1
@@ -99,13 +99,13 @@ def test_short_iron_condor_leg_quantities(make_iron_condor):
 
 def test_short_iron_condor_spread_quantity(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade(quantity=1)
+    ic._open_trade(quantity=1)
     assert ic.quantity == +1  # tracks lower_put leg
 
 
 def test_short_iron_condor_multi_quantity(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade(quantity=3)
+    ic._open_trade(quantity=3)
     assert ic.lower_put.quantity == +3
     assert ic.upper_put.quantity == -3
     assert ic.lower_call.quantity == -3
@@ -115,7 +115,7 @@ def test_short_iron_condor_multi_quantity(make_iron_condor):
 def test_long_iron_condor_leg_quantities(make_iron_condor):
     """LONG: short wings (-1), long body (+1)"""
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
-    ic.open_trade(quantity=1)
+    ic._open_trade(quantity=1)
     assert ic.lower_put.quantity == -1
     assert ic.upper_put.quantity == +1
     assert ic.lower_call.quantity == +1
@@ -124,13 +124,13 @@ def test_long_iron_condor_leg_quantities(make_iron_condor):
 
 def test_long_iron_condor_spread_quantity(make_iron_condor):
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
-    ic.open_trade(quantity=1)
+    ic._open_trade(quantity=1)
     assert ic.quantity == -1
 
 
 def test_open_trade_accepts_negative_quantity_as_absolute(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade(quantity=-2)
+    ic._open_trade(quantity=-2)
     assert ic.lower_put.quantity == +2
     assert ic.upper_put.quantity == -2
     assert ic.lower_call.quantity == -2
@@ -139,7 +139,7 @@ def test_open_trade_accepts_negative_quantity_as_absolute(make_iron_condor):
 
 def test_open_trade_saves_user_defined_kwargs(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade(quantity=1, strategy='income')
+    ic._open_trade(quantity=1, strategy='income')
     assert ic.user_defined.get('strategy') == 'income'
 
 
@@ -151,13 +151,13 @@ def test_get_trade_price_returns_none_before_open(make_iron_condor):
 
 def test_get_trade_price_returns_float_after_open(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert isinstance(ic.get_trade_price(), float)
 
 
 def test_short_trade_price_matches_formula(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     lp = ic.lower_put.trade_open_info.price
     up = ic.upper_put.trade_open_info.price
     lc = ic.lower_call.trade_open_info.price
@@ -167,7 +167,7 @@ def test_short_trade_price_matches_formula(make_iron_condor):
 
 def test_long_trade_price_matches_formula(make_iron_condor):
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     lp = ic.lower_put.trade_open_info.price
     up = ic.upper_put.trade_open_info.price
     lc = ic.lower_call.trade_open_info.price
@@ -179,42 +179,42 @@ def test_long_trade_price_matches_formula(make_iron_condor):
 
 def test_close_trade_closes_all_legs(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
-    ic.close_trade(quote_datetime=ic.lower_put.quote_datetime)
+    ic._open_trade()
+    ic._close_trade(quote_datetime=ic.lower_put.quote_datetime)
     for leg in ic.options:
         assert OptionStatus.TRADE_IS_CLOSED in leg.status
 
 
 def test_close_trade_requires_keyword_only_quote_datetime(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
-    ic.close_trade(quote_datetime=ic.lower_put.quote_datetime)  # must not raise
+    ic._open_trade()
+    ic._close_trade(quote_datetime=ic.lower_put.quote_datetime)  # must not raise
 
 
 def test_close_trade_with_explicit_quantity_does_not_raise(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade(quantity=2)
-    ic.close_trade(quote_datetime=ic.lower_put.quote_datetime,
-                   quantity=ic.lower_put.quantity)
+    ic._open_trade(quantity=2)
+    ic._close_trade(quote_datetime=ic.lower_put.quote_datetime,
+                    quantity=ic.lower_put.quantity)
 
 
 def test_get_closed_price_returns_none_before_close(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert ic.get_closed_price() is None
 
 
 def test_get_closed_price_returns_float_after_close(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
-    ic.close_trade(quote_datetime=ic.lower_put.quote_datetime)
+    ic._open_trade()
+    ic._close_trade(quote_datetime=ic.lower_put.quote_datetime)
     assert isinstance(ic.get_closed_price(), float)
 
 
 def test_closed_price_matches_formula(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
-    ic.close_trade(quote_datetime=ic.lower_put.quote_datetime)
+    ic._open_trade()
+    ic._close_trade(quote_datetime=ic.lower_put.quote_datetime)
     lp = ic.lower_put.trade_close_info.price
     up = ic.upper_put.trade_close_info.price
     lc = ic.lower_call.trade_close_info.price
@@ -245,19 +245,19 @@ def test_quote_datetime_delegates_to_first_option(make_iron_condor):
 
 def test_get_profit_loss_after_open(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert isinstance(ic.get_profit_loss(), float)
 
 
 def test_current_value_sums_legs(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert ic.current_value == pytest.approx(sum(o.current_value for o in ic.options), abs=0.01)
 
 
 def test_trade_value_sums_legs(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert ic.trade_value == pytest.approx(sum(o.trade_value for o in ic.options), abs=0.01)
 
 
@@ -274,14 +274,14 @@ def test_max_loss_returns_none_before_open(make_iron_condor):
 def test_short_max_profit_equals_trade_price(make_iron_condor):
     """SHORT: max profit is the net credit received."""
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert ic.max_profit == pytest.approx(ic.get_trade_price(), abs=0.01)
 
 
 def test_short_max_loss_equals_wing_width_minus_credit(make_iron_condor):
     """SHORT: max loss = min(put_spread_width, call_spread_width) - credit."""
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     wing_width = min(
         ic.upper_put.strike - ic.lower_put.strike,
         ic.upper_call.strike - ic.lower_call.strike,
@@ -292,7 +292,7 @@ def test_short_max_loss_equals_wing_width_minus_credit(make_iron_condor):
 def test_long_max_profit_equals_wing_width_minus_debit(make_iron_condor):
     """LONG: max profit = min(put_spread_width, call_spread_width) - debit."""
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     wing_width = min(
         ic.upper_put.strike - ic.lower_put.strike,
         ic.upper_call.strike - ic.lower_call.strike,
@@ -303,14 +303,14 @@ def test_long_max_profit_equals_wing_width_minus_debit(make_iron_condor):
 def test_long_max_loss_equals_trade_price(make_iron_condor):
     """LONG: max loss is the net debit paid."""
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert ic.max_loss == pytest.approx(ic.get_trade_price(), abs=0.01)
 
 
 def test_max_profit_plus_max_loss_equals_wing_width(make_iron_condor):
     """max_profit + max_loss must always equal the wing width."""
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     wing_width = min(
         ic.upper_put.strike - ic.lower_put.strike,
         ic.upper_call.strike - ic.lower_call.strike,
@@ -355,20 +355,20 @@ def test_price_history_raises_before_open(make_iron_condor):
 
 def test_price_history_returns_list(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert isinstance(ic.get_price_history(), list)
 
 
 def test_price_history_each_entry_has_required_keys(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     for entry in ic.get_price_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
 def test_price_history_length_matches_lower_put_updates(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     last_date = ic.lower_put.quote_datetime
     expected_len = sum(1 for k in ic.lower_put.updates if k <= last_date)
     assert len(ic.get_price_history()) == expected_len
@@ -376,7 +376,7 @@ def test_price_history_length_matches_lower_put_updates(make_iron_condor):
 
 def test_price_history_price_matches_calculate_price_each_row(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     lp_u = ic.lower_put.updates
     up_u = ic.upper_put.updates
     lc_u = ic.lower_call.updates
@@ -397,7 +397,7 @@ def test_price_history_price_matches_calculate_price_each_row(make_iron_condor):
 
 def test_price_history_spot_price_matches_lower_put_updates(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     lp_u = ic.lower_put.updates
     last_date = ic.lower_put.quote_datetime
     keys = sorted(k for k in lp_u if k <= last_date)
@@ -407,26 +407,26 @@ def test_price_history_spot_price_matches_lower_put_updates(make_iron_condor):
 
 def test_price_history_pnl_is_zero_at_open_bar(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert ic.get_price_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 
 def test_price_history_pnl_pct_is_zero_at_open_bar(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     assert ic.get_price_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 
 def test_price_history_long_iron_condor_has_required_keys(make_iron_condor):
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     for entry in ic.get_price_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
 def test_price_history_long_iron_condor_price_formula(make_iron_condor):
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
-    ic.open_trade()
+    ic._open_trade()
     lp_u = ic.lower_put.updates
     up_u = ic.upper_put.updates
     lc_u = ic.lower_call.updates

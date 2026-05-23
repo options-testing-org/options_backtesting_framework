@@ -87,7 +87,7 @@ class IronCondor(SpreadBase):
     def expiration(self) -> datetime.date:
         return self.lower_put.expiration
 
-    def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
+    def _open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         qty = abs(quantity)
         if self.position_type == OptionPositionType.SHORT:
             # SHORT: long wings, short body
@@ -98,19 +98,19 @@ class IronCondor(SpreadBase):
             wing_qty = -qty
             body_qty =  qty
 
-        self.lower_put.open_trade(quantity=wing_qty)
-        self.upper_put.open_trade(quantity=body_qty)
-        self.lower_call.open_trade(quantity=body_qty)
-        self.upper_call.open_trade(quantity=wing_qty)
+        self.lower_put._open_trade(quantity=wing_qty)
+        self.upper_put._open_trade(quantity=body_qty)
+        self.lower_call._open_trade(quantity=body_qty)
+        self.upper_call._open_trade(quantity=wing_qty)
 
         self.quantity = self.lower_put.quantity
         super(IronCondor, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
-        self.lower_put.close_trade(quantity=quantity, quote_datetime=quote_datetime)
-        self.upper_put.close_trade(quantity=quantity, quote_datetime=quote_datetime)
-        self.lower_call.close_trade(quantity=quantity, quote_datetime=quote_datetime)
-        self.upper_call.close_trade(quantity=quantity, quote_datetime=quote_datetime)
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+        self.lower_put._close_trade(quantity=quantity, quote_datetime=quote_datetime)
+        self.upper_put._close_trade(quantity=quantity, quote_datetime=quote_datetime)
+        self.lower_call._close_trade(quantity=quantity, quote_datetime=quote_datetime)
+        self.upper_call._close_trade(quantity=quantity, quote_datetime=quote_datetime)
         self.quantity = self.lower_put.quantity
         super(IronCondor, self)._save_user_defined_values(self, **kwargs)
 

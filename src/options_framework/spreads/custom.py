@@ -39,21 +39,21 @@ class Custom(SpreadBase):
         )
 
         for option, qty in zip(options, quantities):
-            option.open_trade(quantity=qty)
+            option._open_trade(quantity=qty)
 
         custom.quantity = options[0].quantity
         super(Custom, custom)._save_user_defined_values(custom, **kwargs)
         return custom
 
-    def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
+    def _open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         raise RuntimeError(
             "Custom spreads are opened via Custom.create(). "
             "Pass options and quantities there to open the trade."
         )
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
         for option in self.options:
-            option.close_trade(quantity=quantity, quote_datetime=quote_datetime)
+            option._close_trade(quantity=quantity, quote_datetime=quote_datetime)
         self.quantity = self.options[0].quantity
         super(Custom, self)._save_user_defined_values(self, **kwargs)
 

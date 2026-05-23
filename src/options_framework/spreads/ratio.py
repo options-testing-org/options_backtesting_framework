@@ -73,17 +73,17 @@ class Ratio(SpreadBase):
     def option_type(self) -> str:
         return self.long_option.option_type
 
-    def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
+    def _open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         qty = abs(quantity)
-        self.long_option.open_trade(quantity=qty)
-        self.short_option.open_trade(quantity=-qty * self.ratio)
+        self.long_option._open_trade(quantity=qty)
+        self.short_option._open_trade(quantity=-qty * self.ratio)
         self.quantity = self.long_option.quantity
         super(Ratio, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
         short_qty = None if quantity is None else quantity * self.ratio
-        self.long_option.close_trade(quantity=quantity, quote_datetime=quote_datetime)
-        self.short_option.close_trade(quantity=short_qty, quote_datetime=quote_datetime)
+        self.long_option._close_trade(quantity=quantity, quote_datetime=quote_datetime)
+        self.short_option._close_trade(quantity=short_qty, quote_datetime=quote_datetime)
         self.quantity = self.long_option.quantity
         super(Ratio, self)._save_user_defined_values(self, **kwargs)
 

@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-import datetime
+from datetime import datetime, date, time, timedelta
 from decimal import Decimal
 from typing import Any, Generator
 from pathlib import Path
@@ -57,7 +57,7 @@ def distinct(iterable: list) -> Generator[Any, Any, None]:
         yield x
         distinct_values.add(x)
 
-def month_range(start_dt: datetime.datetime, end_dt: datetime.date) -> list[tuple[int, int]]:
+def month_range(start_dt: datetime, end_dt: date) -> list[tuple[int, int]]:
     """
     Return list of (year, month) tuples covering the date range.
     """
@@ -73,7 +73,7 @@ def month_range(start_dt: datetime.datetime, end_dt: datetime.date) -> list[tupl
 
     return months
 
-def get_witching_dates(start_date: datetime.date, end_date: datetime.date) -> list[datetime.date]:
+def get_witching_dates(start_date: date, end_date: date) -> list[date]:
     start_year = start_date.year
     end_year = end_date.year
     years = range(start_year, end_year + 1)
@@ -88,20 +88,19 @@ def get_witching_dates(start_date: datetime.date, end_date: datetime.date) -> li
     return dates
 
 
-def get_market_dates(start_date: datetime.datetime | datetime.date, end_date: datetime.datetime | datetime.date) -> list[datetime.date]:
+def get_market_dates(start_date: datetime | date, end_date: datetime | date) -> list[datetime]:
 
     # Normalize to date for comparison
-    if isinstance(start_date, datetime.datetime):
+    if isinstance(start_date, datetime):
         start_date = start_date.date()
-    if isinstance(end_date, datetime.datetime):
+    if isinstance(end_date, datetime):
         end_date = end_date.date()
 
     csv_path = files("options_framework.utils").joinpath("market_holidays.csv")
-    with csv_path.open("r") as f:
-        df_holidays = pd.read_csv(f, parse_dates=['date'])
+    df_holidays = pd.read_csv(csv_path, parse_dates=['date'])
 
     df_holidays['date'] = df_holidays['date'].dt.date
-    df_holidays = df_holidays[(df_holidays['date'] >= pd.Timestamp(start_date)) & (df_holidays['date'] <= pd.Timestamp(end_date))]
+    df_holidays = df_holidays[(df_holidays['date'] >= start_date) & (df_holidays['date'] <= end_date)]
     exclude_shortdays = settings.get('exclude_shortdays')
 
     # always exclude market closed days
@@ -137,9 +136,10 @@ def get_market_dates(start_date: datetime.datetime | datetime.date, end_date: da
     current_date = start_date
     while current_date <= end_date:
         if current_date.weekday() < 5:
-            if not df_holidays['date'].eq(pd.Timestamp(current_date)).any():
-                market_days_list.append(current_date)
-        current_date += datetime.timedelta(days=1)
+            if not df_holidays['date'].eq(current_date).any():
+                current_datetime = datetime.combine(current_date, time.min)
+                market_days_list.append(current_datetime)
+        current_date += timedelta(days=1)
     return market_days_list
 
 

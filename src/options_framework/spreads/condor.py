@@ -89,7 +89,7 @@ class Condor(SpreadBase):
     def option_type(self) -> str:
         return self.lower_option.option_type
 
-    def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
+    def _open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         qty = abs(quantity)
         if self.position_type == OptionPositionType.LONG:
             # LONG condor: buy wings, sell body
@@ -100,19 +100,19 @@ class Condor(SpreadBase):
             wing_qty   = -qty
             body_qty   =  qty
 
-        self.lower_option.open_trade(quantity=wing_qty)
-        self.lower_middle_option.open_trade(quantity=body_qty)
-        self.upper_middle_option.open_trade(quantity=body_qty)
-        self.upper_option.open_trade(quantity=wing_qty)
+        self.lower_option._open_trade(quantity=wing_qty)
+        self.lower_middle_option._open_trade(quantity=body_qty)
+        self.upper_middle_option._open_trade(quantity=body_qty)
+        self.upper_option._open_trade(quantity=wing_qty)
 
         self.quantity = self.lower_option.quantity
         super(Condor, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
-        self.lower_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.lower_middle_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.upper_middle_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.upper_option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+        self.lower_option._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.lower_middle_option._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.upper_middle_option._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.upper_option._close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.quantity = self.lower_option.quantity
         super(Condor, self)._save_user_defined_values(self, **kwargs)
 

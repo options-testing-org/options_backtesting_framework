@@ -102,7 +102,7 @@ class Diagonal(SpreadBase):
     def far_strike(self) -> int | float:
         return self.far_option.strike
 
-    def open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
+    def _open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         qty = abs(quantity)
         if self.position_type == OptionPositionType.LONG:
             near_qty = -qty
@@ -111,8 +111,8 @@ class Diagonal(SpreadBase):
             near_qty =  qty
             far_qty  = -qty
 
-        self.near_option.open_trade(quantity=near_qty)
-        self.far_option.open_trade(quantity=far_qty)
+        self.near_option._open_trade(quantity=near_qty)
+        self.far_option._open_trade(quantity=far_qty)
 
         self.quantity = self.far_option.quantity
         self.net_cost_basis = self.get_trade_price()
@@ -120,9 +120,9 @@ class Diagonal(SpreadBase):
 
         super(Diagonal, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
-        self.near_option.close_trade(quantity=quantity, quote_datetime=quote_datetime)
-        self.far_option.close_trade(quantity=quantity, quote_datetime=quote_datetime)
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+        self.near_option._close_trade(quantity=quantity, quote_datetime=quote_datetime)
+        self.far_option._close_trade(quantity=quantity, quote_datetime=quote_datetime)
         self.quantity = self.far_option.quantity
         super(Diagonal, self)._save_user_defined_values(self, **kwargs)
 
@@ -136,8 +136,8 @@ class Diagonal(SpreadBase):
         old_near = self.near_option
         qty = old_near.quantity
 
-        old_near.close_trade(quantity=None, quote_datetime=quote_datetime)
-        new_near_option.open_trade(quantity=qty)
+        old_near._close_trade(quantity=None, quote_datetime=quote_datetime)
+        new_near_option._open_trade(quantity=qty)
 
         if self.position_type == OptionPositionType.LONG:
             credit = float(decimalize_2(new_near_option.price) - decimalize_2(old_near.price))

@@ -115,19 +115,19 @@ def test_call_butterfly_price(make_butterfly):
 def test_long_butterfly_leg_quantities(make_butterfly):
     """LONG: lower=+1, center=-2, upper=+1"""
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade(quantity=1)
+    bf._open_trade(quantity=1)
     assert bf.lower_option.quantity  == +1
     assert bf.center_option.quantity == -2
     assert bf.upper_option.quantity  == +1
 
 def test_long_butterfly_spread_quantity(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade(quantity=1)
+    bf._open_trade(quantity=1)
     assert bf.quantity == +1  # tracks lower leg
 
 def test_long_butterfly_multi_quantity(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade(quantity=3)
+    bf._open_trade(quantity=3)
     assert bf.lower_option.quantity  == +3
     assert bf.center_option.quantity == -6
     assert bf.upper_option.quantity  == +3
@@ -135,26 +135,26 @@ def test_long_butterfly_multi_quantity(make_butterfly):
 def test_short_butterfly_leg_quantities(make_butterfly):
     """SHORT: lower=-1, center=+2, upper=-1"""
     bf = make_butterfly(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    bf.open_trade(quantity=1)
+    bf._open_trade(quantity=1)
     assert bf.lower_option.quantity  == -1
     assert bf.center_option.quantity == +2
     assert bf.upper_option.quantity  == -1
 
 def test_short_butterfly_spread_quantity(make_butterfly):
     bf = make_butterfly(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    bf.open_trade(quantity=1)
+    bf._open_trade(quantity=1)
     assert bf.quantity == -1
 
 def test_open_trade_accepts_negative_quantity_as_absolute(make_butterfly):
     """open_trade uses abs(quantity) — sign comes from position_type."""
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade(quantity=-2)
+    bf._open_trade(quantity=-2)
     assert bf.lower_option.quantity == +2
     assert bf.center_option.quantity == -4
 
 def test_open_trade_saves_user_defined_kwargs(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade(quantity=1, my_tag='iron_fly_hedge')
+    bf._open_trade(quantity=1, my_tag='iron_fly_hedge')
     assert bf.user_defined.get('my_tag') == 'iron_fly_hedge'
 
 
@@ -168,13 +168,13 @@ def test_returns_none_before_open(make_butterfly):
 
 def test_returns_float_after_open(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     price = bf.get_trade_price()
     assert isinstance(price, float)
 
 def test_long_trade_price_matches_formula(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     lp = bf.lower_option.trade_open_info.price
     cp = bf.center_option.trade_open_info.price
     up = bf.upper_option.trade_open_info.price
@@ -183,7 +183,7 @@ def test_long_trade_price_matches_formula(make_butterfly):
 
 def test_short_trade_price_matches_formula(make_butterfly):
     bf = make_butterfly(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     lp = bf.lower_option.trade_open_info.price
     cp = bf.center_option.trade_open_info.price
     up = bf.upper_option.trade_open_info.price
@@ -197,9 +197,9 @@ def test_short_trade_price_matches_formula(make_butterfly):
 
 def test_long_butterfly_close_zeroes_quantity(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade(quantity=1)
+    bf._open_trade(quantity=1)
     dt = bf.center_option.quote_datetime
-    bf.close_trade(quote_datetime=dt)
+    bf._close_trade(quote_datetime=dt)
 
     # After full close, lower_option.quantity should reflect closed state
     assert bf.quantity == 0
@@ -210,38 +210,38 @@ def test_long_butterfly_close_zeroes_quantity(make_butterfly):
 def test_close_trade_requires_keyword_only_quote_datetime(make_butterfly):
     """Signature must enforce quote_datetime as keyword-only."""
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     dt = bf.center_option.quote_datetime
     # This must not raise TypeError — keyword-only call
-    bf.close_trade(quote_datetime=dt)
+    bf._close_trade(quote_datetime=dt)
 
 def test_close_trade_with_explicit_quantity(make_butterfly):
     """Explicit quantity should not crash and should close the specified number."""
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade(quantity=2)
+    bf._open_trade(quantity=2)
     dt = bf.center_option.quote_datetime
     # Partial close: close 1 of the 2 units (if supported by Option.close_trade)
     # At minimum this must not raise.
-    bf.close_trade(quote_datetime=dt, quantity=bf.lower_option.quantity)
+    bf._close_trade(quote_datetime=dt, quantity=bf.lower_option.quantity)
 
 def test_get_closed_price_after_close(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     dt = bf.center_option.quote_datetime
-    bf.close_trade(quote_datetime=dt)
+    bf._close_trade(quote_datetime=dt)
     closed = bf.get_closed_price()
     assert isinstance(closed, float)
 
 def test_get_closed_price_before_close_is_none(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     assert bf.get_closed_price() is None
 
 def test_closed_price_matches_formula(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     dt = bf.center_option.quote_datetime
-    bf.close_trade(quote_datetime=dt)
+    bf._close_trade(quote_datetime=dt)
     lp = bf.lower_option.trade_close_info.price
     cp = bf.center_option.trade_close_info.price
     up = bf.upper_option.trade_close_info.price
@@ -277,19 +277,19 @@ def test_quote_datetime_delegates_to_first_option(make_butterfly):
 
 def test_get_profit_loss_after_open(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     pnl = bf.get_profit_loss()
     assert isinstance(pnl, float)
 
 def test_current_value_sums_legs(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     expected = sum(o.current_value for o in bf.options)
     assert bf.current_value == pytest.approx(expected, abs=0.01)
 
 def test_trade_value_sums_legs(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     expected = sum(o.trade_value for o in bf.options)
     assert bf.trade_value == pytest.approx(expected, abs=0.01)
 
@@ -308,14 +308,14 @@ def test_max_loss_returns_none(make_butterfly):
 
 def test_returns_list(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     # Advance through at least some updates so history is populated
     result = bf.get_price_history()
     assert isinstance(result, list)
 
 def test_each_entry_is_dict_with_required_keys(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     history = bf.get_price_history()
     for entry in history:
         assert isinstance(entry, dict)
@@ -326,7 +326,7 @@ def test_each_entry_is_dict_with_required_keys(make_butterfly):
 def test_price_matches_calculate_price_for_each_row(make_butterfly):
     """Price at each row must equal _calculate_price using the update dicts for each leg."""
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     lower_u  = bf.lower_option.updates
     center_u = bf.center_option.updates
     upper_u  = bf.upper_option.updates
@@ -345,7 +345,7 @@ def test_price_matches_calculate_price_for_each_row(make_butterfly):
 
 def test_history_length_matches_lower_leg_updates(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     history = bf.get_price_history()
     last_date = bf.lower_option.quote_datetime
     expected_len = len([k for k in bf.lower_option.updates if k <= last_date])
@@ -353,7 +353,7 @@ def test_history_length_matches_lower_leg_updates(make_butterfly):
 
 def test_spot_price_matches_lower_leg_updates(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     history = bf.get_price_history()
     lower_u = bf.lower_option.updates
     last_date = bf.lower_option.quote_datetime
@@ -364,26 +364,26 @@ def test_spot_price_matches_lower_leg_updates(make_butterfly):
 def test_pnl_is_zero_at_open_bar(make_butterfly):
     """PnL at the first history entry (open bar) should be ~0."""
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     history = bf.get_price_history()
     assert history[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 def test_pnl_pct_is_zero_at_open_bar(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     history = bf.get_price_history()
     assert history[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 def test_short_butterfly_history_keys_present(make_butterfly):
     bf = make_butterfly(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     history = bf.get_price_history()
     for entry in history:
         assert REQUIRED_HISTORY_KEYS == entry.keys()
 
 def test_short_butterfly_price_formula_in_history(make_butterfly):
     bf = make_butterfly(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     lower_u  = bf.lower_option.updates
     center_u = bf.center_option.updates
     upper_u  = bf.upper_option.updates
@@ -398,7 +398,7 @@ def test_short_butterfly_price_formula_in_history(make_butterfly):
 
 def test_call_butterfly_history_keys_present(make_butterfly):
     bf = make_butterfly(option_type='call', fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     history = bf.get_price_history()
     for entry in history:
         assert REQUIRED_HISTORY_KEYS == entry.keys()
@@ -425,7 +425,7 @@ def test_max_loss_returns_none_before_open(make_butterfly):
 def test_long_max_profit_equals_wing_width_minus_debit(make_butterfly):
     """LONG: max profit = wing_width - trade_price, achieved at center strike at expiry."""
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     wing_width = min(
         bf.center_option.strike - bf.lower_option.strike,
         bf.upper_option.strike - bf.center_option.strike,
@@ -437,21 +437,21 @@ def test_long_max_profit_equals_wing_width_minus_debit(make_butterfly):
 def test_long_max_loss_equals_trade_price(make_butterfly):
     """LONG: max loss is the net debit paid."""
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     assert bf.max_loss == pytest.approx(bf.get_trade_price(), abs=0.01)
 
 
 def test_short_max_profit_equals_trade_price(make_butterfly):
     """SHORT: max profit is the net credit received."""
     bf = make_butterfly(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     assert bf.max_profit == pytest.approx(bf.get_trade_price(), abs=0.01)
 
 
 def test_short_max_loss_equals_wing_width_minus_credit(make_butterfly):
     """SHORT: max loss = wing_width - net credit."""
     bf = make_butterfly(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     wing_width = min(
         bf.center_option.strike - bf.lower_option.strike,
         bf.upper_option.strike - bf.center_option.strike,
@@ -463,7 +463,7 @@ def test_short_max_loss_equals_wing_width_minus_credit(make_butterfly):
 def test_max_profit_plus_max_loss_equals_wing_width(make_butterfly):
     """max_profit + max_loss must always equal the wing width."""
     bf = make_butterfly(fill_factor=1.0)
-    bf.open_trade()
+    bf._open_trade()
     wing_width = min(
         bf.center_option.strike - bf.lower_option.strike,
         bf.upper_option.strike - bf.center_option.strike,

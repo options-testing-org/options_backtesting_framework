@@ -106,15 +106,15 @@ class Single(SpreadBase):
 
         return margin
 
-    def open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
-        self.option.open_trade(quantity=quantity)
+    def _open_trade(self, quantity: int = 1, *args, **kwargs: dict) -> None:
+        self.option._open_trade(quantity=quantity)
         self.position_type = self.option.position_type
         self.quantity = self.option.quantity
 
         super(Single, self)._save_user_defined_values(self, **kwargs)
 
-    def close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
-        self.option.close_trade(quote_datetime=quote_datetime, quantity=quantity)
+    def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
+        self.option._close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.quantity = self.option.quantity
 
         super(Single, self)._save_user_defined_values(self, **kwargs) # call super to set any kwargs

@@ -73,7 +73,7 @@ def test_get_unrealized_profit_loss_long_at_profit(make_put_option_380):
     # unrealized = (2.75 - 2.00) * 100 * 10 = +$750
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.price = 2.75
 
     assert opt.get_unrealized_profit_loss() == pytest.approx(750.0)
@@ -84,7 +84,7 @@ def test_get_unrealized_profit_loss_long_at_loss(make_put_option_380):
     # unrealized = (1.50 - 2.00) * 100 * 10 = -$500
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.price = 1.50
 
     assert opt.get_unrealized_profit_loss() == pytest.approx(-500.0)
@@ -94,7 +94,7 @@ def test_get_unrealized_profit_loss_at_break_even(make_put_option_380):
     # Open 10 @ $2.00, price unchanged
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     assert opt.get_unrealized_profit_loss() == pytest.approx(0.0)
 
@@ -105,7 +105,7 @@ def test_get_unrealized_profit_loss_short_at_profit(make_put_option_380):
     # (SHORT profits when price falls)
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
     opt.price = 1.25
 
     assert opt.get_unrealized_profit_loss() == pytest.approx(750.0)
@@ -116,7 +116,7 @@ def test_get_unrealized_profit_loss_short_at_loss(make_put_option_380):
     # unrealized = (2.50 - 2.00) * 100 * (-10) = -$500
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
     opt.price = 2.50
 
     assert opt.get_unrealized_profit_loss() == pytest.approx(-500.0)
@@ -128,7 +128,7 @@ def test_get_unrealized_profit_loss_after_partial_close_covers_only_remaining(ma
     # unrealized = (3.00 - 2.00) * 100 * 6 = +$600   (ONLY the 6 still open)
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=4, price=2.50))
     opt.quantity = 6
@@ -142,8 +142,8 @@ def test_get_unrealized_profit_loss_after_full_close_is_zero(make_put_option_380
     # Fully closed: self.quantity = 0, so unrealized = 0
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
-    opt.close_trade(quote_datetime=QUOTE_DT)
+    opt._open_trade(quantity=10)
+    opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert opt.get_unrealized_profit_loss() == pytest.approx(0.0)
 
@@ -157,7 +157,7 @@ def test_get_profit_loss_long_no_closes_equals_unrealized(make_put_option_380):
     # No realized -> should just be unrealized = (2.50-2.00)*100*10 = $500
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.price = 2.50
 
     assert opt.get_profit_loss() == pytest.approx(500.0)
@@ -167,7 +167,7 @@ def test_get_profit_loss_long_no_closes_equals_unrealized(make_put_option_380):
 def test_get_profit_loss_short_no_closes_equals_unrealized(make_put_option_380):
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
     opt.price = 1.50
 
     # (1.50 - 2.00) * 100 * (-10) = +$500
@@ -182,7 +182,7 @@ def test_get_profit_loss_long_with_partial_close_sums_realized_and_unrealized(ma
     # Total = $800
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=4, price=2.50))
     opt.quantity = 6
@@ -199,7 +199,7 @@ def test_get_profit_loss_short_with_partial_close_sums_realized_and_unrealized(m
     # Total = $650
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=4, price=1.50))
     opt.quantity = -6
@@ -213,9 +213,9 @@ def test_get_profit_loss_fully_closed_long_equals_realized_only(make_put_option_
     # Fully closed via single close at profit
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    opt.close_trade(quote_datetime=QUOTE_DT)
+    opt._close_trade(quote_datetime=QUOTE_DT)
 
     # Realized = (3-2)*100*10 = $1000, unrealized = 0 (nothing open)
     assert opt.get_profit_loss() == pytest.approx(1000.0)
@@ -228,7 +228,7 @@ def test_get_profit_loss_mixed_outcomes_long(make_put_option_380):
     # total = -$80
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=4, price=1.50))
     opt.quantity = 6
@@ -246,7 +246,7 @@ def test_get_profit_loss_multiple_partial_closes(make_put_option_380):
     # Total = +$100
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=3, price=2.50))
     opt.trade_close_records.append(_make_close_record(opt, quantity=4, price=1.80))
@@ -266,7 +266,7 @@ def test_get_unrealized_profit_loss_percent_long_at_profit(make_put_option_380):
     # percent = (2.50 - 2.00) / 2.00 = 25%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.price = 2.50
 
     assert opt.get_unrealized_profit_loss_percent() == pytest.approx(0.25)
@@ -277,7 +277,7 @@ def test_get_unrealized_profit_loss_percent_long_at_loss(make_put_option_380):
     # percent = (1.50 - 2.00) / 2.00 = -25%
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
     opt.price = 1.50
 
     assert opt.get_unrealized_profit_loss_percent() == pytest.approx(-0.25)
@@ -289,7 +289,7 @@ def test_get_unrealized_profit_loss_percent_short_at_profit(make_put_option_380)
     # Formula: ((1.50 - 2.00) / 2.00) * (-10 / 10) = -0.25 * -1 = +0.25
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
     opt.price = 1.50
 
     assert opt.get_unrealized_profit_loss_percent() == pytest.approx(0.25)
@@ -300,7 +300,7 @@ def test_get_unrealized_profit_loss_percent_short_at_loss(make_put_option_380):
     # Formula: ((2.50 - 2.00) / 2.00) * (-10 / 10) = +0.25 * -1 = -0.25
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
     opt.price = 2.50
 
     assert opt.get_unrealized_profit_loss_percent() == pytest.approx(-0.25)
@@ -312,7 +312,7 @@ def test_get_unrealized_profit_loss_percent_after_partial_close(make_put_option_
     # (partial close doesn't change the per-contract percent)
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=4, price=2.30))
     opt.quantity = 6
@@ -325,8 +325,8 @@ def test_get_unrealized_profit_loss_percent_after_partial_close(make_put_option_
 def test_get_unrealized_profit_loss_percent_returns_zero_when_fully_closed(make_put_option_380):
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
-    opt.close_trade(quote_datetime=QUOTE_DT)
+    opt._open_trade(quantity=10)
+    opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert opt.get_unrealized_profit_loss_percent() == 0.0
 
@@ -339,7 +339,7 @@ def test_get_profit_loss_equals_sum_of_close_records_pnl_plus_unrealized(make_pu
     """Structural invariant: get_profit_loss = sum(close.pnl) + unrealized"""
     opt = make_put_option_380()
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.trade_close_records.append(_make_close_record(opt, quantity=3, price=2.40))
     opt.trade_close_records.append(_make_close_record(opt, quantity=2, price=1.90))
@@ -363,14 +363,14 @@ def test_close_trade_expired_long_otm_call_settles_worthless(make_call_option_38
     opt = make_call_option_380(strike=442)
     opt.bid, opt.ask, opt.price = 0.69, 0.69, 0.69
     opt.spot_price = 440.07
-    opt.open_trade(quantity=40)
+    opt._open_trade(quantity=40)
 
     # Stale quote from before expiration should be ignored once EXPIRED is set
     opt.bid, opt.ask, opt.price = 0.65, 0.75, 0.70
     opt.spot_price = 440.07
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     # Intrinsic for OTM call = max(440.07 - 442, 0) = 0
     assert rec.price == pytest.approx(0.0)
@@ -383,12 +383,12 @@ def test_close_trade_expired_long_itm_call_settles_at_intrinsic(make_call_option
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
     opt.spot_price = 99.0
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.spot_price = 105.0  # ITM at expiration
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     # Intrinsic = max(105 - 100, 0) = 5.00
     assert rec.price == pytest.approx(5.0)
@@ -401,12 +401,12 @@ def test_close_trade_expired_long_otm_put_settles_worthless(make_put_option_380,
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 0.50, 0.50, 0.50
     opt.spot_price = 101.0
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.spot_price = 105.0  # OTM at expiration
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert rec.price == pytest.approx(0.0)
     # Full loss: (0 - 0.50) * 100 * 10 = -500
@@ -418,12 +418,12 @@ def test_close_trade_expired_long_itm_put_settles_at_intrinsic(make_put_option_3
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
     opt.spot_price = 99.0
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.spot_price = 95.0  # ITM at expiration
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     # Intrinsic = max(100 - 95, 0) = 5.00
     assert rec.price == pytest.approx(5.0)
@@ -441,12 +441,12 @@ def test_close_trade_expired_short_otm_put_captures_full_premium(make_put_option
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 1.50, 1.50, 1.50
     opt.spot_price = 105.0
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
 
     opt.spot_price = 105.0  # above strike, put is OTM
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert rec.price == pytest.approx(0.0)
     # Short profit = (entry - close) * 100 * qty = (1.50 - 0) * 100 * 10 = +1500
@@ -459,12 +459,12 @@ def test_close_trade_expired_short_otm_call_captures_full_premium(make_call_opti
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 0.80, 0.80, 0.80
     opt.spot_price = 95.0
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
 
     opt.spot_price = 98.0  # below strike, call is OTM
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert rec.price == pytest.approx(0.0)
     # P&L = (0.80 - 0) * 100 * 10 = +800
@@ -477,12 +477,12 @@ def test_close_trade_expired_short_itm_put_settles_at_loss(make_put_option_380, 
     opt = make_put_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
     opt.spot_price = 101.0
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
 
     opt.spot_price = 97.0  # ITM, intrinsic = 3
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert rec.price == pytest.approx(3.0)
     # P&L = (1.00 - 3.00) * 100 * 10 = -2000
@@ -495,12 +495,12 @@ def test_close_trade_expired_short_itm_call_settles_at_loss(make_call_option_380
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 0.50, 0.50, 0.50
     opt.spot_price = 99.0
-    opt.open_trade(quantity=-10)
+    opt._open_trade(quantity=-10)
 
     opt.spot_price = 104.0  # ITM, intrinsic = 4
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert rec.price == pytest.approx(4.0)
     # P&L = (0.50 - 4.00) * 100 * 10 = -3500
@@ -517,12 +517,12 @@ def test_close_trade_expired_call_at_strike_is_worthless(make_call_option_380, s
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 0.50, 0.50, 0.50
     opt.spot_price = 99.0
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.spot_price = 100.0
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert rec.price == pytest.approx(0.0)
 
@@ -537,7 +537,7 @@ def test_close_trade_expired_ignores_fill_factor(make_call_option_380, settings_
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
     opt.spot_price = 99.0
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     # Leave a stale non-zero quote. If fill_factor blending leaks into the
     # expired branch: bid + 0.5*(price - bid) = 0.10 + 0.5*(0.30 - 0.10) = 0.20
@@ -546,7 +546,7 @@ def test_close_trade_expired_ignores_fill_factor(make_call_option_380, settings_
     opt.spot_price = 99.0
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     assert rec.price == pytest.approx(0.0)
 
@@ -556,12 +556,12 @@ def test_close_trade_expired_still_incurs_fees(make_call_option_380, settings_ov
     opt = make_call_option_380(strike=100, fill_factor=0.50, incur_fees=True, standard_fee=0.50)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
     opt.spot_price = 95.0
-    opt.open_trade(quantity=10)
+    opt._open_trade(quantity=10)
 
     opt.spot_price = 95.0
     opt.status |= OptionStatus.EXPIRED
 
-    rec = opt.close_trade(quote_datetime=QUOTE_DT)
+    rec = opt._close_trade(quote_datetime=QUOTE_DT)
 
     # Close fees: 10 contracts * $0.50 = $5.00
     assert rec.fees == pytest.approx(5.0)
@@ -569,9 +569,9 @@ def test_close_trade_expired_still_incurs_fees(make_call_option_380, settings_ov
 def test_long_call_option_profitable_pnl(make_call_option_380, settings_overrides):
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=1)
+    opt._open_trade(quantity=1)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    opt.close_trade(quote_datetime=QUOTE_DT)
+    opt._close_trade(quote_datetime=QUOTE_DT)
     pnl = opt.get_profit_loss()
     pnl_pct = opt.get_profit_loss_percent()
 
@@ -581,9 +581,9 @@ def test_long_call_option_profitable_pnl(make_call_option_380, settings_override
 def test_long_call_option_unprofitable_pnl(make_call_option_380, settings_overrides):
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=1)
+    opt._open_trade(quantity=1)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
-    opt.close_trade(quote_datetime=QUOTE_DT)
+    opt._close_trade(quote_datetime=QUOTE_DT)
     pnl = opt.get_profit_loss()
     pnl_pct = opt.get_profit_loss_percent()
 
@@ -593,9 +593,9 @@ def test_long_call_option_unprofitable_pnl(make_call_option_380, settings_overri
 def test_short_call_option_profitable_pnl(make_call_option_380, settings_overrides):
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-1)
+    opt._open_trade(quantity=-1)
     opt.bid, opt.ask, opt.price = 1.00, 1.00, 1.00
-    opt.close_trade(quote_datetime=QUOTE_DT)
+    opt._close_trade(quote_datetime=QUOTE_DT)
     pnl = opt.get_profit_loss()
     pnl_pct = opt.get_profit_loss_percent()
 
@@ -605,9 +605,9 @@ def test_short_call_option_profitable_pnl(make_call_option_380, settings_overrid
 def test_short_call_option_unprofitable_pnl(make_call_option_380, settings_overrides):
     opt = make_call_option_380(strike=100)
     opt.bid, opt.ask, opt.price = 2.00, 2.00, 2.00
-    opt.open_trade(quantity=-1)
+    opt._open_trade(quantity=-1)
     opt.bid, opt.ask, opt.price = 3.00, 3.00, 3.00
-    opt.close_trade(quote_datetime=QUOTE_DT)
+    opt._close_trade(quote_datetime=QUOTE_DT)
     pnl = opt.get_profit_loss()
     pnl_pct = opt.get_profit_loss_percent()
 

@@ -106,20 +106,20 @@ def test_short_diagonal_price_formula(make_diagonal):
 def test_long_diagonal_leg_quantities(make_diagonal):
     """LONG: short near (-1), long far (+1)"""
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade(quantity=1)
+    d._open_trade(quantity=1)
     assert d.near_option.quantity == -1
     assert d.far_option.quantity == +1
 
 
 def test_long_diagonal_spread_quantity(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade(quantity=1)
+    d._open_trade(quantity=1)
     assert d.quantity == +1  # tracks far leg
 
 
 def test_long_diagonal_multi_quantity(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade(quantity=3)
+    d._open_trade(quantity=3)
     assert d.near_option.quantity == -3
     assert d.far_option.quantity == +3
 
@@ -127,41 +127,41 @@ def test_long_diagonal_multi_quantity(make_diagonal):
 def test_short_diagonal_leg_quantities(make_diagonal):
     """SHORT: long near (+1), short far (-1)"""
     d = make_diagonal(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    d.open_trade(quantity=1)
+    d._open_trade(quantity=1)
     assert d.near_option.quantity == +1
     assert d.far_option.quantity == -1
 
 
 def test_short_diagonal_spread_quantity(make_diagonal):
     d = make_diagonal(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    d.open_trade(quantity=1)
+    d._open_trade(quantity=1)
     assert d.quantity == -1
 
 
 def test_open_trade_accepts_negative_quantity_as_absolute(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade(quantity=-2)
+    d._open_trade(quantity=-2)
     assert d.near_option.quantity == -2
     assert d.far_option.quantity == +2
 
 
 def test_open_trade_sets_net_cost_basis(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert d.net_cost_basis is not None
     assert d.net_cost_basis == pytest.approx(d.get_trade_price(), abs=0.01)
 
 
 def test_open_trade_initialises_roll_records_in_user_defined(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert 'roll_records' in d.user_defined
     assert d.user_defined['roll_records'] is d.roll_records
 
 
 def test_open_trade_saves_user_defined_kwargs(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade(quantity=1, tag='pmcc')
+    d._open_trade(quantity=1, tag='pmcc')
     assert d.user_defined.get('tag') == 'pmcc'
 
 
@@ -173,13 +173,13 @@ def test_get_trade_price_returns_none_before_open(make_diagonal):
 
 def test_get_trade_price_returns_float_after_open(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert isinstance(d.get_trade_price(), float)
 
 
 def test_long_trade_price_matches_formula(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     near_p = d.near_option.trade_open_info.price
     far_p = d.far_option.trade_open_info.price
     assert d.get_trade_price() == pytest.approx(far_p - near_p, abs=0.01)
@@ -187,7 +187,7 @@ def test_long_trade_price_matches_formula(make_diagonal):
 
 def test_short_trade_price_matches_formula(make_diagonal):
     d = make_diagonal(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     near_p = d.near_option.trade_open_info.price
     far_p = d.far_option.trade_open_info.price
     assert d.get_trade_price() == pytest.approx(near_p - far_p, abs=0.01)
@@ -197,35 +197,35 @@ def test_short_trade_price_matches_formula(make_diagonal):
 
 def test_close_trade_closes_all_legs(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
-    d.close_trade(quote_datetime=d.near_option.quote_datetime)
+    d._open_trade()
+    d._close_trade(quote_datetime=d.near_option.quote_datetime)
     for leg in d.options:
         assert OptionStatus.TRADE_IS_CLOSED in leg.status
 
 
 def test_close_trade_requires_keyword_only_quote_datetime(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
-    d.close_trade(quote_datetime=d.near_option.quote_datetime)
+    d._open_trade()
+    d._close_trade(quote_datetime=d.near_option.quote_datetime)
 
 
 def test_get_closed_price_returns_none_before_close(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert d.get_closed_price() is None
 
 
 def test_get_closed_price_returns_float_after_close(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
-    d.close_trade(quote_datetime=d.near_option.quote_datetime)
+    d._open_trade()
+    d._close_trade(quote_datetime=d.near_option.quote_datetime)
     assert isinstance(d.get_closed_price(), float)
 
 
 def test_closed_price_matches_formula(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
-    d.close_trade(quote_datetime=d.near_option.quote_datetime)
+    d._open_trade()
+    d._close_trade(quote_datetime=d.near_option.quote_datetime)
     near_p = d.near_option.trade_close_info.price
     far_p = d.far_option.trade_close_info.price
     assert d.get_closed_price() == pytest.approx(far_p - near_p, abs=0.01)
@@ -259,19 +259,19 @@ def test_quote_datetime_delegates_to_first_option(make_diagonal):
 
 def test_get_profit_loss_after_open(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert isinstance(d.get_profit_loss(), float)
 
 
 def test_current_value_sums_legs(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert d.current_value == pytest.approx(sum(o.current_value for o in d.options), abs=0.01)
 
 
 def test_trade_value_sums_legs(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert d.trade_value == pytest.approx(sum(o.trade_value for o in d.options), abs=0.01)
 
 
@@ -307,7 +307,7 @@ def test_required_margin_short_uses_absolute_quantity(make_diagonal):
 
 def test_roll_near_swaps_near_option(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     new_near = make_put_option_370()
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=new_near)
@@ -317,7 +317,7 @@ def test_roll_near_swaps_near_option(make_diagonal, make_put_option_370):
 
 def test_roll_near_closes_old_near_leg(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     old_near = d.near_option
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
@@ -326,7 +326,7 @@ def test_roll_near_closes_old_near_leg(make_diagonal, make_put_option_370):
 
 def test_roll_near_opens_new_near_leg(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     new_near = make_put_option_370()
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=new_near)
@@ -335,7 +335,7 @@ def test_roll_near_opens_new_near_leg(make_diagonal, make_put_option_370):
 
 def test_roll_near_new_leg_has_same_signed_quantity(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade(quantity=2)
+    d._open_trade(quantity=2)
     old_qty = d.near_option.quantity
     new_near = make_put_option_370()
     dt = d.near_option.quote_datetime
@@ -345,7 +345,7 @@ def test_roll_near_new_leg_has_same_signed_quantity(make_diagonal, make_put_opti
 
 def test_roll_near_appends_roll_record(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
     assert len(d.roll_records) == 1
@@ -354,7 +354,7 @@ def test_roll_near_appends_roll_record(make_diagonal, make_put_option_370):
 
 def test_roll_near_record_fields(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     old_near = d.near_option
     new_near = make_put_option_370()
     dt = d.near_option.quote_datetime
@@ -368,7 +368,7 @@ def test_roll_near_record_fields(make_diagonal, make_put_option_370):
 
 def test_roll_near_user_defined_roll_records_same_reference(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
     assert d.user_defined['roll_records'] is d.roll_records
@@ -376,7 +376,7 @@ def test_roll_near_user_defined_roll_records_same_reference(make_diagonal, make_
 
 def test_roll_near_adjusts_net_cost_basis(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     cost_before = d.net_cost_basis
     new_near = make_put_option_370()
     dt = d.near_option.quote_datetime
@@ -387,7 +387,7 @@ def test_roll_near_adjusts_net_cost_basis(make_diagonal, make_put_option_370):
 
 def test_roll_near_raises_if_new_expiration_not_before_far(make_diagonal, make_put_option_370_far):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     dt = d.near_option.quote_datetime
     with pytest.raises(ValueError, match="far option expiration"):
         d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370_far())
@@ -401,7 +401,7 @@ def test_roll_near_raises_if_near_not_open(make_diagonal, make_put_option_370):
 
 def test_multiple_rolls_accumulate_records(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
     dt2 = d.near_option.quote_datetime
@@ -418,20 +418,20 @@ def test_price_history_raises_before_open(make_diagonal):
 
 def test_price_history_returns_list(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert isinstance(d.get_price_history(), list)
 
 
 def test_price_history_each_entry_has_required_keys(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     for entry in d.get_price_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
 def test_price_history_length_matches_near_leg_updates(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     last_date = d.near_option.quote_datetime
     expected_len = sum(1 for k in d.near_option.updates if k <= last_date)
     assert len(d.get_price_history()) == expected_len
@@ -439,7 +439,7 @@ def test_price_history_length_matches_near_leg_updates(make_diagonal):
 
 def test_price_history_price_matches_calculate_price_each_row(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     near_u = d.near_option.updates
     far_u = d.far_option.updates
     last_date = d.near_option.quote_datetime
@@ -456,7 +456,7 @@ def test_price_history_price_matches_calculate_price_each_row(make_diagonal):
 
 def test_price_history_spot_price_matches_near_leg_updates(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     near_u = d.near_option.updates
     last_date = d.near_option.quote_datetime
     keys = sorted(k for k in near_u if k <= last_date)
@@ -466,33 +466,33 @@ def test_price_history_spot_price_matches_near_leg_updates(make_diagonal):
 
 def test_price_history_pnl_is_zero_at_open_bar(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert d.get_price_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 
 def test_price_history_pnl_pct_is_zero_at_open_bar(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     assert d.get_price_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 
 def test_price_history_short_diagonal_has_required_keys(make_diagonal):
     d = make_diagonal(position_type=OptionPositionType.SHORT, fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     for entry in d.get_price_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
 def test_price_history_call_diagonal_has_required_keys(make_diagonal):
     d = make_diagonal(option_type='call', fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     for entry in d.get_price_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
 def test_price_history_after_roll_is_longer_than_single_leg(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     original_near = d.near_option
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
@@ -505,7 +505,7 @@ def test_price_history_after_roll_is_longer_than_single_leg(make_diagonal, make_
 
 def test_price_history_after_roll_all_entries_have_required_keys(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
     for entry in d.get_price_history():
@@ -514,7 +514,7 @@ def test_price_history_after_roll_all_entries_have_required_keys(make_diagonal, 
 
 def test_price_history_pnl_reflects_adjusted_cost_basis_after_roll(make_diagonal, make_put_option_370):
     d = make_diagonal(fill_factor=1.0)
-    d.open_trade()
+    d._open_trade()
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
 

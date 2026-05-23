@@ -44,9 +44,9 @@ class OptionPortfolio(Dispatcher):
                             option_expired=self.on_option_expired,
                             fees_incurred=self.on_fees_incurred)
             for option in option_spread.options:
-                self.bind(next=option.next)
+                self.bind(next=option._next)
 
-            option_spread.open_trade(quantity=quantity,*args, **kwargs)
+            option_spread._open_trade(quantity=quantity, *args, **kwargs)
             if option_spread.position_type == OptionPositionType.SHORT and self.check_margin_on_open:
 
                 # check to see if we have enough margin to open this position
@@ -78,12 +78,12 @@ class OptionPortfolio(Dispatcher):
         quantity = to_close.quantity if quantity is None else quantity
 
         try:
-            to_close.close_trade(quote_datetime=self.current_datetime, quantity=quantity, **kwargs)
+            to_close._close_trade(quote_datetime=self.current_datetime, quantity=quantity, **kwargs)
             self.closed_positions.append(to_close)
             self.positions.remove(to_close)
             self.emit("position_closed", to_close)
             for option in to_close.options:
-                self.unbind(option.next)
+                self.unbind(option._next)
 
         except Exception as e:
             raise Exception(str(e)) from e
