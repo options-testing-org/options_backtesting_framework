@@ -17,6 +17,9 @@ class IronButterfly(SpreadBase):
     upper_call: Option  = field(init=False, default=None)
 
     def __post_init__(self):
+        expirations = [options.expiration for options in self.options]
+        if len(set(expirations)) != 1:
+            raise ValueError("Option expiration must be the same for all options.")
         self.lower_put  = self.options[0]
         self.center_put = self.options[1]
         self.center_call = self.options[2]

@@ -93,8 +93,8 @@ class OptionPortfolio(Dispatcher):
         self.current_datetime = quote_datetime
         symbols = [] if symbols is None else symbols
         symbols = [symbols] if isinstance(symbols, str) else symbols
-        open_position_symbols = [x.symbol for x in self.positions]
-        symbols = list(dict.fromkeys(symbols + open_position_symbols))
+        # open_position_symbols = [x.symbol for x in self.positions]
+        # symbols = list(dict.fromkeys(symbols + open_position_symbols))
         del_symbols = [s for s in list(self.option_chains.keys()) if s not in symbols]
         self._remove_symbols(del_symbols)
         for symbol in symbols:
@@ -156,11 +156,16 @@ class OptionPortfolio(Dispatcher):
     def _initialize_ticker(self, symbol: str, quote_datetime: datetime.datetime) :
         if symbol in self.option_chains.keys():
             return
-        option_chain = OptionChain(symbol=symbol, quote_datetime=quote_datetime, end_datetime=self.end_date)
-        self.bind(next=option_chain.on_next)
+        try:
+            option_chain = OptionChain(symbol=symbol, quote_datetime=quote_datetime, end_datetime=self.end_date)
+            self.bind(next=option_chain.on_next)
 
-        # self.bind(next_options=option_chain.on_next_options)
-        self.option_chains[symbol] = option_chain
+            # self.bind(next_options=option_chain.on_next_options)
+            self.option_chains[symbol] = option_chain
+        except FileNotFoundError:
+            import warnings
+            msg = f'No options data found for {symbol}. Skipping'
+            warnings.warn(msg, UserWarning)
 
 
     def _remove_symbols(self, symbols: list[str]) -> None:

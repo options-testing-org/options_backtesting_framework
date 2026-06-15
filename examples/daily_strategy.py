@@ -1,4 +1,7 @@
 """
+This is an example of how to use the options framework to test an options trading strategy. The rule of the
+strategy are below. This is very simple approach of looping through all the timeslots to run the test.
+
 Daily Prices:
 Put Credit Spread (Vertical) Strategy Rules:
 

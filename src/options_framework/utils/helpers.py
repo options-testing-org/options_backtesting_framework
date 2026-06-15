@@ -87,9 +87,17 @@ def get_witching_dates(start_date: date, end_date: date) -> list[date]:
             dates.append(date(year, month, fridays[2]))
     return dates
 
+def get_day_times(dt: datetime.datetime, start_time: time, end_time: time, granularity: int) -> list[datetime.datetime]:
+    tm = start_time
+    today = []
+    while tm <= end_time:
+        new_dt = datetime.datetime.combine(dt, tm)
+        today.append(new_dt)
+        new_dt += datetime.timedelta(minutes=granularity)
+        tm = new_dt.time()
+    return today
 
 def get_market_dates(start_date: datetime | date, end_date: datetime | date) -> list[datetime]:
-
     # Normalize to date for comparison
     if isinstance(start_date, datetime):
         start_date = start_date.date()

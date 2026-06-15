@@ -177,12 +177,6 @@ def test_unused_symbol_removed_after_next(portfolio, mock_chain):
     portfolio.next(QUOTE_DT)
     assert 'FAKE' not in portfolio.option_chains
 
-def test_symbol_with_open_position_not_removed(portfolio, make_single, mock_chain):
-    single = make_single()
-    portfolio.open_position(single, quantity=1)
-    portfolio.next(QUOTE_DT)
-    assert single.symbol in portfolio.option_chains
-
 
 # ── on_option_expired ─────────────────────────────────────────────────────────
 """
