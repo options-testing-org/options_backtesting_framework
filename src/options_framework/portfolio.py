@@ -93,8 +93,8 @@ class OptionPortfolio(Dispatcher):
         self.current_datetime = quote_datetime
         symbols = [] if symbols is None else symbols
         symbols = [symbols] if isinstance(symbols, str) else symbols
-        # open_position_symbols = [x.symbol for x in self.positions]
-        # symbols = list(dict.fromkeys(symbols + open_position_symbols))
+        open_position_symbols = [x.symbol for x in self.positions]
+        symbols = list(dict.fromkeys(symbols + open_position_symbols))
         del_symbols = [s for s in list(self.option_chains.keys()) if s not in symbols]
         self._remove_symbols(del_symbols)
         for symbol in symbols:

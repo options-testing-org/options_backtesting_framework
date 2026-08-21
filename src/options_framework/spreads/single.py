@@ -149,11 +149,15 @@ class Single(SpreadBase):
         else:  # LONG
             return abs(self.get_trade_premium())
 
+    @property
+    def status(self) -> OptionStatus:
+        return self.option.status
+
     def get_dte(self) -> int | None:
         return self.option.get_dte()
 
 
-    def get_price_history(self) -> list[tuple]:
+    def get_history(self) -> list[dict]:
         if OptionStatus.TRADE_IS_OPEN not in self.option.status and OptionStatus.TRADE_IS_CLOSED not in self.option.status:
             raise RuntimeError("Cannot get price history: trade has not been opened.")
 
@@ -206,3 +210,6 @@ class Single(SpreadBase):
             return None
         price = decimalize_2(self.option.trade_close_info.price)
         return float(price)
+
+    def get_updates(self) -> list[dict]:
+        pass

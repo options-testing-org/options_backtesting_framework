@@ -100,6 +100,7 @@ class Option(Dispatcher):
     incur_fees: Optional[bool] = field(default=None, compare=False)
     fee_per_contract: Optional[float] = field(default=None, compare=False)
     updates: dict = field(default_factory=lambda: {}, compare=False)
+    _expire_emitted: bool = field(default=False, compare=False)
 
     def __post_init__(self):
         # check for required fields
@@ -194,9 +195,6 @@ class Option(Dispatcher):
         expiration_date, exp_time = self.expiration, datetime.time(16, 00)
         if ((quote_date > expiration_date) or (quote_date == expiration_date and quote_time >= exp_time)):
             self.status |= OptionStatus.EXPIRED
-            _id = self.instance_id
-            self.emit("option_expired", instance_id=_id)
-            #print(f'emit expire {self.option_id}')
             return True
         return False
 
@@ -224,12 +222,15 @@ class Option(Dispatcher):
             raise TypeError(
                 f"quote_datetime must be datetime.datetime or pd.Timestamp, got {type(quote_datetime).__name__}")
         self.quote_datetime = quote_datetime
-        if self.is_expired():
-            return
+        if not self._expire_emitted:
+            self.is_expired()
 
         updates = self.updates.get(quote_datetime, None)
         if updates is None:
-            return
+            if OptionStatus.EXPIRED in self.status:
+                updates = self.updates[-1]
+            else:
+                return
 
         self.spot_price = updates['spot_price']
         self.bid = float(decimalize_2(updates['bid']))
@@ -244,6 +245,14 @@ class Option(Dispatcher):
         self.open_interest = updates.get('open_interest', None)
         self.volume = updates.get('volume', None)
         self.implied_volatility = updates.get('implied_volatility')
+
+        if (not self._expire_emitted
+                and OptionStatus.EXPIRED in self.status
+                and OptionStatus.TRADE_IS_OPEN in self.status):
+            _id = self.instance_id
+            self.emit("option_expired", instance_id=_id)
+            # print(f'emit expire {self.option_id}')
+            self._expire_emitted = True
 
 
     def _open_trade(self, *, quantity: int, **kwargs: dict) -> TradeOpenInfo:
@@ -550,7 +559,7 @@ class Option(Dispatcher):
         if not self.trade_open_records:
             return
         records = self.trade_open_records
-        date = records[-1].date
+        date = records[0].date
         total_abs_qty = decimalize_0(sum(abs(r.quantity) for r in records))
         notional = sum(decimalize_2(r.price) * decimalize_0(abs(r.quantity)) for r in records)
         price = decimalize_2(notional / total_abs_qty)

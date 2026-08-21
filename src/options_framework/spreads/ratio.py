@@ -126,10 +126,14 @@ class Ratio(SpreadBase):
     def max_loss(self) -> float | None:
         return None
 
+    @property
+    def status(self) -> OptionStatus:
+        return self.short_option.status
+
     def get_required_margin(self, quantity: int) -> float:
         return None
 
-    def get_price_history(self) -> list[dict]:
+    def get_history(self) -> list[dict]:
         if (OptionStatus.TRADE_IS_OPEN not in self.long_option.status
                 and OptionStatus.TRADE_IS_CLOSED not in self.long_option.status):
             raise RuntimeError("Cannot get price history: trade has not been opened.")
@@ -189,3 +193,6 @@ class Ratio(SpreadBase):
             })
 
         return history
+
+    def get_updates(self) -> list[dict]:
+        pass

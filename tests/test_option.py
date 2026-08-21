@@ -60,6 +60,9 @@ def _make_close_record(opt, *, quantity, price):
         spot_price=float(opt.spot_price),
     )
 
+def _sorted_update_keys(option):
+    # updates is loaded on first open; keys are the available quote datetimes
+    return sorted(option.updates.keys())
 
 def test_close_without_quantity_closes_full_position(make_put_option_380, settings_overrides):
     settings_overrides(data_frequency='daily')
@@ -1918,3 +1921,65 @@ def test_open_trade_status_remains_trade_is_open_after_scale_in(make_put_option_
     option._open_trade(quantity=-2)
     assert OptionStatus.TRADE_IS_OPEN in option.status
     assert OptionStatus.INITIALIZED not in option.status
+
+
+def test_trade_open_info_date_single_open_uses_that_open(make_put_option_380):
+    option = make_put_option_380()
+    open_dt = option.quote_datetime
+
+    option._open_trade(quantity=-1)
+
+    # With a single open lot, the aggregate date is simply that open's date.
+    assert option.trade_open_info.date == open_dt
+    assert option.trade_open_info.quantity == -1
+    assert len(option.trade_open_records) == 1
+    assert option.trade_open_records[0].date == open_dt
+
+
+def test_trade_open_info_date_pins_to_first_open_after_scale_in(make_put_option_380):
+    option = make_put_option_380()
+    first_dt = option.quote_datetime
+
+    # First open at the initial quote datetime.
+    option._open_trade(quantity=-1)
+
+    # Advance the clock to a later available quote datetime, then scale in.
+    keys = _sorted_update_keys(option)
+    later_keys = [k for k in keys if k > first_dt]
+    # Assumption: the put-380 fixture has at least one quote after the open date.
+    assert later_keys, "fixture must contain a quote after the first open date"
+    scale_in_dt = later_keys[0]
+
+    option._next(scale_in_dt)
+    option._open_trade(quantity=-2)
+
+    # The aggregate date must remain the FIRST open, not the scale-in date.
+    assert option.trade_open_info.date == first_dt
+    assert option.trade_open_info.date != scale_in_dt
+
+    # Per-lot records preserve both dates in order.
+    assert len(option.trade_open_records) == 2
+    assert option.trade_open_records[0].date == first_dt
+    assert option.trade_open_records[-1].date == scale_in_dt
+
+    # Aggregate quantity sums both lots (same direction).
+    assert option.trade_open_info.quantity == -3
+
+
+def test_trade_open_info_date_unchanged_by_partial_close(make_put_option_380):
+    option = make_put_option_380()
+    first_dt = option.quote_datetime
+
+    option._open_trade(quantity=-3)
+
+    keys = _sorted_update_keys(option)
+    later_keys = [k for k in keys if k > first_dt]
+    assert later_keys, "fixture must contain a quote after the first open date"
+    close_dt = later_keys[0]
+
+    option._next(close_dt)
+    option._close_trade(quote_datetime=close_dt, quantity=1)
+
+    # Closing part of the position does not touch the open date.
+    assert option.trade_open_info.date == first_dt
+    assert option.trade_open_info.quantity == -3  # open aggregate is unchanged by closes

@@ -24,7 +24,7 @@ A Python library for backtesting options trading strategies. You provide histori
 pip install options-framework
 ```
 
-Requires Python 3.10 or higher.
+Requires Python 3.12 or higher.
 
 ---
 
@@ -230,6 +230,9 @@ portfolio.closed_positions
 
 # Current cash balance (starting cash adjusted for all opens, closes, and fees)
 portfolio.cash
+
+# Current value of the portfolio including unrealized gains and losses
+portfolio.current_value
 ```
 
 ### Event System

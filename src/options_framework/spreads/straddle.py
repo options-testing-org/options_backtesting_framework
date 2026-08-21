@@ -181,8 +181,12 @@ class Straddle(SpreadBase):
         else:
             return None
 
+    @property
+    def status(self) -> OptionStatus:
+        return self.call.status
 
-    def get_price_history(self) -> list[dict]:
+
+    def get_history(self) -> list[dict]:
         if (OptionStatus.TRADE_IS_OPEN not in self.call.status
                 and OptionStatus.TRADE_IS_CLOSED not in self.call.status):
             raise RuntimeError("Cannot get price history: trade has not been opened.")
@@ -248,3 +252,6 @@ class Straddle(SpreadBase):
             })
 
         return history
+
+    def get_updates(self) -> list[dict]:
+        pass

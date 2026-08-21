@@ -310,13 +310,13 @@ def test_returns_list(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
     bf._open_trade()
     # Advance through at least some updates so history is populated
-    result = bf.get_price_history()
+    result = bf.get_history()
     assert isinstance(result, list)
 
 def test_each_entry_is_dict_with_required_keys(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
     bf._open_trade()
-    history = bf.get_price_history()
+    history = bf.get_history()
     for entry in history:
         assert isinstance(entry, dict)
         assert REQUIRED_HISTORY_KEYS == entry.keys()
@@ -332,7 +332,7 @@ def test_price_matches_calculate_price_for_each_row(make_butterfly):
     upper_u  = bf.upper_option.updates
     last_date = bf.lower_option.quote_datetime
     keys = sorted(k for k in lower_u if k <= last_date)
-    history = bf.get_price_history()
+    history = bf.get_history()
 
     for i, entry in enumerate(history):
         k = keys[i]
@@ -346,7 +346,7 @@ def test_price_matches_calculate_price_for_each_row(make_butterfly):
 def test_history_length_matches_lower_leg_updates(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
     bf._open_trade()
-    history = bf.get_price_history()
+    history = bf.get_history()
     last_date = bf.lower_option.quote_datetime
     expected_len = len([k for k in bf.lower_option.updates if k <= last_date])
     assert len(history) == expected_len
@@ -354,7 +354,7 @@ def test_history_length_matches_lower_leg_updates(make_butterfly):
 def test_spot_price_matches_lower_leg_updates(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
     bf._open_trade()
-    history = bf.get_price_history()
+    history = bf.get_history()
     lower_u = bf.lower_option.updates
     last_date = bf.lower_option.quote_datetime
     keys = sorted(k for k in lower_u if k <= last_date)
@@ -365,19 +365,19 @@ def test_pnl_is_zero_at_open_bar(make_butterfly):
     """PnL at the first history entry (open bar) should be ~0."""
     bf = make_butterfly(fill_factor=1.0)
     bf._open_trade()
-    history = bf.get_price_history()
+    history = bf.get_history()
     assert history[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 def test_pnl_pct_is_zero_at_open_bar(make_butterfly):
     bf = make_butterfly(fill_factor=1.0)
     bf._open_trade()
-    history = bf.get_price_history()
+    history = bf.get_history()
     assert history[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 def test_short_butterfly_history_keys_present(make_butterfly):
     bf = make_butterfly(position_type=OptionPositionType.SHORT, fill_factor=1.0)
     bf._open_trade()
-    history = bf.get_price_history()
+    history = bf.get_history()
     for entry in history:
         assert REQUIRED_HISTORY_KEYS == entry.keys()
 
@@ -389,7 +389,7 @@ def test_short_butterfly_price_formula_in_history(make_butterfly):
     upper_u  = bf.upper_option.updates
     last_date = bf.lower_option.quote_datetime
     keys = sorted(k for k in lower_u if k <= last_date)
-    history  = bf.get_price_history()
+    history  = bf.get_history()
 
     for i, entry in enumerate(history):
         k = keys[i]
@@ -399,7 +399,7 @@ def test_short_butterfly_price_formula_in_history(make_butterfly):
 def test_call_butterfly_history_keys_present(make_butterfly):
     bf = make_butterfly(option_type='call', fill_factor=1.0)
     bf._open_trade()
-    history = bf.get_price_history()
+    history = bf.get_history()
     for entry in history:
         assert REQUIRED_HISTORY_KEYS == entry.keys()
 
@@ -407,7 +407,7 @@ def test_raises_before_open(make_butterfly):
     """get_price_history must raise RuntimeError if trade has not been opened (mirrors Single)."""
     bf = make_butterfly()
     with pytest.raises(RuntimeError, match="trade has not been opened"):
-        bf.get_price_history()
+        bf.get_history()
 
 
 # ── max_profit, max_loss, get_required_margin ─────────────────────────────────

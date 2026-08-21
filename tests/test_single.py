@@ -312,7 +312,7 @@ def test_get_price_history_raises_when_not_opened(make_call_option_380):
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
 
     with pytest.raises(RuntimeError):
-        single.get_price_history()
+        single.get_history()
 
 
 # --- basic shape and fields ---
@@ -323,7 +323,7 @@ def test_get_price_history_returns_list_of_dicts(make_call_option_380, settings_
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
     single._open_trade(quantity=1)
 
-    history = single.get_price_history()
+    history = single.get_history()
 
     assert isinstance(history, list)
     assert len(history) > 0
@@ -336,7 +336,7 @@ def test_get_price_history_contains_expected_keys(make_call_option_380, settings
     single = Single(options=[opt], spread_type=OptionSpreadType.SINGLE)
     single._open_trade(quantity=1)
 
-    history = single.get_price_history()
+    history = single.get_history()
     expected_keys = {'quote_datetime', 'price', 'spot_price', 'bid', 'ask',
                      'delta', 'gamma', 'theta', 'vega', 'rho', 'iv', 'pnl', 'pnl_pct'}
 
@@ -355,7 +355,7 @@ def test_get_price_history_stops_at_close_date(make_call_option_380, settings_ov
     opt.quote_datetime = close_dt
     single._close_trade(quote_datetime=close_dt)
 
-    history = single.get_price_history()
+    history = single.get_history()
 
     assert all(row['quote_datetime'] <= close_dt for row in history)
 
@@ -376,7 +376,7 @@ def test_get_price_history_pnl_long_profitable(make_call_option_380, settings_ov
         'price': 3.00, 'spot_price': 105.0, 'bid': 3.00, 'ask': 3.00
     }
 
-    history = single.get_price_history()
+    history = single.get_history()
     target = next(row for row in history if row['quote_datetime'] == update_dt)
 
     assert target['pnl'] == 100.0       # (3.00 - 2.00) * 100 * 1
@@ -395,7 +395,7 @@ def test_get_price_history_pnl_long_losing(make_call_option_380, settings_overri
         'price': 1.00, 'spot_price': 95.0, 'bid': 1.00, 'ask': 1.00
     }
 
-    history = single.get_price_history()
+    history = single.get_history()
     target = next(row for row in history if row['quote_datetime'] == update_dt)
 
     assert target['pnl'] == -100.0
@@ -416,7 +416,7 @@ def test_get_price_history_pnl_short_profitable(make_put_option_380, settings_ov
         'price': 1.00, 'spot_price': 105.0, 'bid': 1.00, 'ask': 1.00
     }
 
-    history = single.get_price_history()
+    history = single.get_history()
     target = next(row for row in history if row['quote_datetime'] == update_dt)
 
     assert target['pnl'] == 100.0
@@ -435,7 +435,7 @@ def test_get_price_history_pnl_short_losing(make_put_option_380, settings_overri
         'price': 3.00, 'spot_price': 95.0, 'bid': 3.00, 'ask': 3.00
     }
 
-    history = single.get_price_history()
+    history = single.get_history()
     target = next(row for row in history if row['quote_datetime'] == update_dt)
 
     assert target['pnl'] == -100.0
@@ -462,7 +462,7 @@ def test_get_price_history_pnl_after_partial_close(make_call_option_380, setting
     opt.quote_datetime = t2
     opt.updates[t2] = {'price': 3.00, 'spot_price': 105.0, 'bid': 3.00, 'ask': 3.00}
 
-    history = single.get_price_history()
+    history = single.get_history()
     t1_row = next(row for row in history if row['quote_datetime'] == t1)
     t2_row = next(row for row in history if row['quote_datetime'] == t2)
 

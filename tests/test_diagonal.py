@@ -413,19 +413,19 @@ def test_multiple_rolls_accumulate_records(make_diagonal, make_put_option_370):
 
 def test_price_history_raises_before_open(make_diagonal):
     with pytest.raises(RuntimeError, match="trade has not been opened"):
-        make_diagonal().get_price_history()
+        make_diagonal().get_history()
 
 
 def test_price_history_returns_list(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
     d._open_trade()
-    assert isinstance(d.get_price_history(), list)
+    assert isinstance(d.get_history(), list)
 
 
 def test_price_history_each_entry_has_required_keys(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
     d._open_trade()
-    for entry in d.get_price_history():
+    for entry in d.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -434,7 +434,7 @@ def test_price_history_length_matches_near_leg_updates(make_diagonal):
     d._open_trade()
     last_date = d.near_option.quote_datetime
     expected_len = sum(1 for k in d.near_option.updates if k <= last_date)
-    assert len(d.get_price_history()) == expected_len
+    assert len(d.get_history()) == expected_len
 
 
 def test_price_history_price_matches_calculate_price_each_row(make_diagonal):
@@ -445,7 +445,7 @@ def test_price_history_price_matches_calculate_price_each_row(make_diagonal):
     last_date = d.near_option.quote_datetime
     keys = sorted(k for k in near_u if k <= last_date)
 
-    for i, entry in enumerate(d.get_price_history()):
+    for i, entry in enumerate(d.get_history()):
         k = keys[i]
         expected = d._calculate_price(
             near_price=near_u[k]['price'],
@@ -460,33 +460,33 @@ def test_price_history_spot_price_matches_near_leg_updates(make_diagonal):
     near_u = d.near_option.updates
     last_date = d.near_option.quote_datetime
     keys = sorted(k for k in near_u if k <= last_date)
-    for i, entry in enumerate(d.get_price_history()):
+    for i, entry in enumerate(d.get_history()):
         assert entry['spot_price'] == near_u[keys[i]].get('spot_price')
 
 
 def test_price_history_pnl_is_zero_at_open_bar(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
     d._open_trade()
-    assert d.get_price_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
+    assert d.get_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 
 def test_price_history_pnl_pct_is_zero_at_open_bar(make_diagonal):
     d = make_diagonal(fill_factor=1.0)
     d._open_trade()
-    assert d.get_price_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
+    assert d.get_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 
 def test_price_history_short_diagonal_has_required_keys(make_diagonal):
     d = make_diagonal(position_type=OptionPositionType.SHORT, fill_factor=1.0)
     d._open_trade()
-    for entry in d.get_price_history():
+    for entry in d.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
 def test_price_history_call_diagonal_has_required_keys(make_diagonal):
     d = make_diagonal(option_type='call', fill_factor=1.0)
     d._open_trade()
-    for entry in d.get_price_history():
+    for entry in d.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -497,7 +497,7 @@ def test_price_history_after_roll_is_longer_than_single_leg(make_diagonal, make_
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
 
-    history = d.get_price_history()
+    history = d.get_history()
     original_len = sum(1 for k in original_near.updates if k <= original_near.trade_close_info.date)
     new_len = sum(1 for k in d.near_option.updates if k <= d.near_option.quote_datetime)
     assert len(history) == original_len + new_len
@@ -508,7 +508,7 @@ def test_price_history_after_roll_all_entries_have_required_keys(make_diagonal, 
     d._open_trade()
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
-    for entry in d.get_price_history():
+    for entry in d.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -518,7 +518,7 @@ def test_price_history_pnl_reflects_adjusted_cost_basis_after_roll(make_diagonal
     dt = d.near_option.quote_datetime
     d.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
 
-    history = d.get_price_history()
+    history = d.get_history()
     original_len = sum(
         1 for k in d.roll_records[0].old_option.updates
         if k <= d.roll_records[0].old_option.trade_close_info.date

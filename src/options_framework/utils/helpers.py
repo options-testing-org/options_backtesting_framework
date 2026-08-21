@@ -73,6 +73,20 @@ def month_range(start_dt: datetime, end_dt: date) -> list[tuple[int, int]]:
 
     return months
 
+def is_monthly_expiration(expiration: pd.Timestamp) -> bool:
+    if expiration.weekday() != 4:
+        return False
+
+    if not (15 <= expiration.day <= 21):
+        return False
+
+    first_day = expiration.replace(day=1)
+    first_friday_offset = (4 - first_day.weekday()) % 7
+    first_friday = first_day + pd.Timedelta(days=first_friday_offset)
+    third_friday = first_friday + pd.Timedelta(days=14)
+
+    return expiration.date() == third_friday.date()
+
 def get_witching_dates(start_date: date, end_date: date) -> list[date]:
     start_year = start_date.year
     end_year = end_date.year
@@ -91,9 +105,9 @@ def get_day_times(dt: datetime.datetime, start_time: time, end_time: time, granu
     tm = start_time
     today = []
     while tm <= end_time:
-        new_dt = datetime.datetime.combine(dt, tm)
+        new_dt = datetime.combine(dt, tm)
         today.append(new_dt)
-        new_dt += datetime.timedelta(minutes=granularity)
+        new_dt += timedelta(minutes=granularity)
         tm = new_dt.time()
     return today
 

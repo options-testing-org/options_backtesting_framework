@@ -200,6 +200,10 @@ class Diagonal(SpreadBase):
     def max_loss(self) -> float | None:
         return None
 
+    @property
+    def status(self) -> OptionStatus:
+        return self.far_option.status
+
     def get_required_margin(self, quantity: int) -> float:
         if self.position_type == OptionPositionType.LONG:
             return 0.0
@@ -223,7 +227,7 @@ class Diagonal(SpreadBase):
 
         return segments
 
-    def get_price_history(self) -> list[dict]:
+    def get_history(self) -> list[dict]:
         if (OptionStatus.TRADE_IS_OPEN not in self.far_option.status
                 and OptionStatus.TRADE_IS_CLOSED not in self.far_option.status):
             raise RuntimeError("Cannot get price history: trade has not been opened.")
@@ -287,3 +291,6 @@ class Diagonal(SpreadBase):
                 })
 
         return history
+
+    def get_updates(self) -> list[dict]:
+        pass

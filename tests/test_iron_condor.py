@@ -350,19 +350,19 @@ def test_required_margin_uses_absolute_quantity(make_iron_condor):
 
 def test_price_history_raises_before_open(make_iron_condor):
     with pytest.raises(RuntimeError, match="trade has not been opened"):
-        make_iron_condor().get_price_history()
+        make_iron_condor().get_history()
 
 
 def test_price_history_returns_list(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
     ic._open_trade()
-    assert isinstance(ic.get_price_history(), list)
+    assert isinstance(ic.get_history(), list)
 
 
 def test_price_history_each_entry_has_required_keys(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
     ic._open_trade()
-    for entry in ic.get_price_history():
+    for entry in ic.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -371,7 +371,7 @@ def test_price_history_length_matches_lower_put_updates(make_iron_condor):
     ic._open_trade()
     last_date = ic.lower_put.quote_datetime
     expected_len = sum(1 for k in ic.lower_put.updates if k <= last_date)
-    assert len(ic.get_price_history()) == expected_len
+    assert len(ic.get_history()) == expected_len
 
 
 def test_price_history_price_matches_calculate_price_each_row(make_iron_condor):
@@ -384,7 +384,7 @@ def test_price_history_price_matches_calculate_price_each_row(make_iron_condor):
     last_date = ic.lower_put.quote_datetime
     keys = sorted(k for k in lp_u if k <= last_date)
 
-    for i, entry in enumerate(ic.get_price_history()):
+    for i, entry in enumerate(ic.get_history()):
         k = keys[i]
         expected = ic._calculate_price(
             lower_put_price=lp_u[k]['price'],
@@ -401,26 +401,26 @@ def test_price_history_spot_price_matches_lower_put_updates(make_iron_condor):
     lp_u = ic.lower_put.updates
     last_date = ic.lower_put.quote_datetime
     keys = sorted(k for k in lp_u if k <= last_date)
-    for i, entry in enumerate(ic.get_price_history()):
+    for i, entry in enumerate(ic.get_history()):
         assert entry['spot_price'] == lp_u[keys[i]].get('spot_price')
 
 
 def test_price_history_pnl_is_zero_at_open_bar(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
     ic._open_trade()
-    assert ic.get_price_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
+    assert ic.get_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 
 def test_price_history_pnl_pct_is_zero_at_open_bar(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
     ic._open_trade()
-    assert ic.get_price_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
+    assert ic.get_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 
 def test_price_history_long_iron_condor_has_required_keys(make_iron_condor):
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
     ic._open_trade()
-    for entry in ic.get_price_history():
+    for entry in ic.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -434,7 +434,7 @@ def test_price_history_long_iron_condor_price_formula(make_iron_condor):
     last_date = ic.lower_put.quote_datetime
     keys = sorted(k for k in lp_u if k <= last_date)
 
-    for i, entry in enumerate(ic.get_price_history()):
+    for i, entry in enumerate(ic.get_history()):
         k = keys[i]
         expected = (lp_u[k]['price'] + uc_u[k]['price']) - (up_u[k]['price'] + lc_u[k]['price'])
         assert entry['price'] == pytest.approx(expected, abs=0.01)

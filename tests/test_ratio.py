@@ -277,19 +277,19 @@ def test_get_required_margin_returns_none(make_ratio):
 
 def test_price_history_raises_before_open(make_ratio):
     with pytest.raises(RuntimeError, match="trade has not been opened"):
-        make_ratio().get_price_history()
+        make_ratio().get_history()
 
 
 def test_price_history_returns_list(make_ratio):
     r = make_ratio(fill_factor=1.0)
     r._open_trade()
-    assert isinstance(r.get_price_history(), list)
+    assert isinstance(r.get_history(), list)
 
 
 def test_price_history_each_entry_has_required_keys(make_ratio):
     r = make_ratio(fill_factor=1.0)
     r._open_trade()
-    for entry in r.get_price_history():
+    for entry in r.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -298,7 +298,7 @@ def test_price_history_length_matches_long_leg_updates(make_ratio):
     r._open_trade()
     last_date = r.long_option.quote_datetime
     expected_len = sum(1 for k in r.long_option.updates if k <= last_date)
-    assert len(r.get_price_history()) == expected_len
+    assert len(r.get_history()) == expected_len
 
 
 def test_price_history_price_matches_calculate_price_each_row(make_ratio):
@@ -309,7 +309,7 @@ def test_price_history_price_matches_calculate_price_each_row(make_ratio):
     last_date = r.long_option.quote_datetime
     keys = sorted(k for k in long_u if k <= last_date)
 
-    for i, entry in enumerate(r.get_price_history()):
+    for i, entry in enumerate(r.get_history()):
         k = keys[i]
         expected = r._calculate_price(
             long_price=long_u[k]['price'],
@@ -324,26 +324,26 @@ def test_price_history_spot_price_matches_long_leg_updates(make_ratio):
     long_u = r.long_option.updates
     last_date = r.long_option.quote_datetime
     keys = sorted(k for k in long_u if k <= last_date)
-    for i, entry in enumerate(r.get_price_history()):
+    for i, entry in enumerate(r.get_history()):
         assert entry['spot_price'] == long_u[keys[i]].get('spot_price')
 
 
 def test_price_history_pnl_is_zero_at_open_bar(make_ratio):
     r = make_ratio(fill_factor=1.0)
     r._open_trade()
-    assert r.get_price_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
+    assert r.get_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 
 def test_price_history_pnl_pct_is_zero_at_open_bar(make_ratio):
     r = make_ratio(fill_factor=1.0)
     r._open_trade()
-    assert r.get_price_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
+    assert r.get_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 
 def test_price_history_ratio_3_has_required_keys(make_ratio):
     r = make_ratio(ratio=3, fill_factor=1.0)
     r._open_trade()
-    for entry in r.get_price_history():
+    for entry in r.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -355,7 +355,7 @@ def test_price_history_ratio_3_price_formula(make_ratio):
     last_date = r.long_option.quote_datetime
     keys = sorted(k for k in long_u if k <= last_date)
 
-    for i, entry in enumerate(r.get_price_history()):
+    for i, entry in enumerate(r.get_history()):
         k = keys[i]
         expected = long_u[k]['price'] - 3 * short_u[k]['price']
         assert entry['price'] == pytest.approx(expected, abs=0.01)
@@ -364,5 +364,5 @@ def test_price_history_ratio_3_price_formula(make_ratio):
 def test_price_history_call_ratio_has_required_keys(make_ratio):
     r = make_ratio(option_type='call', fill_factor=1.0)
     r._open_trade()
-    for entry in r.get_price_history():
+    for entry in r.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS

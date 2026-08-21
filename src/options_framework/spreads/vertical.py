@@ -118,14 +118,29 @@ class Vertical(SpreadBase):
         if self.position_type == OptionPositionType.LONG:
             max_loss = self.trade_value
         else:
-            long_price = self.long_option.trade_open_info.price
-            short_price = self.short_option.trade_open_info.price
-            quantity = self.long_option.trade_open_info.quantity \
-                if OptionStatus.TRADE_IS_CLOSED in self.long_option.status \
-                else self.quantity
+            if OptionStatus.INITIALIZED in self.long_option.status:
+                long_price = self.long_option.price
+                short_price = self.short_option.price
+            else:
+                long_price = self.long_option.trade_open_info.price
+                short_price = self.short_option.trade_open_info.price
+
+            if OptionStatus.TRADE_IS_OPEN in self.long_option.status:
+                quantity = self.quantity
+            elif OptionStatus.TRADE_IS_CLOSED in self.long_option.status:
+                quantity = self.long_option.trade_open_info.quantity
+            elif OptionStatus.INITIALIZED in self.long_option.status:
+                quantity = 1
+            else:
+                raise RuntimeError("Cannot calculate max loss.")
+
             max_loss = float((abs(decimalize_2(self.long_option.strike) - decimalize_2(self.short_option.strike))
                               - abs(decimalize_2(long_price) - decimalize_2(short_price))) * 100 * abs(quantity))
         return max_loss
+
+    @property
+    def status(self) -> OptionStatus:
+        return self.short_option.status
 
     def get_required_margin(self, quantity: int) -> float:
         if OptionStatus.TRADE_IS_OPEN not in self.long_option.status:
@@ -191,7 +206,7 @@ class Vertical(SpreadBase):
 
         return profit_loss
 
-    def get_price_history(self) -> list[dict]:
+    def get_history(self) -> list[dict]:
         if (OptionStatus.TRADE_IS_OPEN not in self.long_option.status
                 and OptionStatus.TRADE_IS_CLOSED not in self.long_option.status):
             raise RuntimeError("Cannot get price history: trade has not been opened.")
@@ -257,3 +272,37 @@ class Vertical(SpreadBase):
             })
 
         return history
+
+    def get_updates(self) -> list[dict]:
+        keys = sorted(
+            set(self.long_option.updates.keys()) & set(self.short_option.updates.keys())
+        )
+
+        start_long_price = self.long_option.updates[keys[0]]['price']
+        start_short_price = self.short_option.updates[keys[0]]['price']
+
+        premium = round((start_long_price - start_short_price) * 100, 2)
+
+        updates = []
+        for k in keys:
+            long_update = self.long_option.updates[k]
+            short_update = self.short_option.updates[k]
+
+            long_price = round(float(long_update['price']), 2)
+            long_pnl = round((long_price - start_long_price) * 100 , 2)
+
+            short_price = round(float(short_update['price']), 2)
+            short_pnl = round((short_price - start_short_price) * 100, 2)
+
+            spread_price = round(long_price - short_price, 2)
+            spread_pnl = round(long_pnl + short_pnl, 2)
+            pnl_pct = round(spread_pnl / premium, 4) if premium != 0 else 0.0
+
+            updates.append({
+               'quote_datetime': k,
+               'price': spread_price,
+               'pnl': spread_pnl,
+               'pnl_pct': pnl_pct
+            })
+
+        return updates

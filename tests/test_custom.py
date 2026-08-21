@@ -221,15 +221,15 @@ def test_price_history_raises_if_called_on_unopened_options(
     opt2 = make_put_option_370()
     c = Custom(options=[opt1, opt2], spread_type=OptionSpreadType.CUSTOM)
     with pytest.raises(RuntimeError, match="trade has not been opened"):
-        c.get_price_history()
+        c.get_history()
 
 
 def test_price_history_returns_list(make_custom):
-    assert isinstance(make_custom().get_price_history(), list)
+    assert isinstance(make_custom().get_history(), list)
 
 
 def test_price_history_each_entry_has_required_keys(make_custom):
-    for entry in make_custom().get_price_history():
+    for entry in make_custom().get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -237,7 +237,7 @@ def test_price_history_length_matches_first_leg_updates(make_custom):
     c = make_custom()
     last_date = c.options[0].quote_datetime
     expected_len = sum(1 for k in c.options[0].updates if k <= last_date)
-    assert len(c.get_price_history()) == expected_len
+    assert len(c.get_history()) == expected_len
 
 
 def test_price_history_price_matches_signed_sum_each_row(make_custom):
@@ -248,7 +248,7 @@ def test_price_history_price_matches_signed_sum_each_row(make_custom):
     last_date = c.options[0].quote_datetime
     keys = sorted(k for k in u0 if k <= last_date)
 
-    for i, entry in enumerate(c.get_price_history()):
+    for i, entry in enumerate(c.get_history()):
         k = keys[i]
         expected = u0[k]['price'] - u1[k]['price'] + u2[k]['price']
         assert entry['price'] == pytest.approx(expected, abs=0.01)
@@ -259,16 +259,16 @@ def test_price_history_spot_price_matches_first_leg(make_custom):
     u0 = c.options[0].updates
     last_date = c.options[0].quote_datetime
     keys = sorted(k for k in u0 if k <= last_date)
-    for i, entry in enumerate(c.get_price_history()):
+    for i, entry in enumerate(c.get_history()):
         assert entry['spot_price'] == u0[keys[i]].get('spot_price')
 
 
 def test_price_history_pnl_is_zero_at_open_bar(make_custom):
-    assert make_custom(fill_factor=1.0).get_price_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
+    assert make_custom(fill_factor=1.0).get_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 
 def test_price_history_pnl_pct_is_zero_at_open_bar(make_custom):
-    assert make_custom(fill_factor=1.0).get_price_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
+    assert make_custom(fill_factor=1.0).get_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 
 def test_price_history_two_leg_custom(make_put_option_380, make_put_option_370):
@@ -276,7 +276,7 @@ def test_price_history_two_leg_custom(make_put_option_380, make_put_option_370):
     opt1 = make_put_option_380(fill_factor=1.0)
     opt2 = make_put_option_370(fill_factor=1.0)
     c = Custom.create(options=[opt1, opt2], quantities=[+1, -1])
-    history = c.get_price_history()
+    history = c.get_history()
     assert len(history) > 0
     for entry in history:
         assert entry.keys() == REQUIRED_HISTORY_KEYS

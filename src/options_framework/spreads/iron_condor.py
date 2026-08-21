@@ -186,13 +186,17 @@ class IronCondor(SpreadBase):
         else:
             return trade_price
 
+    @property
+    def status(self) -> OptionStatus:
+        return self.lower_put.status
+
     def get_required_margin(self, quantity: int) -> float:
         if self.position_type == OptionPositionType.LONG:
             return 0.0
         max_loss = float(decimalize_2(self._wing_width()) - decimalize_2(self.price))
         return max_loss * 100 * abs(quantity)
 
-    def get_price_history(self) -> list[dict]:
+    def get_history(self) -> list[dict]:
         if (OptionStatus.TRADE_IS_OPEN not in self.lower_put.status
                 and OptionStatus.TRADE_IS_CLOSED not in self.lower_put.status):
             raise RuntimeError("Cannot get price history: trade has not been opened.")
@@ -264,3 +268,6 @@ class IronCondor(SpreadBase):
             })
 
         return history
+
+    def get_updates(self) -> list[dict]:
+        pass

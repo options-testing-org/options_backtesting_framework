@@ -186,7 +186,7 @@ class Butterfly(SpreadBase):
     #   LONG butterfly:  net_G = G_lower + G_upper - 2*G_center
     #   SHORT butterfly: net_G = 2*G_center - G_lower - G_upper
     # IV is averaged across the three legs.
-    def get_price_history(self) -> list[dict]:
+    def get_history(self) -> list[dict]:
         if (OptionStatus.TRADE_IS_OPEN not in self.lower_option.status
                 and OptionStatus.TRADE_IS_CLOSED not in self.lower_option.status):
             raise RuntimeError("Cannot get price history: trade has not been opened.")
@@ -311,6 +311,10 @@ class Butterfly(SpreadBase):
         else:
             return float(decimalize_2(wing_width) - decimalize_2(trade_price))
 
+    @property
+    def status(self) -> OptionStatus:
+        return self.center_option.status
+
     def _calculate_price(self, *, lower_price: float, center_price: float, upper_price: float) -> float:
         lower_price = decimalize_2(lower_price)
         center_price = decimalize_2(center_price)
@@ -329,3 +333,6 @@ class Butterfly(SpreadBase):
       Max Profit = net_credit received
       Max Loss   = (center_strike - lower_strike) - net_credit
     """
+
+    def get_updates(self) -> list[dict]:
+        pass

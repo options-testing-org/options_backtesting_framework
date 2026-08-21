@@ -366,19 +366,19 @@ def test_required_margin_uses_absolute_quantity(make_iron_butterfly):
 def test_price_history_raises_before_open(make_iron_butterfly):
     ib = make_iron_butterfly()
     with pytest.raises(RuntimeError, match="trade has not been opened"):
-        ib.get_price_history()
+        ib.get_history()
 
 
 def test_price_history_returns_list(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
-    assert isinstance(ib.get_price_history(), list)
+    assert isinstance(ib.get_history(), list)
 
 
 def test_price_history_each_entry_has_required_keys(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
-    for entry in ib.get_price_history():
+    for entry in ib.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -387,7 +387,7 @@ def test_price_history_length_matches_lower_put_updates(make_iron_butterfly):
     ib._open_trade()
     last_date = ib.lower_put.quote_datetime
     expected_len = sum(1 for k in ib.lower_put.updates if k <= last_date)
-    assert len(ib.get_price_history()) == expected_len
+    assert len(ib.get_history()) == expected_len
 
 
 def test_price_history_price_matches_calculate_price_each_row(make_iron_butterfly):
@@ -400,7 +400,7 @@ def test_price_history_price_matches_calculate_price_each_row(make_iron_butterfl
     last_date = ib.lower_put.quote_datetime
     keys = sorted(k for k in lp_u if k <= last_date)
 
-    for i, entry in enumerate(ib.get_price_history()):
+    for i, entry in enumerate(ib.get_history()):
         k = keys[i]
         expected = ib._calculate_price(
             lower_put_price=lp_u[k]['price'],
@@ -417,26 +417,26 @@ def test_price_history_spot_price_matches_lower_put_updates(make_iron_butterfly)
     lp_u = ib.lower_put.updates
     last_date = ib.lower_put.quote_datetime
     keys = sorted(k for k in lp_u if k <= last_date)
-    for i, entry in enumerate(ib.get_price_history()):
+    for i, entry in enumerate(ib.get_history()):
         assert entry['spot_price'] == lp_u[keys[i]].get('spot_price')
 
 
 def test_price_history_pnl_is_zero_at_open_bar(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
-    assert ib.get_price_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
+    assert ib.get_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 
 def test_price_history_pnl_pct_is_zero_at_open_bar(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
-    assert ib.get_price_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
+    assert ib.get_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 
 def test_price_history_long_iron_butterfly_has_required_keys(make_iron_butterfly):
     ib = make_iron_butterfly(position_type=OptionPositionType.LONG, fill_factor=1.0)
     ib._open_trade()
-    for entry in ib.get_price_history():
+    for entry in ib.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 
@@ -450,7 +450,7 @@ def test_price_history_long_iron_butterfly_price_formula(make_iron_butterfly):
     last_date = ib.lower_put.quote_datetime
     keys = sorted(k for k in lp_u if k <= last_date)
 
-    for i, entry in enumerate(ib.get_price_history()):
+    for i, entry in enumerate(ib.get_history()):
         k = keys[i]
         expected = (lp_u[k]['price'] + uc_u[k]['price']) - (cp_u[k]['price'] + cc_u[k]['price'])
         assert entry['price'] == pytest.approx(expected, abs=0.01)

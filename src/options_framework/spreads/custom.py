@@ -101,7 +101,7 @@ class Custom(SpreadBase):
     def get_required_margin(self, quantity: int) -> float | None:
         return None
 
-    def get_price_history(self) -> list[dict]:
+    def get_history(self) -> list[dict]:
         first = self.options[0]
         if (OptionStatus.TRADE_IS_OPEN not in first.status
                 and OptionStatus.TRADE_IS_CLOSED not in first.status):
@@ -160,3 +160,6 @@ class Custom(SpreadBase):
             })
 
         return history
+
+    def get_updates(self) -> list[dict]:
+        pass

@@ -388,17 +388,17 @@ def test_multiple_rolls_accumulate_records(make_calendar, make_put_option_370):
 
 def test_price_history_raises_before_open(make_calendar):
     with pytest.raises(RuntimeError, match="trade has not been opened"):
-        make_calendar().get_price_history()
+        make_calendar().get_history()
 
 def test_price_history_returns_list(make_calendar):
     cal = make_calendar(fill_factor=1.0)
     cal._open_trade()
-    assert isinstance(cal.get_price_history(), list)
+    assert isinstance(cal.get_history(), list)
 
 def test_price_history_each_entry_has_required_keys(make_calendar):
     cal = make_calendar(fill_factor=1.0)
     cal._open_trade()
-    for entry in cal.get_price_history():
+    for entry in cal.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 def test_price_history_length_matches_near_leg_updates(make_calendar):
@@ -406,7 +406,7 @@ def test_price_history_length_matches_near_leg_updates(make_calendar):
     cal._open_trade()
     last_date = cal.near_option.quote_datetime
     expected_len = sum(1 for k in cal.near_option.updates if k <= last_date)
-    assert len(cal.get_price_history()) == expected_len
+    assert len(cal.get_history()) == expected_len
 
 def test_price_history_price_matches_calculate_price_each_row(make_calendar):
     cal = make_calendar(fill_factor=1.0)
@@ -416,7 +416,7 @@ def test_price_history_price_matches_calculate_price_each_row(make_calendar):
     last_date = cal.near_option.quote_datetime
     keys = sorted(k for k in near_u if k <= last_date)
 
-    for i, entry in enumerate(cal.get_price_history()):
+    for i, entry in enumerate(cal.get_history()):
         k = keys[i]
         expected = cal._calculate_price(
             near_price=near_u[k]['price'],
@@ -430,29 +430,29 @@ def test_price_history_spot_price_matches_near_leg_updates(make_calendar):
     near_u = cal.near_option.updates
     last_date = cal.near_option.quote_datetime
     keys = sorted(k for k in near_u if k <= last_date)
-    for i, entry in enumerate(cal.get_price_history()):
+    for i, entry in enumerate(cal.get_history()):
         assert entry['spot_price'] == near_u[keys[i]].get('spot_price')
 
 def test_price_history_pnl_is_zero_at_open_bar(make_calendar):
     cal = make_calendar(fill_factor=1.0)
     cal._open_trade()
-    assert cal.get_price_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
+    assert cal.get_history()[0]['pnl'] == pytest.approx(0.0, abs=1.0)
 
 def test_price_history_pnl_pct_is_zero_at_open_bar(make_calendar):
     cal = make_calendar(fill_factor=1.0)
     cal._open_trade()
-    assert cal.get_price_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
+    assert cal.get_history()[0]['pnl_pct'] == pytest.approx(0.0, abs=0.01)
 
 def test_price_history_short_calendar_has_required_keys(make_calendar):
     cal = make_calendar(position_type=OptionPositionType.SHORT, fill_factor=1.0)
     cal._open_trade()
-    for entry in cal.get_price_history():
+    for entry in cal.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 def test_price_history_call_calendar_has_required_keys(make_calendar):
     cal = make_calendar(option_type='call', fill_factor=1.0)
     cal._open_trade()
-    for entry in cal.get_price_history():
+    for entry in cal.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 def test_price_history_after_roll_is_longer_than_single_leg(make_calendar, make_put_option_370):
@@ -464,7 +464,7 @@ def test_price_history_after_roll_is_longer_than_single_leg(make_calendar, make_
     new_near = make_put_option_370()
     cal.roll_near(quote_datetime=dt, new_near_option=new_near)
 
-    history = cal.get_price_history()
+    history = cal.get_history()
     original_near_len = sum(1 for k in original_near.updates if k <= original_near.trade_close_info.date)
     new_near_len      = sum(1 for k in new_near.updates if k <= new_near.quote_datetime)
     assert len(history) == original_near_len + new_near_len
@@ -474,7 +474,7 @@ def test_price_history_after_roll_all_entries_have_required_keys(make_calendar, 
     cal._open_trade()
     dt = cal.near_option.quote_datetime
     cal.roll_near(quote_datetime=dt, new_near_option=make_put_option_370())
-    for entry in cal.get_price_history():
+    for entry in cal.get_history():
         assert entry.keys() == REQUIRED_HISTORY_KEYS
 
 def test_price_history_pnl_reflects_adjusted_cost_basis_after_roll(make_calendar, make_put_option_370):
@@ -485,7 +485,7 @@ def test_price_history_pnl_reflects_adjusted_cost_basis_after_roll(make_calendar
     new_near = make_put_option_370()
     cal.roll_near(quote_datetime=dt, new_near_option=new_near)
 
-    history = cal.get_price_history()
+    history = cal.get_history()
     # The first entry of the second segment should reflect the new cost basis
     original_near_len = sum(
         1 for k in cal.roll_records[0].old_option.updates

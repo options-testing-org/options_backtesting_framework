@@ -367,20 +367,20 @@ OPEN_DT = datetime.datetime(2026, 3, 17)
 def test_get_price_history_raises_before_open(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
     with pytest.raises(RuntimeError, match="trade has not been opened"):
-        v.get_price_history()
+        v.get_history()
 
 
 def test_get_price_history_returns_list(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
     v._open_trade(quantity=1)
-    history = v.get_price_history()
+    history = v.get_history()
     assert isinstance(history, list)
 
 
 def test_get_price_history_entries_are_dicts(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
     v._open_trade(quantity=1)
-    history = v.get_price_history()
+    history = v.get_history()
     assert all(isinstance(entry, dict) for entry in history)
 
 
@@ -390,7 +390,7 @@ def test_get_price_history_entry_count_matches_updates(make_vertical, daily_upda
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
     v.long_option._next(quote_datetime=last_date)
     v.short_option._next(quote_datetime=last_date)
-    history = v.get_price_history()
+    history = v.get_history()
     expected_keys = set(daily_updates_put_370.keys()) & set(daily_updates_put_380.keys())
     assert len(history) == len(expected_keys)
 
@@ -398,14 +398,14 @@ def test_get_price_history_entry_count_matches_updates(make_vertical, daily_upda
 def test_get_price_history_first_entry_quote_datetime(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
     v._open_trade(quantity=1)
-    history = v.get_price_history()
+    history = v.get_history()
     assert history[0]['quote_datetime'] == OPEN_DT
 
 
 def test_get_price_history_spread_price_is_long_minus_short(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
     v._open_trade(quantity=1)
-    history = v.get_price_history()
+    history = v.get_history()
     # 370 put price=2.31, 380 put price=3.78 at open
     assert history[0]['price'] == pytest.approx(-1.47, abs=0.01)
 
@@ -413,7 +413,7 @@ def test_get_price_history_spread_price_is_long_minus_short(make_vertical, daily
 def test_get_price_history_pnl_is_zero_on_open_day(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380, fill_factor=1.0)
     v._open_trade(quantity=1)
-    history = v.get_price_history()
+    history = v.get_history()
     assert history[0]['pnl'] == pytest.approx(0.0, abs=0.01)
 
 
@@ -423,7 +423,7 @@ def test_get_price_history_pnl_second_entry(make_vertical, daily_updates_put_370
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
     v.long_option._next(quote_datetime=last_date)
     v.short_option._next(quote_datetime=last_date)
-    history = v.get_price_history()
+    history = v.get_history()
     # long pnl: (3.72 - 2.31) * 100 * 1 = 141.0
     # short pnl: (5.93 - 3.78) * 100 * -1 = -215.0
     # spread pnl = -74.0
@@ -433,7 +433,7 @@ def test_get_price_history_pnl_second_entry(make_vertical, daily_updates_put_370
 def test_get_price_history_contains_expected_keys(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
     v._open_trade(quantity=1)
-    history = v.get_price_history()
+    history = v.get_history()
     expected_keys = {'quote_datetime', 'price', 'spot_price', 'pnl', 'pnl_pct',
                      'delta', 'gamma', 'theta', 'vega', 'rho', 'iv'}
     assert set(history[0].keys()) == expected_keys
@@ -442,7 +442,7 @@ def test_get_price_history_contains_expected_keys(make_vertical, daily_updates_p
 def test_get_price_history_greeks_are_netted(make_vertical, daily_updates_put_370, daily_updates_put_380):
     v = make_vertical(long_updates=daily_updates_put_370, short_updates=daily_updates_put_380)
     v._open_trade(quantity=1)
-    history = v.get_price_history()
+    history = v.get_history()
     # delta: -0.1426 - (-0.2218) = 0.0792
     assert history[0]['delta'] == pytest.approx(0.0792, abs=0.0001)
 
@@ -454,7 +454,7 @@ def test_get_price_history_bounded_by_close_date(make_vertical, daily_updates_pu
     v.long_option._next(quote_datetime=close_dt)
     v.short_option._next(quote_datetime=close_dt)
     v._close_trade(quote_datetime=close_dt)
-    history = v.get_price_history()
+    history = v.get_history()
     assert all(entry['quote_datetime'] <= close_dt for entry in history)
     assert history[-1]['quote_datetime'] == close_dt
 
@@ -464,7 +464,7 @@ def test_get_price_history_pnl_pct_second_entry(make_vertical, daily_updates_put
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
     v.long_option._next(quote_datetime=last_date)
     v.short_option._next(quote_datetime=last_date)
-    history = v.get_price_history()
+    history = v.get_history()
     actual_pnl = history[1]['pnl']
     trade_price = abs(v.get_trade_price())
     expected_pct = round(actual_pnl / (trade_price * 100), 4)

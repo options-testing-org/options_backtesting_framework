@@ -191,6 +191,10 @@ class IronButterfly(SpreadBase):
         else:
             return trade_price
 
+    @property
+    def status(self) -> OptionStatus:
+        return self.center_put.status
+
     def get_required_margin(self, quantity: int) -> float:
         if self.position_type == OptionPositionType.LONG:
             return 0.0
@@ -201,7 +205,7 @@ class IronButterfly(SpreadBase):
         max_loss = float(decimalize_2(wing_width) - decimalize_2(self.price))
         return max_loss * 100 * abs(quantity)
 
-    def get_price_history(self) -> list[dict]:
+    def get_history(self) -> list[dict]:
         if (OptionStatus.TRADE_IS_OPEN not in self.lower_put.status
                 and OptionStatus.TRADE_IS_CLOSED not in self.lower_put.status):
             raise RuntimeError("Cannot get price history: trade has not been opened.")
@@ -220,7 +224,10 @@ class IronButterfly(SpreadBase):
         cc_updates = self.center_call.updates
         uc_updates = self.upper_call.updates
 
-        keys = [k for k in lp_updates if k <= last_date]
+        keys = sorted(
+            set(lp_updates.keys()) & set(cp_updates.keys() & set(cc_updates.keys() & uc_updates.keys()))
+        )
+        keys = [k for k in keys if k <= last_date]
 
         history = []
         for k in keys:
@@ -273,3 +280,6 @@ class IronButterfly(SpreadBase):
             })
 
         return history
+
+    def get_updates(self) -> list[dict]:
+        pass

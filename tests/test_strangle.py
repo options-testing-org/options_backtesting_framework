@@ -263,13 +263,13 @@ def test_symbol_from_spread_base(make_strangle):
 def test_get_price_history_raises_before_open(make_strangle):
     s = make_strangle()
     with pytest.raises(RuntimeError, match="trade has not been opened"):
-        s.get_price_history()
+        s.get_history()
 
 
 def test_get_price_history_returns_list(make_strangle):
     s = make_strangle()
     s._open_trade(quantity=-1)
-    assert isinstance(s.get_price_history(), list)
+    assert isinstance(s.get_history(), list)
 
 
 def test_get_price_history_entry_count_matches_updates(make_strangle, daily_updates_call_390, daily_updates_put_380):
@@ -278,7 +278,7 @@ def test_get_price_history_entry_count_matches_updates(make_strangle, daily_upda
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
     s.call._next(last_date)
     s.put._next(last_date)
-    history = s.get_price_history()
+    history = s.get_history()
     expected = len(set(daily_updates_call_390.keys()) & set(daily_updates_put_380.keys()))
     assert len(history) == expected
 
@@ -286,7 +286,7 @@ def test_get_price_history_entry_count_matches_updates(make_strangle, daily_upda
 def test_get_price_history_contains_expected_keys(make_strangle):
     s = make_strangle()
     s._open_trade(quantity=-1)
-    history = s.get_price_history()
+    history = s.get_history()
     expected_keys = {'quote_datetime', 'price', 'spot_price', 'pnl', 'pnl_pct',
                      'delta', 'gamma', 'theta', 'vega', 'rho', 'iv'}
     assert set(history[0].keys()) == expected_keys
@@ -295,7 +295,7 @@ def test_get_price_history_contains_expected_keys(make_strangle):
 def test_get_price_history_spread_price_is_call_plus_put(make_strangle):
     s = make_strangle()
     s._open_trade(quantity=-1)
-    history = s.get_price_history()
+    history = s.get_history()
     # call=16.78, put=3.78 at open
     assert history[0]['price'] == pytest.approx(20.55, abs=0.01)
 
@@ -303,7 +303,7 @@ def test_get_price_history_spread_price_is_call_plus_put(make_strangle):
 def test_get_price_history_pnl_zero_on_open_day(make_strangle):
     s = make_strangle(fill_factor=1.0)
     s._open_trade(quantity=-1)
-    history = s.get_price_history()
+    history = s.get_history()
     assert history[0]['pnl'] == pytest.approx(0.0, abs=0.01)
 
 
@@ -313,7 +313,7 @@ def test_get_price_history_pnl_second_entry(make_strangle):
     last_date = datetime.datetime(2026, 4, 10, 0, 0)
     s.call._next(last_date)
     s.put._next(last_date)
-    history = s.get_price_history()
+    history = s.get_history()
     # call pnl: (12.13 - 16.78) * 100 * -1 = 465.0
     # put pnl:  (5.93 - 3.78) * 100 * -1   = -215.0
     # spread pnl = 250.0
@@ -323,7 +323,7 @@ def test_get_price_history_pnl_second_entry(make_strangle):
 def test_get_price_history_greeks_are_netted(make_strangle):
     s = make_strangle()
     s._open_trade(quantity=-1)
-    history = s.get_price_history()
+    history = s.get_history()
     # delta: 0.6618 + (-0.2218) = 0.44
     assert history[0]['delta'] == pytest.approx(0.44, abs=0.0001)
 
@@ -335,6 +335,6 @@ def test_get_price_history_bounded_by_close_date(make_strangle):
     s.call._next(close_dt)
     s.put._next(close_dt)
     s._close_trade(quote_datetime=close_dt)
-    history = s.get_price_history()
+    history = s.get_history()
     assert all(entry['quote_datetime'] <= close_dt for entry in history)
     assert history[-1]['quote_datetime'] == close_dt

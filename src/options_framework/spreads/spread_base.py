@@ -87,6 +87,11 @@ class SpreadBase(ABC):
     def max_loss(self) -> float | None:
         raise NotImplementedError
 
+    @property
+    @abstractmethod
+    def status(self) -> OptionStatus:
+        raise NotImplementedError
+
 
     @abstractmethod
     def get_required_margin(self, quantity: int) -> float:
@@ -153,10 +158,9 @@ class SpreadBase(ABC):
 
     def get_open_datetime(self) -> datetime.datetime | None:
         first_option = self.options[0]
-        if (OptionStatus.TRADE_IS_OPEN & OptionStatus.TRADE_IS_CLOSED) not in first_option.status:
+        if first_option.trade_open_info is None:
             return None
-        open_date = first_option.trade_open_info.date
-        return open_date
+        return first_option.trade_open_info.date
 
     def get_close_datetime(self):
         closed_options = [x for x in self.options if OptionStatus.TRADE_IS_CLOSED in x.status]
@@ -183,6 +187,10 @@ class SpreadBase(ABC):
         return fees
 
     @abstractmethod
-    def get_price_history(self) -> list[tuple]:
+    def get_history(self) -> list[dict]:
+        raise NotImplementedError
+
+    @abstractmethod
+    def get_updates(self) -> list[dict]:
         raise NotImplementedError
 
