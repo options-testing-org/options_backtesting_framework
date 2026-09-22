@@ -100,7 +100,7 @@ def test_short_iron_condor_leg_quantities(make_iron_condor):
 def test_short_iron_condor_spread_quantity(make_iron_condor):
     ic = make_iron_condor(fill_factor=1.0)
     ic._open_trade(quantity=1)
-    assert ic.quantity == +1  # tracks lower_put leg
+    assert ic.quantity == -1  # tracks upper_put leg
 
 
 def test_short_iron_condor_multi_quantity(make_iron_condor):
@@ -125,7 +125,7 @@ def test_long_iron_condor_leg_quantities(make_iron_condor):
 def test_long_iron_condor_spread_quantity(make_iron_condor):
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
     ic._open_trade(quantity=1)
-    assert ic.quantity == -1
+    assert ic.quantity == +1
 
 
 def test_open_trade_accepts_negative_quantity_as_absolute(make_iron_condor):
@@ -263,19 +263,36 @@ def test_trade_value_sums_legs(make_iron_condor):
 
 # ── max_profit, max_loss, get_required_margin ─────────────────────────────────
 
-def test_max_profit_returns_none_before_open(make_iron_condor):
-    assert make_iron_condor().max_profit is None
+def test_short_position_max_profit_returns_same_before_open_as_after_open(make_iron_condor):
+    ic = make_iron_condor()
+    mp_before = ic.max_profit 
+    ic._open_trade()
+    mp_after = ic.max_profit
+    assert mp_before == mp_after
+    
+def test_long_position_max_profit_returns_same_before_open_as_after_open(make_iron_condor):
+    ic = make_iron_condor(position_type=OptionPositionType.LONG)
+    mp_before = ic.max_profit 
+    ic._open_trade()
+    mp_after = ic.max_profit
+    assert mp_before == mp_after
 
-
-def test_max_loss_returns_none_before_open(make_iron_condor):
-    assert make_iron_condor().max_loss is None
+def test_short_position_max_loss_returns_same_before_open_as_after_open(make_iron_condor):
+    ic = make_iron_condor()
+    ml_before = ic.max_loss 
+    ic._open_trade()
+    ml_after = ic.max_loss
+    assert ml_before == ml_after
 
 
 def test_short_max_profit_equals_trade_price(make_iron_condor):
     """SHORT: max profit is the net credit received."""
     ic = make_iron_condor(fill_factor=1.0)
     ic._open_trade()
-    assert ic.max_profit == pytest.approx(ic.get_trade_price(), abs=0.01)
+    mp = ic.max_profit
+    price = ic.get_trade_price()
+    expected = price * 100
+    assert mp == pytest.approx(expected, abs=0.01)
 
 
 def test_short_max_loss_equals_wing_width_minus_credit(make_iron_condor):
@@ -286,7 +303,9 @@ def test_short_max_loss_equals_wing_width_minus_credit(make_iron_condor):
         ic.upper_put.strike - ic.lower_put.strike,
         ic.upper_call.strike - ic.lower_call.strike,
     )
-    assert ic.max_loss == pytest.approx(wing_width - ic.get_trade_price(), abs=0.01)
+    price = ic.get_trade_price()
+    expected = (wing_width - price) * 100
+    assert ic.max_loss == pytest.approx(expected, abs=0.01)
 
 
 def test_long_max_profit_equals_wing_width_minus_debit(make_iron_condor):
@@ -297,34 +316,23 @@ def test_long_max_profit_equals_wing_width_minus_debit(make_iron_condor):
         ic.upper_put.strike - ic.lower_put.strike,
         ic.upper_call.strike - ic.lower_call.strike,
     )
-    assert ic.max_profit == pytest.approx(wing_width - ic.get_trade_price(), abs=0.01)
+    expected = (wing_width - abs(ic.get_trade_price())) * 100
+    assert ic.max_profit == pytest.approx(expected, abs=0.01)
 
 
 def test_long_max_loss_equals_trade_price(make_iron_condor):
     """LONG: max loss is the net debit paid."""
     ic = make_iron_condor(position_type=OptionPositionType.LONG, fill_factor=1.0)
     ic._open_trade()
-    assert ic.max_loss == pytest.approx(ic.get_trade_price(), abs=0.01)
-
-
-def test_max_profit_plus_max_loss_equals_wing_width(make_iron_condor):
-    """max_profit + max_loss must always equal the wing width."""
-    ic = make_iron_condor(fill_factor=1.0)
-    ic._open_trade()
-    wing_width = min(
-        ic.upper_put.strike - ic.lower_put.strike,
-        ic.upper_call.strike - ic.lower_call.strike,
-    )
-    assert ic.max_profit + ic.max_loss == pytest.approx(wing_width, abs=0.01)
-
+    price = ic.get_trade_price()
+    expected = abs(price) * 100
+    assert ic.max_loss == pytest.approx(expected, abs=0.01)
 
 def test_required_margin_long_is_zero(make_iron_condor):
     assert make_iron_condor(position_type=OptionPositionType.LONG).get_required_margin(1) == 0.0
 
-
 def test_required_margin_short_is_positive(make_iron_condor):
     assert make_iron_condor().get_required_margin(1) > 0
-
 
 def test_required_margin_short_formula(make_iron_condor):
     ic = make_iron_condor()

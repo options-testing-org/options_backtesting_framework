@@ -648,6 +648,11 @@ def test_is_expired_before_expiration_date_returns_false(make_put_option_380):
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=datetime.datetime(2024, 3, 1, 10, 0),
     )
+    
+    dt = datetime.datetime(2024, 3, 1, 10, 0)
+    opt._open_trade(quantity=1)
+    opt._next(dt)
+    
     assert opt.is_expired() is False
     assert OptionStatus.EXPIRED not in opt.status
 
@@ -658,6 +663,11 @@ def test_is_expired_morning_of_expiration_returns_false(make_put_option_380):
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=datetime.datetime(2024, 3, 15, 9, 30),
     )
+    
+    dt = datetime.datetime(2024, 3, 1, 10, 0)
+    opt._open_trade(quantity=1)
+    opt._next(dt)
+    
     assert opt.is_expired() is False
     assert OptionStatus.EXPIRED not in opt.status
 
@@ -668,6 +678,11 @@ def test_is_expired_one_minute_before_settlement_returns_false(make_put_option_3
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=datetime.datetime(2024, 3, 15, 15, 59),
     )
+    
+    dt = datetime.datetime(2024, 3, 1, 10, 0)
+    opt._open_trade(quantity=1)
+    opt._next(dt)
+    
     assert opt.is_expired() is False
     assert OptionStatus.EXPIRED not in opt.status
 
@@ -682,6 +697,11 @@ def test_is_expired_at_settlement_time_returns_true(make_put_option_380):
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=datetime.datetime(2024, 3, 15, 16, 0),
     )
+    
+    dt = datetime.datetime(2024, 3, 15, 16, 0)
+    opt._open_trade(quantity=1)
+    opt._next(dt)
+        
     assert opt.is_expired() is True
     assert OptionStatus.EXPIRED in opt.status
 
@@ -692,6 +712,11 @@ def test_is_expired_after_settlement_time_returns_true(make_put_option_380):
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=datetime.datetime(2024, 3, 15, 16, 15),
     )
+    
+    dt = datetime.datetime(2024, 3, 15, 16, 15)
+    opt._open_trade(quantity=1)
+    opt._next(dt)
+        
     assert opt.is_expired() is True
     assert OptionStatus.EXPIRED in opt.status
 
@@ -702,8 +727,11 @@ def test_is_expired_day_after_expiration_returns_true(make_put_option_380):
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=datetime.datetime(2024, 3, 1, 10, 0),
     )
-    opt.quote_datetime = datetime.datetime(2024, 3, 16, 9, 30)
-    assert opt.is_expired() is True
+    opt._open_trade(quantity=1)
+    dt = datetime.datetime(2024, 3, 16, 9, 30)
+    opt._next(dt)
+    
+    assert opt.is_expired() == True
     assert OptionStatus.EXPIRED in opt.status
 
 
@@ -712,11 +740,13 @@ def test_is_expired_emits_option_expired_event(make_put_option_380):
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=datetime.datetime(2024, 3, 15, 16, 0),
     )
-
+    
     events = _capture_events(opt, "option_expired")
     opt.bind(option_expired=lambda *args, **kwargs: events.append((args, kwargs)))
-
-    opt.is_expired()
+    
+    opt._open_trade(quantity=1)
+    dt = datetime.datetime(2024, 3, 15, 16, 0)
+    opt._next(dt)
 
     assert len(events) == 1
     event_vals = events[0]
@@ -732,7 +762,9 @@ def test_is_expired_does_not_emit_when_not_expired(make_put_option_380):
     events = _capture_events(opt, "option_expired")
     opt.bind(option_expired=lambda *args, **kwargs: events.append((args, kwargs)))
 
-    opt.is_expired()
+    dt = datetime.datetime(2024, 3, 1, 10, 0)
+    opt._open_trade(quantity=1)
+    opt._next(dt)
 
     assert len(events) == 0
 
@@ -746,7 +778,16 @@ def test_is_expired_idempotent_returns_true_on_second_call(make_put_option_380):
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=datetime.datetime(2024, 3, 15, 16, 0),
     )
+    
+    dt = datetime.datetime(2024, 3, 15, 16, 0)
+    opt._open_trade(quantity=1)
+    opt._next(dt)
+    
     assert opt.is_expired() is True
+    
+    dt = dt + datetime.timedelta(minutes=1)
+    opt._next(dt)
+    
     assert opt.is_expired() is True
 
 
@@ -758,8 +799,17 @@ def test_is_expired_does_not_re_emit_on_second_call(make_put_option_380):
     events = _capture_events(opt, "option_expired")
     opt.bind(option_expired=lambda *args, **kwargs: events.append(kwargs))
 
+    dt = datetime.datetime(2024, 3, 15, 16, 0)
+    opt._open_trade(quantity=1)
+    opt._next(dt)
+        
     opt.is_expired()
+    dt = dt + datetime.timedelta(minutes=1)
+    opt._next(dt)
     opt.is_expired()
+    
+    dt = dt + datetime.timedelta(minutes=1)
+    opt._next(dt)    
     opt.is_expired()
 
     assert len(events) == 1, "option_expired should fire exactly once"
@@ -781,7 +831,8 @@ def test_is_expired_preserves_trade_is_open_flag(make_put_option_380):
     assert OptionStatus.TRADE_IS_OPEN in opt.status
 
     # Advance to expiration
-    opt.quote_datetime = datetime.datetime(2024, 3, 15, 16, 0)
+    dt = datetime.datetime(2024, 3, 15, 16, 0)
+    opt._next(dt)
     opt.is_expired()
 
     assert OptionStatus.EXPIRED in opt.status
@@ -800,7 +851,8 @@ def test_is_expired_preserves_trade_is_closed_flag(make_put_option_380):
     opt._close_trade(quote_datetime=close_datetime, )
     assert OptionStatus.TRADE_IS_CLOSED in opt.status
 
-    opt.quote_datetime = datetime.datetime(2024, 3, 15, 16, 0)
+    dt = datetime.datetime(2024, 3, 15, 16, 0)
+    opt._next(dt)
     opt.is_expired()
 
     assert OptionStatus.EXPIRED in opt.status
@@ -817,6 +869,9 @@ def test_is_expired_accepts_pd_timestamp_not_yet_expired(make_put_option_380):
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=pd.Timestamp("2024-03-01 10:00:00"),
     )
+    
+    opt._open_trade(quantity=1)
+    opt._next(pd.Timestamp("2024-03-01 10:00:00"))
     assert opt.is_expired() is False
 
 
@@ -825,6 +880,10 @@ def test_is_expired_accepts_pd_timestamp_after_expiration(make_put_option_380):
         expiration=datetime.date(2024, 3, 15),
         quote_datetime=pd.Timestamp("2024-03-15 16:00:00"),
     )
+    opt._open_trade(quantity=1)
+    dt = pd.Timestamp("2024-03-15 16:00:00")
+    opt._next(dt)
+    
     assert opt.is_expired() is True
     assert OptionStatus.EXPIRED in opt.status
 
@@ -836,6 +895,10 @@ def test_is_expired_accepts_pd_timestamp_emits_event(make_put_option_380):
     )
     events = _capture_events(opt, "option_expired")
     opt.bind(option_expired=lambda *args, **kwargs: events.append(kwargs))
+    
+    opt._open_trade(quantity=1)
+    dt = pd.Timestamp("2024-03-15 16:30:00")
+    opt._next(dt)
 
     opt.is_expired()
 

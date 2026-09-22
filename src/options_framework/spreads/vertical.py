@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from options_framework.option_types import OptionPositionType, OptionSpreadType, OptionStatus
 from options_framework.option_chain import OptionChain
 from options_framework.spreads.spread_base import SpreadBase
-from options_framework.utils.helpers import decimalize_2
+from options_framework.utils.helpers import decimalize_2, decimalize_4
 from options_framework.option import Option
 import datetime
 from typing import Self
@@ -143,12 +143,23 @@ class Vertical(SpreadBase):
         return self.short_option.status
 
     def get_required_margin(self, quantity: int) -> float:
-        if OptionStatus.TRADE_IS_OPEN not in self.long_option.status:
-            return 0
-        elif self.position_type == OptionPositionType.LONG:
-            return 0
-        elif self.position_type == OptionPositionType.SHORT:
-            return abs((self.short_option.strike - self.long_option.strike) * 100 * self.quantity)
+        if OptionStatus.INITIALIZED in self.long_option.status:
+            long_price = self.long_option.get_open_price(position_type=OptionPositionType.LONG)
+            short_price = self.short_option.get_open_price(position_type=OptionPositionType.SHORT)
+        else:
+            long_price = self.long_option.trade_open_info.price
+            short_price = self.short_option.trade_open_info.price
+        price = long_price - short_price
+        
+        if self.position_type == OptionPositionType.LONG:
+            required_margin = 0
+        else:
+            spread_width = abs(self.short_option.strike - self.long_option.strike)
+            required_margin = (spread_width - abs(price)) * 100
+            
+        required_margin = required_margin * quantity
+            
+        return round(required_margin, 2)
 
     @property
     def price(self) -> float:
@@ -278,31 +289,49 @@ class Vertical(SpreadBase):
             set(self.long_option.updates.keys()) & set(self.short_option.updates.keys())
         )
 
-        start_long_price = self.long_option.updates[keys[0]]['price']
-        start_short_price = self.short_option.updates[keys[0]]['price']
-
-        premium = round((start_long_price - start_short_price) * 100, 2)
+        start_long_price = decimalize_2(self.long_option.updates[keys[0]]['price'])
+        start_short_price = decimalize_2(self.short_option.updates[keys[0]]['price'])
+        start_price = start_long_price - start_short_price
 
         updates = []
         for k in keys:
             long_update = self.long_option.updates[k]
             short_update = self.short_option.updates[k]
 
-            long_price = round(float(long_update['price']), 2)
-            long_pnl = round((long_price - start_long_price) * 100 , 2)
+            long_price = decimalize_2(long_update['price'])
+            short_price = decimalize_2(short_update['price'])
+            price = long_price - short_price
 
-            short_price = round(float(short_update['price']), 2)
-            short_pnl = round((short_price - start_short_price) * 100, 2)
+            if long_price == short_price == 0:
+                continue # bad data
 
-            spread_price = round(long_price - short_price, 2)
-            spread_pnl = round(long_pnl + short_pnl, 2)
-            pnl_pct = round(spread_pnl / premium, 4) if premium != 0 else 0.0
+            if self.position_type == OptionPositionType.SHORT:
+                pnl = (abs(start_price)-abs(price))*100*self.quantity
+                pnl_pct = decimalize_4((start_price - price)/start_price)
+            else:
+                pnl = (price - start_price)/start_price
+                pnl_pct = decimalize_4((price - start_price)/start_price)
+            
+            def net(field):
+                lv = long_update.get(field)
+                sv = short_update.get(field)
+                return round(float(lv) - float(sv), 4) if lv is not None and sv is not None else None
 
             updates.append({
                'quote_datetime': k,
-               'price': spread_price,
-               'pnl': spread_pnl,
-               'pnl_pct': pnl_pct
+            #    'start_short_price': start_short_price, 
+            #    'start_long_price': start_long_price,
+            #    'short_price': short_price,
+            #    'long_price': long_price,
+               'spot_price': long_update.get('spot_price'),
+               'pnl': float(pnl),
+               'pnl_pct': float(pnl_pct),
+               'delta': net('delta'),
+                'gamma': net('gamma'),
+                'theta': net('theta'),
+                'vega': net('vega'),
+                'rho': net('rho'),
+                'iv': net('implied_volatility'),
             })
 
         return updates

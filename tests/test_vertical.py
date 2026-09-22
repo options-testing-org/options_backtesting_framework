@@ -321,9 +321,12 @@ def test_max_loss_short_equals_spread_width_minus_credit(make_vertical):
 
 # ── get_required_margin ───────────────────────────────────────────────────────
 
-def test_get_required_margin_returns_zero_before_open(make_vertical):
+def test_get_required_margin_returns_same_price_before_open_and_after_open(make_vertical):
     v = make_vertical()
-    assert v.get_required_margin(1) == 0
+    before = v.get_required_margin(1)
+    v._open_trade(quantity=1)
+    after = v.get_required_margin(1)
+    assert before == after
 
 
 def test_get_required_margin_returns_zero_for_long(make_vertical):
@@ -335,7 +338,9 @@ def test_get_required_margin_returns_zero_for_long(make_vertical):
 def test_get_required_margin_short_equals_strike_width_times_quantity(make_vertical):
     v = make_vertical(position_type=OptionPositionType.SHORT)
     v._open_trade(quantity=2)
-    expected = abs((SHORT_STRIKE - LONG_STRIKE) * 100 * 2)
+    wing_width = abs((SHORT_STRIKE - LONG_STRIKE))
+    price = abs(v.get_trade_price())
+    expected = abs((wing_width - price) * 100 * 2)
     assert v.get_required_margin(2) == pytest.approx(expected)
 
 

@@ -8,8 +8,8 @@ from conftest import REQUIRED_HISTORY_KEYS
 def test_post_init_assigns_leg_references(make_iron_butterfly):
     ib = make_iron_butterfly()
     assert ib.lower_put is ib.options[0]
-    assert ib.center_put is ib.options[1]
-    assert ib.center_call is ib.options[2]
+    assert ib.upper_put is ib.options[1]
+    assert ib.lower_call is ib.options[2]
     assert ib.upper_call is ib.options[3]
 
 
@@ -69,16 +69,16 @@ def test_equality_based_on_instance_id(make_iron_butterfly):
 # ── Price calculation ─────────────────────────────────────────────────────────
 
 def test_short_iron_butterfly_price_formula(make_iron_butterfly):
-    """SHORT: price = (center_put + center_call) - (lower_put + upper_call)"""
+    """SHORT: price = (upper_put + lower_call) - (lower_put + upper_call)"""
     ib = make_iron_butterfly()
-    expected = (ib.center_put.price + ib.center_call.price) - (ib.lower_put.price + ib.upper_call.price)
+    expected = (ib.upper_put.price + ib.lower_call.price) - (ib.lower_put.price + ib.upper_call.price)
     assert ib.price == pytest.approx(expected, abs=0.01)
 
 
 def test_long_iron_butterfly_price_formula(make_iron_butterfly):
-    """LONG: price = (lower_put + upper_call) - (center_put + center_call)"""
+    """LONG: price = (lower_put + upper_call) - (upper_put + lower_call)"""
     ib = make_iron_butterfly(position_type=OptionPositionType.LONG)
-    expected = (ib.lower_put.price + ib.upper_call.price) - (ib.center_put.price + ib.center_call.price)
+    expected = (ib.lower_put.price + ib.upper_call.price) - (ib.upper_put.price + ib.lower_call.price)
     assert ib.price == pytest.approx(expected, abs=0.01)
 
 
@@ -95,23 +95,23 @@ def test_short_iron_butterfly_leg_quantities(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade(quantity=1)
     assert ib.lower_put.quantity == +1
-    assert ib.center_put.quantity == -1
-    assert ib.center_call.quantity == -1
+    assert ib.upper_put.quantity == -1
+    assert ib.lower_call.quantity == -1
     assert ib.upper_call.quantity == +1
 
 
 def test_short_iron_butterfly_spread_quantity(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade(quantity=1)
-    assert ib.quantity == +1  # tracks lower_put leg
+    assert ib.quantity == -1  # tracks upper_put leg
 
 
 def test_short_iron_butterfly_multi_quantity(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade(quantity=3)
     assert ib.lower_put.quantity == +3
-    assert ib.center_put.quantity == -3
-    assert ib.center_call.quantity == -3
+    assert ib.upper_put.quantity == -3
+    assert ib.lower_call.quantity == -3
     assert ib.upper_call.quantity == +3
 
 
@@ -120,15 +120,15 @@ def test_long_iron_butterfly_leg_quantities(make_iron_butterfly):
     ib = make_iron_butterfly(position_type=OptionPositionType.LONG, fill_factor=1.0)
     ib._open_trade(quantity=1)
     assert ib.lower_put.quantity == -1
-    assert ib.center_put.quantity == +1
-    assert ib.center_call.quantity == +1
+    assert ib.upper_put.quantity == +1
+    assert ib.lower_call.quantity == +1
     assert ib.upper_call.quantity == -1
 
 
 def test_long_iron_butterfly_spread_quantity(make_iron_butterfly):
     ib = make_iron_butterfly(position_type=OptionPositionType.LONG, fill_factor=1.0)
     ib._open_trade(quantity=1)
-    assert ib.quantity == -1  # tracks lower_put leg
+    assert ib.quantity == +1  # tracks upper_put leg
 
 
 def test_open_trade_accepts_negative_quantity_as_absolute(make_iron_butterfly):
@@ -136,8 +136,8 @@ def test_open_trade_accepts_negative_quantity_as_absolute(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade(quantity=-2)
     assert ib.lower_put.quantity == +2
-    assert ib.center_put.quantity == -2
-    assert ib.center_call.quantity == -2
+    assert ib.upper_put.quantity == -2
+    assert ib.lower_call.quantity == -2
     assert ib.upper_call.quantity == +2
 
 
@@ -164,8 +164,8 @@ def test_short_trade_price_matches_formula(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
     lp = ib.lower_put.trade_open_info.price
-    cp = ib.center_put.trade_open_info.price
-    cc = ib.center_call.trade_open_info.price
+    cp = ib.upper_put.trade_open_info.price
+    cc = ib.lower_call.trade_open_info.price
     uc = ib.upper_call.trade_open_info.price
     assert ib.get_trade_price() == pytest.approx((cp + cc) - (lp + uc), abs=0.01)
 
@@ -174,8 +174,8 @@ def test_long_trade_price_matches_formula(make_iron_butterfly):
     ib = make_iron_butterfly(position_type=OptionPositionType.LONG, fill_factor=1.0)
     ib._open_trade()
     lp = ib.lower_put.trade_open_info.price
-    cp = ib.center_put.trade_open_info.price
-    cc = ib.center_call.trade_open_info.price
+    cp = ib.upper_put.trade_open_info.price
+    cc = ib.lower_call.trade_open_info.price
     uc = ib.upper_call.trade_open_info.price
     assert ib.get_trade_price() == pytest.approx((lp + uc) - (cp + cc), abs=0.01)
 
@@ -185,7 +185,7 @@ def test_long_trade_price_matches_formula(make_iron_butterfly):
 def test_close_trade_closes_all_legs(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
-    ib._close_trade(quote_datetime=ib.center_put.quote_datetime)
+    ib._close_trade(quote_datetime=ib.upper_put.quote_datetime)
     for leg in ib.options:
         assert OptionStatus.TRADE_IS_CLOSED in leg.status
 
@@ -193,13 +193,13 @@ def test_close_trade_closes_all_legs(make_iron_butterfly):
 def test_close_trade_requires_keyword_only_quote_datetime(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
-    ib._close_trade(quote_datetime=ib.center_put.quote_datetime)  # must not raise
+    ib._close_trade(quote_datetime=ib.upper_put.quote_datetime)  # must not raise
 
 
 def test_close_trade_with_explicit_quantity_does_not_raise(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade(quantity=2)
-    ib._close_trade(quote_datetime=ib.center_put.quote_datetime,
+    ib._close_trade(quote_datetime=ib.upper_put.quote_datetime,
                     quantity=ib.lower_put.quantity)
 
 
@@ -212,26 +212,26 @@ def test_get_closed_price_returns_none_before_close(make_iron_butterfly):
 def test_get_closed_price_returns_float_after_close(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
-    ib._close_trade(quote_datetime=ib.center_put.quote_datetime)
+    ib._close_trade(quote_datetime=ib.upper_put.quote_datetime)
     assert isinstance(ib.get_closed_price(), float)
 
 
 def test_closed_price_matches_formula(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
-    ib._close_trade(quote_datetime=ib.center_put.quote_datetime)
+    ib._close_trade(quote_datetime=ib.upper_put.quote_datetime)
     lp = ib.lower_put.trade_close_info.price
-    cp = ib.center_put.trade_close_info.price
-    cc = ib.center_call.trade_close_info.price
+    cp = ib.upper_put.trade_close_info.price
+    cc = ib.lower_call.trade_close_info.price
     uc = ib.upper_call.trade_close_info.price
     assert ib.get_closed_price() == pytest.approx((cp + cc) - (lp + uc), abs=0.01)
 
 
 # ── DTE & SpreadBase delegation ───────────────────────────────────────────────
 
-def test_dte_delegates_to_center_put(make_iron_butterfly):
+def test_dte_delegates_to_upper_put(make_iron_butterfly):
     ib = make_iron_butterfly()
-    assert ib.get_dte() == ib.center_put.get_dte()
+    assert ib.get_dte() == ib.upper_put.get_dte()
 
 
 def test_dte_is_positive_before_expiry(make_iron_butterfly):
@@ -267,21 +267,29 @@ def test_trade_value_sums_legs(make_iron_butterfly):
     assert ib.trade_value == pytest.approx(sum(o.trade_value for o in ib.options), abs=0.01)
 
 
-def test_max_profit_returns_none_before_open(make_iron_butterfly):
+def test_max_profit_before_open_returns_same_value_as_after_open(make_iron_butterfly):
     ib = make_iron_butterfly()
-    assert ib.max_profit is None
+    mp_before_open =  ib.max_profit
+    ib._open_trade()
+    mp_after_open = ib.max_profit
+    assert mp_before_open == mp_after_open
 
 
-def test_max_loss_returns_none_before_open(make_iron_butterfly):
+def test_max_loss_before_open_returns_same_value_as_after_open(make_iron_butterfly):
     ib = make_iron_butterfly()
-    assert ib.max_loss is None
+    ml_before_open = ib.max_loss
+    ib._open_trade()
+    ml_after_open = ib.max_loss
+    assert ml_before_open == ml_after_open
 
 
 def test_short_max_profit_equals_trade_price(make_iron_butterfly):
     """SHORT: max profit is the net credit received."""
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
-    assert ib.max_profit == pytest.approx(ib.get_trade_price(), abs=0.01)
+    trade_price = ib.get_trade_price()
+    expected = trade_price * 100
+    assert ib.max_profit == pytest.approx(expected, abs=0.01)
 
 
 def test_short_max_loss_equals_wing_width_minus_credit(make_iron_butterfly):
@@ -289,22 +297,22 @@ def test_short_max_loss_equals_wing_width_minus_credit(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
     wing_width = max(
-        ib.center_put.strike - ib.lower_put.strike,
-        ib.upper_call.strike - ib.center_put.strike,
+        ib.upper_put.strike - ib.lower_put.strike,
+        ib.upper_call.strike - ib.lower_call.strike,
     )
-    expected = wing_width - ib.get_trade_price()
+    expected = (wing_width - ib.get_trade_price()) * 100
     assert ib.max_loss == pytest.approx(expected, abs=0.01)
 
 
 def test_long_max_profit_equals_wing_width_minus_debit(make_iron_butterfly):
     """LONG: max profit = wing_width - net debit."""
     ib = make_iron_butterfly(position_type=OptionPositionType.LONG, fill_factor=1.0)
-    ib._open_trade()
+    ib._open_trade(quantity=1)
     wing_width = max(
-        ib.center_put.strike - ib.lower_put.strike,
-        ib.upper_call.strike - ib.center_put.strike,
+        ib.upper_put.strike - ib.lower_put.strike,
+        ib.upper_call.strike - ib.upper_put.strike,
     )
-    expected = wing_width - ib.get_trade_price()
+    expected = (wing_width - abs(ib.get_trade_price())) * 100
     assert ib.max_profit == pytest.approx(expected, abs=0.01)
 
 
@@ -312,7 +320,8 @@ def test_long_max_loss_equals_trade_price(make_iron_butterfly):
     """LONG: max loss is the net debit paid."""
     ib = make_iron_butterfly(position_type=OptionPositionType.LONG, fill_factor=1.0)
     ib._open_trade()
-    assert ib.max_loss == pytest.approx(ib.get_trade_price(), abs=0.01)
+    expected = abs(ib.get_trade_price()) * 100
+    assert ib.max_loss == pytest.approx(expected, abs=0.01)
 
 
 def test_max_profit_plus_max_loss_equals_wing_width(make_iron_butterfly):
@@ -320,10 +329,12 @@ def test_max_profit_plus_max_loss_equals_wing_width(make_iron_butterfly):
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
     wing_width = max(
-        ib.center_put.strike - ib.lower_put.strike,
-        ib.upper_call.strike - ib.center_put.strike,
+        ib.upper_put.strike - ib.lower_put.strike,
+        ib.upper_call.strike - ib.upper_put.strike,
     )
-    assert ib.max_profit + ib.max_loss == pytest.approx(wing_width, abs=0.01)
+    max_profit= ib.max_profit
+    max_loss = ib.max_loss
+    assert (ib.max_profit + ib.max_loss)/100 == pytest.approx(wing_width, abs=0.01)
 
 
 # ── get_required_margin ───────────────────────────────────────────────────────
@@ -343,8 +354,8 @@ def test_required_margin_short_formula(make_iron_butterfly):
     """SHORT margin = (wing_width - current_price) * 100 * quantity."""
     ib = make_iron_butterfly()
     wing_width = max(
-        ib.center_put.strike - ib.lower_put.strike,
-        ib.upper_call.strike - ib.center_put.strike,
+        ib.upper_put.strike - ib.lower_put.strike,
+        ib.upper_call.strike - ib.upper_put.strike,
     )
     expected = (wing_width - ib.price) * 100 * 1
     assert ib.get_required_margin(1) == pytest.approx(expected, abs=1.0)
@@ -394,8 +405,8 @@ def test_price_history_price_matches_calculate_price_each_row(make_iron_butterfl
     ib = make_iron_butterfly(fill_factor=1.0)
     ib._open_trade()
     lp_u = ib.lower_put.updates
-    cp_u = ib.center_put.updates
-    cc_u = ib.center_call.updates
+    cp_u = ib.upper_put.updates
+    cc_u = ib.lower_call.updates
     uc_u = ib.upper_call.updates
     last_date = ib.lower_put.quote_datetime
     keys = sorted(k for k in lp_u if k <= last_date)
@@ -404,8 +415,8 @@ def test_price_history_price_matches_calculate_price_each_row(make_iron_butterfl
         k = keys[i]
         expected = ib._calculate_price(
             lower_put_price=lp_u[k]['price'],
-            center_put_price=cp_u[k]['price'],
-            center_call_price=cc_u[k]['price'],
+            upper_put_price=cp_u[k]['price'],
+            lower_call_price=cc_u[k]['price'],
             upper_call_price=uc_u[k]['price'],
         )
         assert entry['price'] == pytest.approx(expected, abs=0.01)
@@ -444,8 +455,8 @@ def test_price_history_long_iron_butterfly_price_formula(make_iron_butterfly):
     ib = make_iron_butterfly(position_type=OptionPositionType.LONG, fill_factor=1.0)
     ib._open_trade()
     lp_u = ib.lower_put.updates
-    cp_u = ib.center_put.updates
-    cc_u = ib.center_call.updates
+    cp_u = ib.upper_put.updates
+    cc_u = ib.lower_call.updates
     uc_u = ib.upper_call.updates
     last_date = ib.lower_put.quote_datetime
     keys = sorted(k for k in lp_u if k <= last_date)

@@ -163,3 +163,7 @@ class Custom(SpreadBase):
 
     def get_updates(self) -> list[dict]:
         pass
+
+    @property
+    def status(self):
+        return self.options[0].status

@@ -228,7 +228,8 @@ class Option(Dispatcher):
         updates = self.updates.get(quote_datetime, None)
         if updates is None:
             if OptionStatus.EXPIRED in self.status:
-                updates = self.updates[-1]
+                keys = list(self.updates.keys())
+                updates = self.updates[keys[-1]]
             else:
                 return
 
@@ -296,7 +297,7 @@ class Option(Dispatcher):
         if quantity > 0:
             ask = self.ask - fill_factor*(self.ask - self.price)
             fill_price = decimalize_2(ask)
-            if fill_price <= 0:
+            if fill_price < 0:
                 raise ValueError(f"Cannot open LONG with non-positive ask for {self.option_id}")
             premium = float(+fill_price * 100 * abs(quantity))  # cash outflow
             self.position_type = OptionPositionType.LONG
@@ -641,7 +642,7 @@ class Option(Dispatcher):
         if OptionStatus.TRADE_IS_OPEN not in self.status and OptionStatus.TRADE_IS_CLOSED not in self.status:
             raise Exception("This option has not been traded.")
 
-        unrealized_pnl = self.get_unrealized_profit_loss()
+        unrealized_pnl = self.get_unrealized_profit_loss() 
         # if no contracts were closed, this is just the open pnl
         if not self.trade_close_records:
             return unrealized_pnl

@@ -3,7 +3,7 @@ import datetime
 from options_framework.utils.helpers import decimalize_2
 from options_framework.option import Option
 from options_framework.option_chain import OptionChain
-from options_framework.option_types import OptionSpreadType, OptionStatus
+from options_framework.option_types import OptionSpreadType, OptionStatus, OptionPositionType
 from options_framework.spreads.spread_base import SpreadBase
 from typing import Self
 
@@ -34,6 +34,7 @@ class Ratio(SpreadBase):
                long_strike: int | float = None,
                short_strike: int | float = None,
                ratio: int = 2,
+               position_type: OptionPositionType = OptionPositionType.SHORT,
                *args, **kwargs) -> Self:
 
         if long_strike == short_strike:
@@ -54,7 +55,10 @@ class Ratio(SpreadBase):
         short_strike = min(expiration_strikes, key=lambda x: abs(x - short_strike))
 
         long_option  = Option(**next(o for o in options if o['strike'] == long_strike))
+        long_option.position_type = OptionPositionType.LONG if position_type == OptionPositionType.SHORT else OptionPositionType.SHORT
+        
         short_option = Option(**next(o for o in options if o['strike'] == short_strike))
+        short_option.position_type = OptionPositionType.SHORT if position_type == OptionPositionType.SHORT else OptionPositionType.LONG
 
         ratio_spread = Ratio(
             options=[long_option, short_option],
@@ -114,6 +118,8 @@ class Ratio(SpreadBase):
                 short_price=self.short_option.trade_close_info.price,
             )
         return None
+    
+
 
     def get_dte(self) -> int | None:
         return self.long_option.get_dte()
@@ -150,7 +156,10 @@ class Ratio(SpreadBase):
         long_updates  = self.long_option.updates
         short_updates = self.short_option.updates
 
-        keys = [k for k in long_updates if k <= last_date]
+        long_keys = [k for k in long_updates if k <= last_date]
+        short_keys = [k for k in short_updates if k <= last_date]
+        keys = list(set(long_keys) & set(short_keys))
+        keys.sort()
 
         history = []
         for k in keys:

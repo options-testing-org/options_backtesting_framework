@@ -12,8 +12,8 @@ from typing import Self
 class IronButterfly(SpreadBase):
 
     lower_put: Option  = field(init=False, default=None)
-    center_put: Option = field(init=False, default=None)
-    center_call: Option = field(init=False, default=None)
+    upper_put: Option = field(init=False, default=None)
+    lower_call: Option = field(init=False, default=None)
     upper_call: Option  = field(init=False, default=None)
 
     def __post_init__(self):
@@ -21,15 +21,15 @@ class IronButterfly(SpreadBase):
         if len(set(expirations)) != 1:
             raise ValueError("Option expiration must be the same for all options.")
         self.lower_put  = self.options[0]
-        self.center_put = self.options[1]
-        self.center_call = self.options[2]
+        self.upper_put = self.options[1]
+        self.lower_call = self.options[2]
         self.upper_call  = self.options[3]
 
     def __repr__(self) -> str:
         return (
             f'<{self.spread_type.name}({self.instance_id}) '
             f'{self.expiration} '
-            f'{self.lower_put.strike}/{self.center_put.strike}/{self.upper_call.strike}>'
+            f'{self.lower_put.strike}/{self.upper_put.strike}/{self.lower_call.strike}/{self.upper_call.strike}>'
         )
 
     @classmethod
@@ -37,17 +37,17 @@ class IronButterfly(SpreadBase):
                option_chain: OptionChain,
                expiration: datetime.date = None,
                center_strike: int | float = None,
-               lower_strike: int | float = None,
-               upper_strike: int | float = None,
+               lower_put_strike: int | float = None,
+               upper_call_strike: int | float = None,
                position_type: OptionPositionType = None,
                *args, **kwargs) -> Self:
 
-        if center_strike == lower_strike or center_strike == upper_strike:
+        if center_strike == lower_put_strike or center_strike == upper_call_strike:
             raise ValueError("Cannot open an iron butterfly if the wings are the same strike as the center strike.")
-        if lower_strike > center_strike:
-            raise ValueError("Lower strike must be lower than the center strike.")
-        if upper_strike < center_strike:
-            raise ValueError("Upper strike must be higher than the center strike.")
+        if lower_put_strike > center_strike:
+            raise ValueError("Lower put strike must be lower than the center strike.")
+        if upper_call_strike < center_strike:
+            raise ValueError("Upper call strike must be higher than the center strike.")
 
         try:
             expiration = next(e for e in option_chain.expirations if e >= expiration)
@@ -60,18 +60,18 @@ class IronButterfly(SpreadBase):
         calls = [o for o in all_options if o['option_type'] == 'call']
 
         center_strike = min(expiration_strikes, key=lambda x: abs(x - center_strike))
-        lower_strike  = min(expiration_strikes, key=lambda x: abs(x - lower_strike))
-        upper_strike  = min(expiration_strikes, key=lambda x: abs(x - upper_strike))
+        lower_put_strike  = min(expiration_strikes, key=lambda x: abs(x - lower_put_strike))
+        upper_call_strike  = min(expiration_strikes, key=lambda x: abs(x - upper_call_strike))
 
-        lower_put  = Option(**next(o for o in puts  if o['strike'] == lower_strike))
-        center_put = Option(**next(o for o in puts  if o['strike'] == center_strike))
-        center_call = Option(**next(o for o in calls if o['strike'] == center_strike))
-        upper_call  = Option(**next(o for o in calls if o['strike'] == upper_strike))
+        lower_put  = Option(**next(o for o in puts  if o['strike'] == lower_put_strike))
+        upper_put = Option(**next(o for o in puts  if o['strike'] == center_strike))
+        lower_call = Option(**next(o for o in calls if o['strike'] == center_strike))
+        upper_call  = Option(**next(o for o in calls if o['strike'] == upper_call_strike))
 
         resolved_position_type = position_type if position_type is not None else OptionPositionType.SHORT
 
         iron_butterfly = IronButterfly(
-            options=[lower_put, center_put, center_call, upper_call],
+            options=[lower_put, upper_put, lower_call, upper_call],
             spread_type=OptionSpreadType.IRON_BUTTERFLY,
             position_type=resolved_position_type,
         )
@@ -81,11 +81,11 @@ class IronButterfly(SpreadBase):
 
     @property
     def expiration(self) -> datetime.date:
-        return self.center_put.expiration
+        return self.upper_put.expiration
 
     @property
     def center_strike(self) -> int | float:
-        return self.center_put.strike
+        return self.upper_put.strike
 
     def _open_trade(self, *, quantity: int = 1, **kwargs: dict) -> None:
         qty = abs(quantity)
@@ -99,29 +99,29 @@ class IronButterfly(SpreadBase):
             center_qty =  qty
 
         self.lower_put._open_trade(quantity=wing_qty)
-        self.center_put._open_trade(quantity=center_qty)
-        self.center_call._open_trade(quantity=center_qty)
+        self.upper_put._open_trade(quantity=center_qty)
+        self.lower_call._open_trade(quantity=center_qty)
         self.upper_call._open_trade(quantity=wing_qty)
 
-        self.quantity = self.lower_put.quantity
+        self.quantity = self.upper_put.quantity
         super(IronButterfly, self)._save_user_defined_values(self, **kwargs)
 
     def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
         self.lower_put._close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.center_put._close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.center_call._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.upper_put._close_trade(quote_datetime=quote_datetime, quantity=quantity)
+        self.lower_call._close_trade(quote_datetime=quote_datetime, quantity=quantity)
         self.upper_call._close_trade(quote_datetime=quote_datetime, quantity=quantity)
-        self.quantity = self.lower_put.quantity
+        self.quantity = self.upper_put.quantity
         super(IronButterfly, self)._save_user_defined_values(self, **kwargs)
 
     def _calculate_price(self, *,
                          lower_put_price: float,
-                         center_put_price: float,
-                         center_call_price: float,
+                         upper_put_price: float,
+                         lower_call_price: float,
                          upper_call_price: float) -> float:
         lp = decimalize_2(lower_put_price)
-        cp = decimalize_2(center_put_price)
-        cc = decimalize_2(center_call_price)
+        cp = decimalize_2(upper_put_price)
+        cc = decimalize_2(lower_call_price)
         uc = decimalize_2(upper_call_price)
         if self.position_type == OptionPositionType.SHORT:
             # Net credit received: center premiums minus wing premiums
@@ -135,18 +135,18 @@ class IronButterfly(SpreadBase):
     def price(self) -> float:
         return self._calculate_price(
             lower_put_price=self.lower_put.price,
-            center_put_price=self.center_put.price,
-            center_call_price=self.center_call.price,
+            upper_put_price=self.upper_put.price,
+            lower_call_price=self.lower_call.price,
             upper_call_price=self.upper_call.price,
         )
 
     def get_trade_price(self) -> float | None:
-        if OptionStatus.INITIALIZED in self.center_put.status:
+        if OptionStatus.INITIALIZED in self.upper_put.status:
             return None
         return self._calculate_price(
             lower_put_price=self.lower_put.trade_open_info.price,
-            center_put_price=self.center_put.trade_open_info.price,
-            center_call_price=self.center_call.trade_open_info.price,
+            upper_put_price=self.upper_put.trade_open_info.price,
+            lower_call_price=self.lower_call.trade_open_info.price,
             upper_call_price=self.upper_call.trade_open_info.price,
         )
 
@@ -154,56 +154,72 @@ class IronButterfly(SpreadBase):
         if all(OptionStatus.TRADE_IS_CLOSED in o.status for o in self.options):
             return self._calculate_price(
                 lower_put_price=self.lower_put.trade_close_info.price,
-                center_put_price=self.center_put.trade_close_info.price,
-                center_call_price=self.center_call.trade_close_info.price,
+                upper_put_price=self.upper_put.trade_close_info.price,
+                lower_call_price=self.lower_call.trade_close_info.price,
                 upper_call_price=self.upper_call.trade_close_info.price,
             )
         return None
 
     def get_dte(self) -> int | None:
-        return self.center_put.get_dte()
+        return self.upper_put.get_dte()
 
     @property
     def max_profit(self) -> float | None:
-        if OptionStatus.INITIALIZED in self.center_put.status:
-            return None
-        trade_price = self.get_trade_price()
-        wing_width = max(
-            self.center_put.strike - self.lower_put.strike,
-            self.upper_call.strike - self.center_put.strike,
-        )
-        if self.position_type == OptionPositionType.SHORT:
-            return trade_price
+        if OptionStatus.INITIALIZED in self.upper_put.status:
+            quantity = -1 if self.position_type == OptionPositionType.SHORT else 1
+            
+            wing_position_type = OptionPositionType.LONG if self.position_type == OptionPositionType.SHORT else OptionPositionType.SHORT
+            center_position_type = self.position_type
+            lower_put_price=self.lower_put.get_open_price(position_type=wing_position_type)
+            upper_put_price=self.upper_put.get_open_price(position_type=center_position_type)
+            lower_call_price=self.lower_call.get_open_price(position_type=center_position_type)
+            upper_call_price=self.upper_call.get_open_price(position_type=wing_position_type)
         else:
-            return float(decimalize_2(wing_width) - decimalize_2(trade_price))
+            lower_put_price=self.lower_put.trade_open_info.price
+            upper_put_price=self.upper_put.trade_open_info.price
+            lower_call_price=self.lower_call.trade_open_info.price
+            upper_call_price=self.upper_call.trade_open_info.price
+            
+            quantity = self.quantity
+            
+        
+        price = self._calculate_price(lower_put_price=lower_put_price,
+                                      upper_put_price=upper_put_price,
+                                      lower_call_price=lower_call_price,
+                                      upper_call_price=upper_call_price)
+        
+        if self.position_type == OptionPositionType.LONG:
+            wing_width = max((self.upper_put.strike - self.lower_put.strike), (self.upper_call.strike - self.lower_call.strike))
+            max_profit_value = (wing_width - abs(price)) * 100 * quantity
+        else:
+            max_profit_value = price * 100 * abs(quantity)
+            
+        return round(max_profit_value, 2)
+
 
     @property
     def max_loss(self) -> float | None:
-        if OptionStatus.INITIALIZED in self.center_put.status:
-            return None
-        trade_price = self.get_trade_price()
-        wing_width = max(
-            self.center_put.strike - self.lower_put.strike,
-            self.upper_call.strike - self.center_put.strike,
+        max_profit_value = self.max_profit
+        max_width = max(
+            self.upper_put.strike - self.lower_put.strike,
+            self.upper_call.strike - self.lower_call.strike
         )
-        if self.position_type == OptionPositionType.SHORT:
-            return float(decimalize_2(wing_width) - decimalize_2(trade_price))
-        else:
-            return trade_price
+        max_loss_value = max_profit_value  - max_width * 100
+        return round(abs(max_loss_value), 2)
 
     @property
     def status(self) -> OptionStatus:
-        return self.center_put.status
+        return self.upper_put.status
 
     def get_required_margin(self, quantity: int) -> float:
         if self.position_type == OptionPositionType.LONG:
             return 0.0
         wing_width = max(
-            self.center_put.strike - self.lower_put.strike,
-            self.upper_call.strike - self.center_put.strike,
+            self.upper_put.strike - self.lower_put.strike,
+            self.upper_call.strike - self.lower_call.strike,
         )
-        max_loss = float(decimalize_2(wing_width) - decimalize_2(self.price))
-        return max_loss * 100 * abs(quantity)
+        required_margin = float(decimalize_2(wing_width) - decimalize_2(self.price)) * 100 * abs(quantity)
+        return round(required_margin, 2)
 
     def get_history(self) -> list[dict]:
         if (OptionStatus.TRADE_IS_OPEN not in self.lower_put.status
@@ -220,8 +236,8 @@ class IronButterfly(SpreadBase):
         close_records = self.lower_put.trade_close_records
 
         lp_updates = self.lower_put.updates
-        cp_updates = self.center_put.updates
-        cc_updates = self.center_call.updates
+        cp_updates = self.upper_put.updates
+        cc_updates = self.lower_call.updates
         uc_updates = self.upper_call.updates
 
         keys = sorted(
@@ -238,8 +254,8 @@ class IronButterfly(SpreadBase):
 
             price = self._calculate_price(
                 lower_put_price=round(float(lpu['price']), 2),
-                center_put_price=round(float(cpu['price']), 2),
-                center_call_price=round(float(ccu['price']), 2),
+                upper_put_price=round(float(cpu['price']), 2),
+                lower_call_price=round(float(ccu['price']), 2),
                 upper_call_price=round(float(ucu['price']), 2),
             )
 

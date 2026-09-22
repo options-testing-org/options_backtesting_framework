@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from abc import abstractmethod
 import datetime
 from dataclasses import dataclass, field
 from decimal import Decimal
@@ -211,5 +212,60 @@ class Single(SpreadBase):
         price = decimalize_2(self.option.trade_close_info.price)
         return float(price)
 
+
     def get_updates(self) -> list[dict]:
-        pass
+        """
+        Return the per-timeslot update history for this position.
+
+        Returns
+        -------
+        list of dict
+            One row per recorded quote datetime from trade open through
+            either the close datetime (if closed) or the current quote
+            datetime (if still open). Each row contains the option price,
+            spot price, greeks, and unrealized P&L at that moment.
+
+        Raises
+        ------
+        RuntimeError
+            If the trade has not been opened.
+        """
+        option = self.option
+
+        if (OptionStatus.TRADE_IS_OPEN not in option.status
+                and OptionStatus.TRADE_IS_CLOSED not in option.status):
+            raise RuntimeError("Cannot get updates: trade has not been opened.")
+
+        if OptionStatus.TRADE_IS_CLOSED in option.status:
+            last_date = option.trade_close_info.date
+        else:
+            last_date = option.quote_datetime
+
+        open_price = option.trade_open_info.price
+        open_qty = option.trade_open_info.quantity  # signed
+        direction = 1 if open_qty > 0 else -1
+        close_records = option.trade_close_records
+
+        rows = []
+        for dt, update in option.updates.items():
+            if dt > last_date:
+                continue
+
+            closes_so_far = sum(r.quantity for r in close_records if r.date <= dt)
+            remaining = abs(open_qty) - closes_so_far
+            signed_remaining = remaining * direction
+
+            price = round(float(update['price']), 2)
+            pnl = round((price - open_price) * 100 * signed_remaining, 2)
+            cost_basis = open_price * 100 * remaining
+            pnl_pct = round(pnl / cost_basis, 4) if cost_basis != 0 else 0.0
+
+            rows.append({
+                'quote_datetime': dt,
+                'price': price,
+                'spot_price': update.get('spot_price'),
+                'pnl': pnl,
+                'pnl_pct': pnl_pct,
+            })
+
+        return rows

@@ -103,7 +103,7 @@ class IronCondor(SpreadBase):
         self.lower_call._open_trade(quantity=body_qty)
         self.upper_call._open_trade(quantity=wing_qty)
 
-        self.quantity = self.lower_put.quantity
+        self.quantity = self.upper_put.quantity
         super(IronCondor, self)._save_user_defined_values(self, **kwargs)
 
     def _close_trade(self, *, quote_datetime: datetime.datetime, quantity: int | None = None, **kwargs: dict) -> None:
@@ -111,7 +111,7 @@ class IronCondor(SpreadBase):
         self.upper_put._close_trade(quantity=quantity, quote_datetime=quote_datetime)
         self.lower_call._close_trade(quantity=quantity, quote_datetime=quote_datetime)
         self.upper_call._close_trade(quantity=quantity, quote_datetime=quote_datetime)
-        self.quantity = self.lower_put.quantity
+        self.quantity = self.upper_put.quantity
         super(IronCondor, self)._save_user_defined_values(self, **kwargs)
 
     def _calculate_price(self, *,
@@ -168,27 +168,51 @@ class IronCondor(SpreadBase):
 
     @property
     def max_profit(self) -> float | None:
-        if OptionStatus.INITIALIZED in self.lower_put.status:
-            return None
-        trade_price = self.get_trade_price()
-        if self.position_type == OptionPositionType.SHORT:
-            return trade_price
+        if OptionStatus.INITIALIZED in self.upper_put.status:
+            quantity = -1 if self.position_type == OptionPositionType.SHORT else 1
+            
+            wing_position_type = OptionPositionType.LONG if self.position_type == OptionPositionType.SHORT else OptionPositionType.SHORT
+            center_position_type = self.position_type
+            lower_put_price=self.lower_put.get_open_price(position_type=wing_position_type)
+            upper_put_price=self.upper_put.get_open_price(position_type=center_position_type)
+            lower_call_price=self.lower_call.get_open_price(position_type=center_position_type)
+            upper_call_price=self.upper_call.get_open_price(position_type=wing_position_type)
         else:
-            return float(decimalize_2(self._wing_width()) - decimalize_2(trade_price))
+            lower_put_price=self.lower_put.trade_open_info.price
+            upper_put_price=self.upper_put.trade_open_info.price
+            lower_call_price=self.lower_call.trade_open_info.price
+            upper_call_price=self.upper_call.trade_open_info.price
+            
+            quantity = self.quantity
+            
+        
+        price = self._calculate_price(lower_put_price=lower_put_price,
+                                        upper_put_price=upper_put_price,
+                                        lower_call_price=lower_call_price,
+                                        upper_call_price=upper_call_price)
+        
+        if self.position_type == OptionPositionType.LONG:
+            wing_width = max((self.upper_put.strike - self.lower_put.strike), (self.upper_call.strike - self.lower_call.strike))
+            max_profit_value = (wing_width - abs(price)) * 100 * quantity
+        else:
+            max_profit_value = price * 100 * abs(quantity)
+            
+        return round(max_profit_value, 2)
+
 
     @property
     def max_loss(self) -> float | None:
-        if OptionStatus.INITIALIZED in self.lower_put.status:
-            return None
-        trade_price = self.get_trade_price()
-        if self.position_type == OptionPositionType.SHORT:
-            return float(decimalize_2(self._wing_width()) - decimalize_2(trade_price))
-        else:
-            return trade_price
+        max_profit_value = self.max_profit
+        max_width = max(
+            self.upper_put.strike - self.lower_put.strike,
+            self.upper_call.strike - self.lower_call.strike
+        )
+        max_loss_value = max_profit_value  - max_width * 100
+        return round(abs(max_loss_value), 2)
 
     @property
     def status(self) -> OptionStatus:
-        return self.lower_put.status
+        return self.upper_put.status
 
     def get_required_margin(self, quantity: int) -> float:
         if self.position_type == OptionPositionType.LONG:
